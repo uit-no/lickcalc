@@ -40,6 +40,14 @@ TOOLTIP_TEXTS = {
         "Goodness of fit (R²) for the Weibull distribution model. "
         "Values closer to 1.0 indicate better fit to the theoretical distribution."
     ),
+    'onset_array': (
+        "Select the data column containing lick onset timestamps. "
+        "These are the times when licks begin."
+    ),
+    'offset_array': (
+        "Select the data column containing lick offset timestamps. "
+        "These are the times when licks end. Optional - used for lick duration analysis."
+    ),
 }
 
 # Helper function to create a labeled element with tooltip
@@ -108,6 +116,12 @@ def get_minlicks_tooltip():
 
 def get_longlick_tooltip():
     return create_labeled_element_with_tooltip("Long lick threshold (s)", "longlick-help", "longlick", "top")
+
+def get_onset_tooltip():
+    return create_labeled_element_with_tooltip("Onset array", "onset-help", "onset_array", "top")
+
+def get_offset_tooltip():
+    return create_labeled_element_with_tooltip("Offset array", "offset-help", "offset_array", "top")
 
 # Table cell tooltips
 def get_table_tooltips():

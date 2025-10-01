@@ -18,7 +18,7 @@ import numpy as np
 
 from helperfx import parse_medfile, parse_csvfile, parse_ddfile, lickCalc
 from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip, 
-                     get_longlick_tooltip, get_table_tooltips)
+                     get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip)
 
 # template_df = pd.DataFrame(data=None, columns=["Property", "Value"])
 
@@ -55,50 +55,46 @@ app.layout = dbc.Container([
         ),
         dbc.Row(children=[
                 
-            dbc.Col(
-                  html.Div(id='filetypeLbl', children="File type"),
-                  width=1
-                  ),
-            dbc.Col(
-                html.Div(
+            dbc.Col([
+                html.Div(id='filetypeLbl', children="File type"),
+            ], width=1),
+            dbc.Col([
                 dcc.Dropdown(id='input-file-type',
                               options=[
                                   {'label': 'Med Associates', 'value': 'med'},
                                   {'label': 'CSV/TXT', 'value': 'csv'},
                                   {'label': 'DD Lab', 'value': 'dd'}],
-                              value='med',
-                                  ),
-                ), width=2
-          ),
-            dbc.Col(html.Div(id='fileloadLbl', children="No file loaded yet"),
-                  width=3
-                ),
+                              value='med'),
+            ], width=2),
+            dbc.Col([
+                html.Div(id='fileloadLbl', children="No file loaded yet"),
+            ], width=3),
             
-            dbc.Col(
-                  html.Div(id='onsetLbl', children="Onset array"),
-                  width=1
-                  ),
+            dbc.Col([
+                get_onset_tooltip()[0],
+                get_onset_tooltip()[1],
+            ], width=1),
             
-            dbc.Col(
-                html.Div(
-                    dcc.Dropdown(id='onset-array',
-                                 options=[
-                                     {'label': '', 'value': 'none'}],
-                                 value='none')),
-                width=2),
+            dbc.Col([
+                dcc.Dropdown(id='onset-array',
+                             options=[
+                                 {'label': 'No file loaded', 'value': 'none'}],
+                             value='none',
+                             placeholder="Select onset column..."),
+            ], width=2),
 
-            dbc.Col(
-                  html.Div(id='offsetLbl', children="Offset array"),
-                  width=1
-                  ),
+            dbc.Col([
+                get_offset_tooltip()[0],
+                get_offset_tooltip()[1],
+            ], width=1),
             
-            dbc.Col(
-                html.Div(
-                    dcc.Dropdown(id='offset-array',
-                                 options=[
-                                     {'label': '', 'value': 'none'}],
-                                 value='none')),
-                width=2),
+            dbc.Col([
+                dcc.Dropdown(id='offset-array',
+                             options=[
+                                 {'label': 'No file loaded', 'value': 'none'}],
+                             value='none',
+                             placeholder="Select offset column..."),
+            ], width=2),
           
           ]),
         dbc.Row(
@@ -165,6 +161,7 @@ app.layout = dbc.Container([
                 get_minlicks_tooltip()[1],
                 dcc.Slider(id='minlicks-slider',
                            min=1, max=5,
+                           step=1,
                             marks={i: str(i) for i in [1, 2, 3, 4, 5]},
                                   value=1)
             ], width=4),
@@ -259,11 +256,41 @@ def load_and_clean_data(list_of_contents, list_of_names, list_of_dates, input_fi
         elif input_file_type == 'dd':
             data_array = parse_ddfile(f)
         
-        options = [{'label': key, 'value': key} for key in data_array]
-        value = options[0]['value']
-        jsonified_dict = json.dumps(data_array)
+        # Create options for dropdowns
+        column_names = list(data_array.keys())
+        
+        # For onset array, include all columns
+        onset_options = [{'label': key, 'value': key} for key in column_names]
+        
+        # For offset array, include all columns plus "None" option
+        offset_options = [{'label': 'None (onset only)', 'value': 'none'}] + [{'label': key, 'value': key} for key in column_names]
+        
+        # Set default values
+        if len(column_names) > 0:
+            # Try to find common column names for onsets
+            onset_default = None
+            for potential_name in ['licks', 'onset', 'timestamps', 'time', column_names[0]]:
+                if potential_name in column_names:
+                    onset_default = potential_name
+                    break
+            if onset_default is None:
+                onset_default = column_names[0]
             
-        return jsonified_dict, list_of_names, options, value, options, value
+            # Try to find common column names for offsets
+            offset_default = 'none'
+            for potential_name in ['offset', 'offsets', 'end', 'stop']:
+                if potential_name in column_names:
+                    offset_default = potential_name
+                    break
+        else:
+            onset_default = 'none'
+            offset_default = 'none'
+        
+        jsonified_dict = json.dumps(data_array)
+        
+        file_info = f"Loaded: {list_of_names} ({len(column_names)} columns)"
+            
+        return jsonified_dict, file_info, onset_options, onset_default, offset_options, offset_default
 
 @app.callback(Output('lick-data', 'data'),
               Input('data-store', 'data'),
