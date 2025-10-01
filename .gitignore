@@ -11,10 +11,14 @@ __pycache__/*
 .spyproject/*
 
 figs/*
+output/*
 static/*
 templates/*
 tutorials/*
 uploads/*
+
+*checkpoint.ipynb
+.ipynb_checkpoints/*
 
 
 
