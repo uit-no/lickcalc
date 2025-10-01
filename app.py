@@ -473,7 +473,7 @@ def save_file(n):
             csv_out.writerow(row)
 
 if __name__ == '__main__':
-    app.run_server(debug=True, dev_tools_hot_reload=True)
+    app.run(debug=True, dev_tools_hot_reload=True)
     
 """
 TO DO:
