@@ -500,5 +500,21 @@ TO DO:
     16. make histograms look the same, i.e. space between bars
     17. 
     18. 
+    
+    Would be great to have a way to export the data to Excel (or similar) - either option to load several mice / files and look scroll through each, and then export all the data into one file, or have a summary of important data (number of licks, number of bursts, licks per burst, etc) in a table that is easily copy/pasted into excel so it's quick to load in a file, paste the data into an excel file, load the next file, and so on.
+For the histogram bin size, specify if its in minutes or seconds
+"intraburst lick frequency" is average number of licks / second, might be nice to have that as a description somewhere to make it super clear what it is
+Remove "spacer..."
+Description of what the slider next to spacer is
+Would be nice to have the sliders for setting intraburst lick interval and minimum licks/burst higher on the page
+Maybe an explanation of what the Weibul plot is?
+Definition of what a "long lick" is? And perhaps an option to set that, and an option to remove long licks from the data?
+
+make sure updated lickcalc still works
+write test suite to check (either in trompy or here)
+add help bubbles with explanations of parameters/fields/output
+    
+    
+    
 """
     
