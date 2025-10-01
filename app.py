@@ -17,6 +17,8 @@ import pandas as pd
 import numpy as np
 
 from helperfx import parse_medfile, parse_csvfile, parse_ddfile, lickCalc
+from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip, 
+                     get_longlick_tooltip, get_table_tooltips)
 
 # template_df = pd.DataFrame(data=None, columns=["Property", "Value"])
 
@@ -28,6 +30,9 @@ from helperfx import parse_medfile, parse_csvfile, parse_ddfile, lickCalc
 # app = dash.Dash(__name__, external_stylesheets=[dbc.themes.GRID])
 
 app = dash.Dash(__name__, title='LickCalc', prevent_initial_callbacks=True)
+
+# Get table cells and tooltips
+table_cells, table_tooltips = get_table_tooltips()
 
 app.layout = dbc.Container([
     dcc.Store(id='lick-data'),
@@ -129,8 +134,8 @@ app.layout = dbc.Container([
                         {"label": "Cumulative plot", "value": "cumul"}],
                     value="hist")
                 ),
-            dbc.Col(html.Div(children="Bin size"),
-                  width=1),
+            dbc.Col(get_binsize_tooltip()[0], width=2),
+            get_binsize_tooltip()[1],
             dbc.Col(
                 dcc.Slider(
                     id='session-bin-slider',
@@ -139,51 +144,66 @@ app.layout = dbc.Container([
                     step=5,
                     marks={i: str(i) for i in [10, 30, 60, 120, 300]},
                     value=30),
-                width=8),
-            # dbc.Col(html.Div(children="xxx selected"),
-            #       width=2)
+                width=7),
             ]),
         dbc.Row(dbc.Col(html.H2("Microstructural analysis"), width='auto')),
+        
+        # Controls for microstructural analysis
         dbc.Row(children=[
-            dbc.Col(
-                dcc.Graph(id='intraburst-fig',
-                          # figure={
-                          #     'layout': {'margin': dict(l=20, r=20, t=20, b=20)}
-                          #     }
-                          ),
-                width=4),
-            dbc.Col(
-                dcc.Graph(id='longlicks-fig'),
-                width=4),
-            dbc.Col(
-                dbc.Table([
-                    html.Tr([html.Th(["Property"]), html.Th(["Value"])]),
-                    html.Tr([html.Td(["Total licks"]), html.Td(id="total-licks")]),
-                    html.Tr([html.Td(["Intraburst frequency"]), html.Td(id="intraburst-freq")]),
-                    html.Tr([html.Td(["No. of long licks"]), html.Td(id="nlonglicks")]),
-                    html.Tr([html.Td(["Maximum long lick"]), html.Td(id="longlicks-max")]),
-                    ],
-                    style={"margin": dict(l=20, r=20, t=1000, b=20),
-                           "columns": [100, 200],
-                           "border": "5px"},
-                    striped=True, hover=True, bordered=True),
-                width="auto"),
-    ]),
-        dbc.Row(children=[
-            dbc.Col(
-                html.Div(id='blank-space',
-                    children='Spacer...'),
-                width=8),
-            dbc.Col(
+            dbc.Col([
+                get_ibi_tooltip()[0],
+                get_ibi_tooltip()[1],
+                dcc.Slider(id='interburst-slider',              
+                    min=0,
+                    max=3,
+                    step=0.25,
+                    marks={i: str(i) for i in [0.5, 1, 1.5, 2, 2.5, 3]},
+                    value=0.5)
+            ], width=4),
+            dbc.Col([
+                get_minlicks_tooltip()[0],
+                get_minlicks_tooltip()[1],
+                dcc.Slider(id='minlicks-slider',
+                           min=1, max=5,
+                            marks={i: str(i) for i in [1, 2, 3, 4, 5]},
+                                  value=1)
+            ], width=4),
+            dbc.Col([
+                get_longlick_tooltip()[0],
+                get_longlick_tooltip()[1],
                 dcc.Slider(
                     id='longlick-threshold',
                     min=0.1,
                     max=1.0,
                     step=0.1,
                     marks={i: str(i) for i in [0.2, 0.4, 0.6, 0.8, 1.0]},
-                    value=0.3),
-                width=3),
+                    value=0.3)
+            ], width=4),
+        ], style={'margin-bottom': '20px'}),
+        
+        dbc.Row(children=[
+            dbc.Col(
+                dcc.Graph(id='intraburst-fig'),
+                width=4),
+            dbc.Col(
+                dcc.Graph(id='longlicks-fig'),
+                width=4),
+            dbc.Col([
+                dbc.Table([
+                    html.Tr([html.Th("Property"), html.Th("Value")]),
+                    html.Tr([table_cells[0], html.Td(id="total-licks")]),  # Total licks
+                    html.Tr([table_cells[1], html.Td(id="intraburst-freq")]),  # Intraburst frequency
+                    html.Tr([table_cells[2], html.Td(id="nlonglicks")]),  # No. of long licks
+                    html.Tr([html.Td("Maximum long lick"), html.Td(id="longlicks-max")]),
+                    ],
+                    striped=True, hover=True, bordered=True),
+                # Add tooltips
+                table_tooltips[0],  # Total licks tooltip
+                table_tooltips[1],  # Intraburst frequency tooltip
+                table_tooltips[2],  # No. of long licks tooltip
+            ], width=4),
     ]),
+        
         dbc.Row(children=[
             dbc.Col(
                 dcc.Graph(id='bursthist-fig'),
@@ -191,34 +211,23 @@ app.layout = dbc.Container([
             dbc.Col(
                 dcc.Graph(id='burstprob-fig'),
                 width=4),
-            dbc.Col(
-                html.Table([
-                    html.Tr([html.Td(["No. of bursts"]), html.Td(id="nbursts")]),
-                    html.Tr([html.Td(["Mean licks per burst"]), html.Td(id="licks-per-burst")]),
-                    html.Tr([html.Td(["Weibull: Alpha"]), html.Td(id="weibull-alpha")]),
-                    html.Tr([html.Td(["Weibull: Beta"]), html.Td(id="weibull-beta")]),
-                    html.Tr([html.Td(["Weibull: r-squared"]), html.Td(id="weibull-rsq")]),
-                    ]),
-                width="auto"),
+            dbc.Col([
+                dbc.Table([
+                    html.Tr([html.Th("Property"), html.Th("Value")]),
+                    html.Tr([html.Td("No. of bursts"), html.Td(id="nbursts")]),
+                    html.Tr([table_cells[3], html.Td(id="licks-per-burst")]),  # Mean licks per burst
+                    html.Tr([table_cells[4], html.Td(id="weibull-alpha")]),  # Weibull: Alpha
+                    html.Tr([table_cells[5], html.Td(id="weibull-beta")]),  # Weibull: Beta
+                    html.Tr([table_cells[6], html.Td(id="weibull-rsq")]),  # Weibull: r-squared
+                    ],
+                    striped=True, hover=True, bordered=True),
+                # Add tooltips
+                table_tooltips[3],  # Mean licks per burst tooltip
+                table_tooltips[4],  # Weibull: Alpha tooltip
+                table_tooltips[5],  # Weibull: Beta tooltip
+                table_tooltips[6],  # Weibull: r-squared tooltip
+            ], width=4),
             
-            ]),
-        dbc.Row(children=[
-            dbc.Col(
-                html.Div('Interburst lick interval')),
-            dbc.Col(
-                dcc.Slider(id='interburst-slider',              
-                    min=0,
-                    max=3,
-                    step=0.25,
-                    marks={i: str(i) for i in [0.5, 1, 1.5, 2, 2.5, 3]},
-                    value=0.5)),
-            dbc.Col(
-                html.Div('Minimum licks/burst')),
-            dbc.Col(
-                dcc.Slider(id='minlicks-slider',
-                           min=1, max=5,
-                            marks={i: str(i) for i in [1, 2, 3, 4, 5]},
-                                  value=1))
             ]),
         
         
@@ -277,7 +286,7 @@ def make_session_graph(jsonified_df, figtype, binsize):
     if jsonified_df is None:
         raise PreventUpdate
     else:
-        df = pd.read_json(jsonified_df, orient='split')
+        df = pd.read_json(io.StringIO(jsonified_df), orient='split')
         
         lastlick=max(df["licks"])
         
@@ -308,7 +317,7 @@ def make_intraburstfreq_graph(jsonified_df):
     if jsonified_df is None:
         raise PreventUpdate
     else:        
-        df = pd.read_json(jsonified_df, orient='split')
+        df = pd.read_json(io.StringIO(jsonified_df), orient='split')
         lickdata = lickCalc(df["licks"].to_list())
  
         ilis = lickdata["ilis"]
@@ -342,10 +351,10 @@ def make_longlicks_graph(offset_key, longlick_th, jsonified_dict, jsonified_df):
     if jsonified_df is None:
         raise PreventUpdate
     else:        
-        df = pd.read_json(jsonified_df, orient='split')
+        df = pd.read_json(io.StringIO(jsonified_df), orient='split')
         
         data_array = json.loads(jsonified_dict)
-        offset_df = pd.read_json(data_array[offset_key], orient='split')
+        offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
         
         onset=df["licks"].to_list()
         offset=offset_df["licks"].to_list()
@@ -392,7 +401,7 @@ def make_bursthist_graph(jsonified_df, ibi, minlicks):
     if jsonified_df is None:
         raise PreventUpdate
     else:
-        df = pd.read_json(jsonified_df, orient='split')
+        df = pd.read_json(io.StringIO(jsonified_df), orient='split')
         lickdata = lickCalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
     
         bursts=lickdata['bLicks']
@@ -425,7 +434,7 @@ def make_burstprob_graph(jsonified_df, ibi, minlicks):
     if jsonified_df is None:
         raise PreventUpdate
     else:
-        df = pd.read_json(jsonified_df, orient='split')
+        df = pd.read_json(io.StringIO(jsonified_df), orient='split')
         lickdata = lickCalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
     
         x=lickdata['burstprob'][0]
