@@ -35,25 +35,24 @@ app.layout = dbc.Container([
     dcc.Store(id='session-duration-store'),  # Store for total session duration
     html.Div(
     [
+        # Help button positioned at top right of entire page
+        html.A(
+            "📖 Help", 
+            href="/help", 
+            target="_blank",
+            className="btn btn-info btn-sm",
+            style={
+                "position": "fixed", 
+                "top": "10px", 
+                "right": "10px",
+                "z-index": "9999",
+                "text-decoration": "none"
+            }
+        ),
+        
         dbc.Row(children=[
-            
-            dbc.Col(html.H1("LickCalc GUI"), width='auto'),
-            dbc.Col([
-                html.A(
-                    "📖 Help", 
-                    href="/help", 
-                    target="_blank",
-                    className="btn btn-info btn-sm",
-                    style={
-                        "position": "absolute", 
-                        "top": "20px", 
-                        "right": "20px",
-                        "z-index": "1000",
-                        "text-decoration": "none"
-                    }
-                )
-            ], width='auto', style={"position": "relative"}),
-                    ]),
+            dbc.Col(html.H1("LickCalc GUI"), width=12),
+        ]),
         dbc.Row(
             dbc.Col(html.Div(
                 '''
