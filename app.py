@@ -48,6 +48,10 @@ app.layout = dbc.Container([
                 '''
                              ), width="auto")
         ),
+        
+        # Add spacing between description and controls
+        html.Div(style={'margin-top': '20px'}),
+        
         dbc.Row(children=[
                 
             dbc.Col([
@@ -133,6 +137,9 @@ app.layout = dbc.Container([
                     **config.get_slider_config('session_bin')),
                 width=7),
             ]),
+        
+        # Add spacing before microstructural analysis section
+        dbc.Row(dbc.Col(html.Hr(), width=12), style={'margin-top': '30px'}),  # Separator line
         dbc.Row(dbc.Col(html.H2("Microstructural analysis"), width='auto')),
         
         # Controls for microstructural analysis
@@ -319,13 +326,15 @@ app.layout = dbc.Container([
                 selected_rows=[],
                 style_cell={
                     'textAlign': 'center',
-                    'padding': '10px',
+                    'padding': '12px',
                     'fontFamily': 'Arial',
-                    'fontSize': '12px'
+                    'fontSize': '12px',
+                    'minHeight': '40px'
                 },
                 style_header={
                     'backgroundColor': 'rgb(230, 230, 230)',
-                    'fontWeight': 'bold'
+                    'fontWeight': 'bold',
+                    'height': '50px'
                 },
                 style_data_conditional=[
                     {
@@ -353,9 +362,19 @@ app.layout = dbc.Container([
                         'fontWeight': 'bold'
                     }
                 ],
-                style_table={'overflowX': 'auto'}
+                style_table={
+                    'overflowX': 'auto',
+                    'minHeight': '300px',
+                    'border': '1px solid #dee2e6',
+                    'borderRadius': '5px'
+                },
+                page_size=20,  # Show more rows to prevent cut-off appearance
+                fill_width=True
             )
         ], width=12)),
+        
+        # Add some buffer space below the table
+        dbc.Row(dbc.Col(html.Div(style={'height': '50px'}), width=12)),
         
         # Store for results table data
         dcc.Store(id='results-table-store', data=[]),
@@ -905,7 +924,23 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data):
 def update_results_table(stored_data):
     """Update the displayed table with stored data plus statistics"""
     if not stored_data:
-        return []
+        # Return placeholder empty rows to make the table look more complete
+        empty_rows = []
+        for i in range(5):  # Add 5 empty placeholder rows
+            empty_row = {
+                'id': '',
+                'total_licks': None,
+                'intraburst_freq': None,
+                'n_bursts': None,
+                'mean_licks_per_burst': None,
+                'weibull_alpha': None,
+                'weibull_beta': None,
+                'weibull_rsq': None,
+                'n_long_licks': None,
+                'max_lick_duration': None
+            }
+            empty_rows.append(empty_row)
+        return empty_rows
     
     # Create copy of data
     table_data = stored_data.copy()
