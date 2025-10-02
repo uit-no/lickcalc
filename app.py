@@ -20,8 +20,6 @@ from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip
                      get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip)
 from config_manager import config
 
-# app = dash.Dash(__name__, external_stylesheets=[dbc.themes.GRID])
-
 # Get app configuration
 app_config = config.get_app_config()
 app = dash.Dash(__name__, title=app_config['title'], prevent_initial_callbacks=True)
@@ -34,6 +32,7 @@ app.layout = dbc.Container([
     dcc.Store(id='data-store'),
     dcc.Store(id='figure-data-store'),  # Store for figure underlying data
     dcc.Store(id='filename-store'),  # Store for uploaded filename
+    dcc.Store(id='session-duration-store'),  # Store for total session duration
     html.Div(
     [
         dbc.Row(children=[
@@ -470,6 +469,7 @@ def load_and_clean_data(list_of_contents, list_of_names, list_of_dates, input_fi
         return jsonified_dict, file_info, onset_options, onset_default, offset_options, offset_default, list_of_names
 
 @app.callback(Output('lick-data', 'data'),
+              Output('session-duration-store', 'data'),
               Input('data-store', 'data'),
               Input('onset-array', 'value'))
 def get_lick_data(jsonified_dict, df_key):
@@ -478,8 +478,12 @@ def get_lick_data(jsonified_dict, df_key):
     
     data_array = json.loads(jsonified_dict)
     jsonified_df = data_array[df_key]
+    
+    # Get session duration
+    df = pd.read_json(io.StringIO(jsonified_df), orient='split')
+    session_duration = max(df["licks"]) if len(df) > 0 else 3600  # Default to 1 hour if no data
 
-    return jsonified_df
+    return jsonified_df, session_duration
 
 @app.callback(Output('session-fig', 'figure'),
               Input('lick-data', 'data'),
@@ -491,25 +495,27 @@ def make_session_graph(jsonified_df, figtype, binsize):
         raise PreventUpdate
     else:
         df = pd.read_json(io.StringIO(jsonified_df), orient='split')
-        
-        lastlick=max(df["licks"])
+        lastlick = max(df["licks"]) if len(df) > 0 else 0
         
         if figtype == "hist":
             fig = px.histogram(df,
+                            x="licks",
                             range_x=[0, lastlick],
-                            nbins=int(lastlick/binsize))
+                            nbins=int(lastlick/binsize) if lastlick > 0 else 1)
         
-            fig.update_layout(transition_duration=500,
+            fig.update_layout(
+                transition_duration=500,
                 xaxis_title="Time (s)",
                 yaxis_title="Licks per {} s".format(binsize),
                 showlegend=False)
         else:
             fig = px.line(x=df["licks"], y=range(0, len(df["licks"])))
             
-            fig.update_layout(transition_duration=500,
+            fig.update_layout(
+                transition_duration=500,
                 xaxis_title="Time (s)",
                 yaxis_title="Cumulative licks",
-                showlegend=False,)
+                showlegend=False)
 
         return fig
 
@@ -522,6 +528,13 @@ def make_intraburstfreq_graph(jsonified_df):
         raise PreventUpdate
     else:        
         df = pd.read_json(io.StringIO(jsonified_df), orient='split')
+        
+        if len(df) == 0:
+            # Return empty figure if no data
+            fig = go.Figure()
+            fig.update_layout(title="No data available")
+            return fig, "0", "0.00 Hz"
+        
         lickdata = lickCalc(df["licks"].to_list())
  
         ilis = lickdata["ilis"]
@@ -554,11 +567,56 @@ def make_intraburstfreq_graph(jsonified_df):
 def make_longlicks_graph(offset_key, longlick_th, jsonified_dict, jsonified_df):
     if jsonified_df is None:
         raise PreventUpdate
-    else:        
+    
+    # Check if offset data is available
+    if offset_key is None or offset_key == 'none':
+        # Return empty figure when no offset data is available
+        fig = go.Figure()
+        fig.update_layout(
+            title="Lick Duration Analysis",
+            xaxis_title="Lick length (s)",
+            yaxis_title="Frequency",
+            annotations=[
+                dict(
+                    text="Offset data required for lick duration analysis",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                    showarrow=False,
+                    font=dict(size=14, color="gray")
+                )
+            ]
+        )
+        return fig, "N/A", "N/A"
+    
+    try:        
         df = pd.read_json(io.StringIO(jsonified_df), orient='split')
         
         data_array = json.loads(jsonified_dict)
+        
+        # Check if the offset key exists in the data
+        if offset_key not in data_array:
+            fig = go.Figure()
+            fig.update_layout(
+                title="Lick Duration Analysis",
+                annotations=[
+                    dict(
+                        text=f"Offset column '{offset_key}' not found in data",
+                        xref="paper", yref="paper",
+                        x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                        showarrow=False,
+                        font=dict(size=14, color="red")
+                    )
+                ]
+            )
+            return fig, "N/A", "N/A"
+        
         offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+        
+        if len(df) == 0:
+            # Return empty figure if no data
+            fig = go.Figure()
+            fig.update_layout(title="No data available")
+            return fig, "0", "0.00"
         
         onset=df["licks"].to_list()
         offset=offset_df["licks"].to_list()
@@ -567,14 +625,32 @@ def make_longlicks_graph(offset_key, longlick_th, jsonified_dict, jsonified_df):
             print("arrays are the same size, making figure...")
         elif len(onset) - len(offset) == 1:
             print("arrays are different lengths by 1, need to remove a value")
-            if offset[0] > onset[0]:
+            if len(offset) > 0 and offset[0] > onset[0]:
                 onset = onset [:-1]
         else:
             print("offset array seems wrong")
-            return {"data": []}, ""
+            fig = go.Figure()
+            fig.update_layout(
+                title="Lick Duration Analysis",
+                annotations=[
+                    dict(
+                        text=f"Onset/Offset array length mismatch: {len(onset)} vs {len(offset)}",
+                        xref="paper", yref="paper",
+                        x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                        showarrow=False,
+                        font=dict(size=14, color="red")
+                    )
+                ]
+            )
+            return fig, "N/A", "N/A"
         
         lickdata = lickCalc(onset, offset=offset, longlickThreshold=longlick_th)
         licklength = lickdata["licklength"]
+        
+        if len(licklength) == 0:
+            fig = go.Figure()
+            fig.update_layout(title="No lick length data available")
+            return fig, "0", "0.00"
         
         counts, bins = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
         bins = 0.5 * (bins[:-1] + bins[1:])
@@ -591,9 +667,26 @@ def make_longlicks_graph(offset_key, longlick_th, jsonified_dict, jsonified_df):
             )
         
         nlonglicks = "{}".format(len(lickdata["longlicks"]))
-        longlick_max = "{:.2f}".format(np.max(licklength))
+        longlick_max = "{:.2f}".format(np.max(licklength)) if len(licklength) > 0 else "0.00"
         
         return fig, nlonglicks, longlick_max
+        
+    except Exception as e:
+        print(f"Error in longlicks callback: {e}")
+        fig = go.Figure()
+        fig.update_layout(
+            title="Lick Duration Analysis - Error",
+            annotations=[
+                dict(
+                    text=f"Error processing lick duration data: {str(e)}",
+                    xref="paper", yref="paper",
+                    x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                    showarrow=False,
+                    font=dict(size=12, color="red")
+                )
+            ]
+        )
+        return fig, "Error", "Error"
 
 @app.callback(Output('bursthist-fig', 'figure'),
               Input('lick-data', 'data'),
@@ -604,9 +697,21 @@ def make_bursthist_graph(jsonified_df, ibi, minlicks):
         raise PreventUpdate
     else:
         df = pd.read_json(io.StringIO(jsonified_df), orient='split')
+        
+        if len(df) == 0:
+            # Return empty figure if no data
+            fig = go.Figure()
+            fig.update_layout(title="No data available")
+            return fig
+        
         lickdata = lickCalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
     
         bursts=lickdata['bLicks']
+        
+        if len(bursts) == 0:
+            fig = go.Figure()
+            fig.update_layout(title="No bursts found with current parameters")
+            return fig
 
         fig = px.histogram(bursts,
                             range_x=[1, max(bursts)],
@@ -637,8 +742,20 @@ def make_burstprob_graph(jsonified_df, ibi, minlicks):
         raise PreventUpdate
     else:
         df = pd.read_json(io.StringIO(jsonified_df), orient='split')
+        
+        if len(df) == 0:
+            # Return empty figure if no data
+            fig = go.Figure()
+            fig.update_layout(title="No data available")
+            return fig, "0", "0.00", "0.00", "0.00", "0.00"
+        
         lickdata = lickCalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
     
+        if len(lickdata['burstprob'][0]) == 0:
+            fig = go.Figure()
+            fig.update_layout(title="No bursts found with current parameters")
+            return fig, "0", "0.00", "0.00", "0.00", "0.00"
+        
         x=lickdata['burstprob'][0]
         y=lickdata['burstprob'][1]
 
@@ -679,11 +796,30 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, json
     
     try:
         df = pd.read_json(io.StringIO(jsonified_df), orient='split')
+        
+        # Store original session info
+        original_duration = max(df["licks"]) if len(df) > 0 else 0
+        
+        if len(df) == 0:
+            # Return minimal data if no licks
+            figure_data['summary_stats'] = {
+                'total_licks': 0,
+                'intraburst_freq': 0,
+                'n_bursts': 0,
+                'mean_licks_per_burst': 0,
+                'weibull_alpha': 0,
+                'weibull_beta': 0,
+                'weibull_rsq': 0,
+                'n_long_licks': 0,
+                'max_lick_duration': 0
+            }
+            return figure_data
+        
         lick_times = df["licks"].to_list()
         
         # Session histogram data
         lastlick = max(lick_times)
-        hist_counts, hist_edges = np.histogram(lick_times, bins=int(lastlick/bin_size), range=(0, lastlick))
+        hist_counts, hist_edges = np.histogram(lick_times, bins=int(lastlick/bin_size) if lastlick > 0 else 1, range=(0, lastlick))
         hist_centers = (hist_edges[:-1] + hist_edges[1:]) / 2
         figure_data['session_hist'] = {
             'bin_centers': hist_centers.tolist(),
@@ -742,36 +878,46 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, json
         if offset_key and offset_key != 'none' and jsonified_dict:
             try:
                 data_array = json.loads(jsonified_dict)
-                offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
-                offset_times = offset_df["licks"].to_list()
                 
-                # Adjust arrays if needed
-                onset_times = lick_times.copy()
-                if len(onset_times) - len(offset_times) == 1:
-                    onset_times = onset_times[:-1]
-                elif len(onset_times) != len(offset_times):
-                    onset_times = onset_times[:len(offset_times)]
+                # Check if the offset key exists in the data
+                if offset_key not in data_array:
+                    print(f"Warning: Offset key '{offset_key}' not found in data")
+                    figure_data['summary_stats']['n_long_licks'] = 'N/A (offset column not found)'
+                    figure_data['summary_stats']['max_lick_duration'] = 'N/A (offset column not found)'
+                else:
+                    offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                    offset_times = offset_df["licks"].to_list()
                     
-                if len(onset_times) == len(offset_times):
-                    lickdata_with_offset = lickCalc(onset_times, offset=offset_times, longlickThreshold=longlick_th)
-                    licklength = lickdata_with_offset["licklength"]
-                    
-                    # Create lick lengths histogram data
-                    ll_counts, ll_edges = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
-                    ll_centers = (ll_edges[:-1] + ll_edges[1:]) / 2
-                    figure_data['lick_lengths'] = {
-                        'duration_centers': ll_centers.tolist(),
-                        'counts': ll_counts.tolist(),
-                        'raw_durations': licklength,
-                        'threshold': longlick_th
-                    }
-                    
-                    # Update long lick statistics in summary
-                    figure_data['summary_stats']['n_long_licks'] = len(lickdata_with_offset["longlicks"])
-                    figure_data['summary_stats']['max_lick_duration'] = np.max(licklength)
-                    
-                    print(f"DEBUG: Calculated n_long_licks = {figure_data['summary_stats']['n_long_licks']}")
-                    print(f"DEBUG: Calculated max_lick_duration = {figure_data['summary_stats']['max_lick_duration']}")
+                    # Adjust arrays if needed
+                    onset_times = lick_times.copy()
+                    if len(onset_times) - len(offset_times) == 1:
+                        onset_times = onset_times[:-1]
+                    elif len(onset_times) != len(offset_times):
+                        onset_times = onset_times[:len(offset_times)]
+                        
+                    if len(onset_times) == len(offset_times) and len(onset_times) > 0:
+                        lickdata_with_offset = lickCalc(onset_times, offset=offset_times, longlickThreshold=longlick_th)
+                        licklength = lickdata_with_offset["licklength"]
+                        
+                        # Create lick lengths histogram data
+                        ll_counts, ll_edges = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
+                        ll_centers = (ll_edges[:-1] + ll_edges[1:]) / 2
+                        figure_data['lick_lengths'] = {
+                            'duration_centers': ll_centers.tolist(),
+                            'counts': ll_counts.tolist(),
+                            'raw_durations': licklength,
+                            'threshold': longlick_th
+                        }
+                        
+                        # Update long lick statistics in summary
+                        figure_data['summary_stats']['n_long_licks'] = len(lickdata_with_offset["longlicks"])
+                        figure_data['summary_stats']['max_lick_duration'] = np.max(licklength) if len(licklength) > 0 else 0
+                        
+                        print(f"DEBUG: Calculated n_long_licks = {figure_data['summary_stats']['n_long_licks']}")
+                        print(f"DEBUG: Calculated max_lick_duration = {figure_data['summary_stats']['max_lick_duration']}")
+                    else:
+                        figure_data['summary_stats']['n_long_licks'] = 'N/A (array length mismatch)'
+                        figure_data['summary_stats']['max_lick_duration'] = 'N/A (array length mismatch)'
                     
             except Exception as e:
                 print(f"Error processing offset data: {e}")
