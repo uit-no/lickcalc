@@ -33,6 +33,7 @@ app.layout = dbc.Container([
     dcc.Store(id='lick-data'),
     dcc.Store(id='data-store'),
     dcc.Store(id='figure-data-store'),  # Store for figure underlying data
+    dcc.Store(id='filename-store'),  # Store for uploaded filename
     html.Div(
     [
         dbc.Row(children=[
@@ -310,6 +311,7 @@ app.layout = dbc.Container([
                 id='results-table',
                 columns=[
                     {'name': 'ID', 'id': 'id', 'type': 'text', 'editable': True},
+                    {'name': 'Source File', 'id': 'source_filename', 'type': 'text', 'editable': False},
                     {'name': 'Total Licks', 'id': 'total_licks', 'type': 'numeric', 'format': {'specifier': '.0f'}},
                     {'name': 'Intraburst Freq (Hz)', 'id': 'intraburst_freq', 'type': 'numeric', 'format': {'specifier': '.3f'}},
                     {'name': 'N Bursts', 'id': 'n_bursts', 'type': 'numeric', 'format': {'specifier': '.0f'}},
@@ -388,6 +390,7 @@ app.layout = dbc.Container([
               Output('onset-array', 'value'),
               Output('offset-array', 'options'),
               Output('offset-array', 'value'),
+              Output('filename-store', 'data'),
               Input('upload-data', 'contents'),
               State('upload-data', 'filename'),
               State('upload-data', 'last_modified'),
@@ -442,7 +445,7 @@ def load_and_clean_data(list_of_contents, list_of_names, list_of_dates, input_fi
         
         file_info = f"Loaded: {list_of_names} ({len(column_names)} columns)"
             
-        return jsonified_dict, file_info, onset_options, onset_default, offset_options, offset_default
+        return jsonified_dict, file_info, onset_options, onset_default, offset_options, offset_default, list_of_names
 
 @app.callback(Output('lick-data', 'data'),
               Input('data-store', 'data'),
@@ -766,8 +769,9 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, json
               State('animal-id-input', 'value'),
               State('export-data-checklist', 'value'),
               State('figure-data-store', 'data'),
+              State('filename-store', 'data'),
               prevent_initial_call=True)
-def export_to_excel(n_clicks, animal_id, selected_data, figure_data):
+def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_filename):
     """Export selected data to Excel with multiple sheets"""
     if n_clicks == 0 or not figure_data:
         raise PreventUpdate
@@ -788,6 +792,7 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data):
                 stats = figure_data['summary_stats']
                 summary_df = pd.DataFrame([
                     ['Animal ID', animal_id],
+                    ['Source Filename', source_filename if source_filename else 'N/A'],
                     ['Export Date', datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
                     ['Total Licks', stats.get('total_licks', 'N/A')],
                     ['Intraburst Frequency (Hz)', f"{stats.get('intraburst_freq', 'N/A'):.3f}" if stats.get('intraburst_freq') else 'N/A'],
@@ -873,8 +878,9 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data):
               State('animal-id-input', 'value'),
               State('figure-data-store', 'data'),
               State('results-table-store', 'data'),
+              State('filename-store', 'data'),
               prevent_initial_call=True)
-def add_to_results_table(n_clicks, animal_id, figure_data, existing_data):
+def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source_filename):
     """Add current analysis results to the results table"""
     if n_clicks == 0 or not figure_data or 'summary_stats' not in figure_data:
         raise PreventUpdate
@@ -885,6 +891,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data):
         # Create new row
         new_row = {
             'id': animal_id or 'Unknown',
+            'source_filename': source_filename if source_filename else 'N/A',
             'total_licks': stats.get('total_licks', np.nan),
             'intraburst_freq': stats.get('intraburst_freq', np.nan),
             'n_bursts': stats.get('n_bursts', np.nan),
@@ -929,6 +936,7 @@ def update_results_table(stored_data):
         for i in range(5):  # Add 5 empty placeholder rows
             empty_row = {
                 'id': '',
+                'source_filename': '',
                 'total_licks': None,
                 'intraburst_freq': None,
                 'n_bursts': None,
@@ -957,7 +965,7 @@ def update_results_table(stored_data):
         stats_rows = []
         
         # Mean
-        mean_row = {'id': 'Mean'}
+        mean_row = {'id': 'Mean', 'source_filename': ''}
         for col in numeric_columns:
             if col in df.columns:
                 values = pd.to_numeric(df[col], errors='coerce')
@@ -966,7 +974,7 @@ def update_results_table(stored_data):
         stats_rows.append(mean_row)
         
         # Standard Deviation
-        sd_row = {'id': 'SD'}
+        sd_row = {'id': 'SD', 'source_filename': ''}
         for col in numeric_columns:
             if col in df.columns:
                 values = pd.to_numeric(df[col], errors='coerce')
@@ -975,7 +983,7 @@ def update_results_table(stored_data):
         stats_rows.append(sd_row)
         
         # N (count of non-NaN values)
-        n_row = {'id': 'N'}
+        n_row = {'id': 'N', 'source_filename': ''}
         for col in numeric_columns:
             if col in df.columns:
                 values = pd.to_numeric(df[col], errors='coerce')
@@ -984,7 +992,7 @@ def update_results_table(stored_data):
         stats_rows.append(n_row)
         
         # Standard Error
-        se_row = {'id': 'SE'}
+        se_row = {'id': 'SE', 'source_filename': ''}
         for col in numeric_columns:
             if col in df.columns:
                 values = pd.to_numeric(df[col], errors='coerce')
