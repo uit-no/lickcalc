@@ -258,6 +258,108 @@ app.layout = dbc.Container([
             ], width=3)
         ], style={'margin-bottom': '20px'}),
         
+        # Results Table Section
+        dbc.Row(dbc.Col(html.Hr(), width=12), style={'margin-top': '30px'}),  # Separator line
+        dbc.Row(dbc.Col(html.H2("Results Summary"), width='auto')),
+        
+        dbc.Row(children=[
+            # Add to table button
+            dbc.Col([
+                html.Button(
+                    'Add Current Results to Table', 
+                    id='add-to-table-btn', 
+                    n_clicks=0,
+                    className='btn btn-success',
+                    style={'margin-right': '10px'}
+                ),
+                html.Button(
+                    'Delete Selected Row', 
+                    id='delete-row-btn', 
+                    n_clicks=0,
+                    className='btn btn-danger',
+                    style={'margin-right': '10px'}
+                ),
+                html.Button(
+                    'Export Selected Row', 
+                    id='export-row-btn', 
+                    n_clicks=0,
+                    className='btn btn-info',
+                    style={'margin-right': '10px'}
+                ),
+                html.Button(
+                    'Export Full Table', 
+                    id='export-table-btn', 
+                    n_clicks=0,
+                    className='btn btn-primary'
+                ),
+                dcc.Download(id="download-table"),
+                html.Div(id='table-status', style={'margin-top': '10px'})
+            ], width=12)
+        ], style={'margin-bottom': '20px'}),
+        
+        # Results table
+        dbc.Row(dbc.Col([
+            dash_table.DataTable(
+                id='results-table',
+                columns=[
+                    {'name': 'ID', 'id': 'id', 'type': 'text', 'editable': True},
+                    {'name': 'Total Licks', 'id': 'total_licks', 'type': 'numeric', 'format': {'specifier': '.0f'}},
+                    {'name': 'Intraburst Freq (Hz)', 'id': 'intraburst_freq', 'type': 'numeric', 'format': {'specifier': '.3f'}},
+                    {'name': 'N Bursts', 'id': 'n_bursts', 'type': 'numeric', 'format': {'specifier': '.0f'}},
+                    {'name': 'Mean Licks/Burst', 'id': 'mean_licks_per_burst', 'type': 'numeric', 'format': {'specifier': '.2f'}},
+                    {'name': 'Weibull Alpha', 'id': 'weibull_alpha', 'type': 'numeric', 'format': {'specifier': '.3f'}},
+                    {'name': 'Weibull Beta', 'id': 'weibull_beta', 'type': 'numeric', 'format': {'specifier': '.3f'}},
+                    {'name': 'Weibull R²', 'id': 'weibull_rsq', 'type': 'numeric', 'format': {'specifier': '.3f'}},
+                    {'name': 'N Long Licks', 'id': 'n_long_licks', 'type': 'numeric', 'format': {'specifier': '.0f'}},
+                    {'name': 'Max Lick Duration (s)', 'id': 'max_lick_duration', 'type': 'numeric', 'format': {'specifier': '.4f'}}
+                ],
+                data=[],
+                editable=True,
+                row_selectable='single',
+                selected_rows=[],
+                style_cell={
+                    'textAlign': 'center',
+                    'padding': '10px',
+                    'fontFamily': 'Arial',
+                    'fontSize': '12px'
+                },
+                style_header={
+                    'backgroundColor': 'rgb(230, 230, 230)',
+                    'fontWeight': 'bold'
+                },
+                style_data_conditional=[
+                    {
+                        'if': {'row_index': 'odd'},
+                        'backgroundColor': 'rgb(248, 248, 248)'
+                    },
+                    {
+                        'if': {'filter_query': '{id} contains "Mean"'},
+                        'backgroundColor': '#e6f3ff',
+                        'fontWeight': 'bold'
+                    },
+                    {
+                        'if': {'filter_query': '{id} contains "SD"'},
+                        'backgroundColor': '#ffe6e6',
+                        'fontWeight': 'bold'
+                    },
+                    {
+                        'if': {'filter_query': '{id} contains "SE"'},
+                        'backgroundColor': '#e6ffe6',
+                        'fontWeight': 'bold'
+                    },
+                    {
+                        'if': {'filter_query': '{id} contains "N"'},
+                        'backgroundColor': '#fff2e6',
+                        'fontWeight': 'bold'
+                    }
+                ],
+                style_table={'overflowX': 'auto'}
+            )
+        ], width=12)),
+        
+        # Store for results table data
+        dcc.Store(id='results-table-store', data=[]),
+        
         
 ])])
     
@@ -727,6 +829,254 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data):
         
         status_msg = dbc.Alert(
             f"✅ Successfully exported data for {animal_id} to {filename}",
+            color="success",
+            dismissable=True,
+            duration=4000
+        )
+        
+        return dcc.send_bytes(excel_data, filename), status_msg
+        
+    except Exception as e:
+        error_msg = dbc.Alert(
+            f"❌ Export failed: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=4000
+        )
+        return None, error_msg
+
+# Results table callbacks
+
+# Add current results to table
+@app.callback(Output('results-table-store', 'data'),
+              Output('table-status', 'children'),
+              Input('add-to-table-btn', 'n_clicks'),
+              State('animal-id-input', 'value'),
+              State('figure-data-store', 'data'),
+              State('results-table-store', 'data'),
+              prevent_initial_call=True)
+def add_to_results_table(n_clicks, animal_id, figure_data, existing_data):
+    """Add current analysis results to the results table"""
+    if n_clicks == 0 or not figure_data or 'summary_stats' not in figure_data:
+        raise PreventUpdate
+    
+    try:
+        stats = figure_data['summary_stats']
+        
+        # Create new row
+        new_row = {
+            'id': animal_id or 'Unknown',
+            'total_licks': stats.get('total_licks', np.nan),
+            'intraburst_freq': stats.get('intraburst_freq', np.nan),
+            'n_bursts': stats.get('n_bursts', np.nan),
+            'mean_licks_per_burst': stats.get('mean_licks_per_burst', np.nan),
+            'weibull_alpha': stats.get('weibull_alpha', np.nan),
+            'weibull_beta': stats.get('weibull_beta', np.nan),
+            'weibull_rsq': stats.get('weibull_rsq', np.nan),
+            'n_long_licks': stats.get('n_long_licks', np.nan) if isinstance(stats.get('n_long_licks'), (int, float)) else np.nan,
+            'max_lick_duration': stats.get('max_lick_duration', np.nan) if isinstance(stats.get('max_lick_duration'), (int, float)) else np.nan
+        }
+        
+        # Add to existing data
+        updated_data = existing_data.copy() if existing_data else []
+        updated_data.append(new_row)
+        
+        status_msg = dbc.Alert(
+            f"✅ Added results for {animal_id} to table",
+            color="success",
+            dismissable=True,
+            duration=3000
+        )
+        
+        return updated_data, status_msg
+        
+    except Exception as e:
+        error_msg = dbc.Alert(
+            f"❌ Failed to add results: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=4000
+        )
+        return existing_data, error_msg
+
+# Update table display with statistics
+@app.callback(Output('results-table', 'data'),
+              Input('results-table-store', 'data'))
+def update_results_table(stored_data):
+    """Update the displayed table with stored data plus statistics"""
+    if not stored_data:
+        return []
+    
+    # Create copy of data
+    table_data = stored_data.copy()
+    
+    # Calculate statistics (ignoring NaN values)
+    if len(table_data) > 1:  # Only add stats if there's more than one row
+        numeric_columns = ['total_licks', 'intraburst_freq', 'n_bursts', 'mean_licks_per_burst', 
+                          'weibull_alpha', 'weibull_beta', 'weibull_rsq', 'n_long_licks', 'max_lick_duration']
+        
+        # Convert data to DataFrame for easier calculation
+        df = pd.DataFrame(table_data)
+        
+        # Calculate statistics
+        stats_rows = []
+        
+        # Mean
+        mean_row = {'id': 'Mean'}
+        for col in numeric_columns:
+            if col in df.columns:
+                values = pd.to_numeric(df[col], errors='coerce')
+                mean_val = values.mean()
+                mean_row[col] = mean_val if not pd.isna(mean_val) else np.nan
+        stats_rows.append(mean_row)
+        
+        # Standard Deviation
+        sd_row = {'id': 'SD'}
+        for col in numeric_columns:
+            if col in df.columns:
+                values = pd.to_numeric(df[col], errors='coerce')
+                sd_val = values.std()
+                sd_row[col] = sd_val if not pd.isna(sd_val) else np.nan
+        stats_rows.append(sd_row)
+        
+        # N (count of non-NaN values)
+        n_row = {'id': 'N'}
+        for col in numeric_columns:
+            if col in df.columns:
+                values = pd.to_numeric(df[col], errors='coerce')
+                n_val = values.count()
+                n_row[col] = n_val
+        stats_rows.append(n_row)
+        
+        # Standard Error
+        se_row = {'id': 'SE'}
+        for col in numeric_columns:
+            if col in df.columns:
+                values = pd.to_numeric(df[col], errors='coerce')
+                sd_val = values.std()
+                n_val = values.count()
+                se_val = sd_val / np.sqrt(n_val) if n_val > 0 and not pd.isna(sd_val) else np.nan
+                se_row[col] = se_val if not pd.isna(se_val) else np.nan
+        stats_rows.append(se_row)
+        
+        # Add separator and stats
+        table_data.extend(stats_rows)
+    
+    return table_data
+
+# Delete selected row
+@app.callback(Output('results-table-store', 'data', allow_duplicate=True),
+              Output('table-status', 'children', allow_duplicate=True),
+              Input('delete-row-btn', 'n_clicks'),
+              State('results-table', 'selected_rows'),
+              State('results-table-store', 'data'),
+              prevent_initial_call=True)
+def delete_selected_row(n_clicks, selected_rows, stored_data):
+    """Delete selected row from the results table"""
+    if n_clicks == 0 or not selected_rows or not stored_data:
+        raise PreventUpdate
+    
+    try:
+        selected_idx = selected_rows[0]
+        
+        # Don't allow deletion of statistics rows
+        if selected_idx >= len(stored_data):
+            error_msg = dbc.Alert(
+                "❌ Cannot delete statistics rows",
+                color="warning",
+                dismissable=True,
+                duration=3000
+            )
+            return stored_data, error_msg
+        
+        # Remove the selected row
+        updated_data = stored_data.copy()
+        deleted_id = updated_data[selected_idx].get('id', 'Unknown')
+        del updated_data[selected_idx]
+        
+        status_msg = dbc.Alert(
+            f"✅ Deleted row for {deleted_id}",
+            color="info",
+            dismissable=True,
+            duration=3000
+        )
+        
+        return updated_data, status_msg
+        
+    except Exception as e:
+        error_msg = dbc.Alert(
+            f"❌ Failed to delete row: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=4000
+        )
+        return stored_data, error_msg
+
+# Export selected row
+@app.callback(Output("download-table", "data"),
+              Output('table-status', 'children', allow_duplicate=True),
+              Input('export-row-btn', 'n_clicks'),
+              Input('export-table-btn', 'n_clicks'),
+              State('results-table', 'selected_rows'),
+              State('results-table-store', 'data'),
+              prevent_initial_call=True)
+def export_table_data(export_row_clicks, export_table_clicks, selected_rows, stored_data):
+    """Export selected row or full table to Excel"""
+    ctx = dash.callback_context
+    if not ctx.triggered or not stored_data:
+        raise PreventUpdate
+    
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    
+    try:
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        if button_id == 'export-row-btn':
+            if not selected_rows:
+                error_msg = dbc.Alert(
+                    "❌ Please select a row to export",
+                    color="warning",
+                    dismissable=True,
+                    duration=3000
+                )
+                return None, error_msg
+            
+            selected_idx = selected_rows[0]
+            if selected_idx >= len(stored_data):
+                error_msg = dbc.Alert(
+                    "❌ Cannot export statistics rows individually",
+                    color="warning",
+                    dismissable=True,
+                    duration=3000
+                )
+                return None, error_msg
+            
+            # Export single row
+            export_data = [stored_data[selected_idx]]
+            row_id = export_data[0].get('id', 'Unknown')
+            filename = f"LickCalc_SingleRow_{row_id}_{timestamp}.xlsx"
+            success_msg = f"✅ Exported row for {row_id}"
+            
+        else:  # export-table-btn
+            # Export full table
+            export_data = stored_data.copy()
+            filename = f"LickCalc_ResultsTable_{timestamp}.xlsx"
+            success_msg = f"✅ Exported full table ({len(stored_data)} rows)"
+        
+        # Create Excel file
+        df = pd.DataFrame(export_data)
+        
+        # Create a BytesIO buffer
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Results', index=False)
+        
+        output.seek(0)
+        excel_data = output.getvalue()
+        
+        status_msg = dbc.Alert(
+            success_msg,
             color="success",
             dismissable=True,
             duration=4000
