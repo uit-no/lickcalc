@@ -3,7 +3,6 @@ import datetime
 import io
 import string
 import json
-import csv
 
 import dash
 from dash import dcc, html, dash_table, Input, Output, State
@@ -33,12 +32,12 @@ table_cells, table_tooltips = get_table_tooltips()
 app.layout = dbc.Container([
     dcc.Store(id='lick-data'),
     dcc.Store(id='data-store'),
+    dcc.Store(id='figure-data-store'),  # Store for figure underlying data
     html.Div(
     [
         dbc.Row(children=[
             
             dbc.Col(html.H1("LickCalc GUI"), width='auto'),
-            dbc.Col([html.Button('Output file', id='btn', n_clicks=0), dcc.Download(id="download")])
                     ]),
         dbc.Row(
             dbc.Col(html.Div(
@@ -207,6 +206,57 @@ app.layout = dbc.Container([
             ], width=4),
             
             ]),
+        
+        # Data Output Section
+        dbc.Row(dbc.Col(html.Hr(), width=12), style={'margin-top': '30px'}),  # Separator line
+        dbc.Row(dbc.Col(html.H2("Data Output"), width='auto')),
+        
+        dbc.Row(children=[
+            # Animal ID input
+            dbc.Col([
+                html.Label("Animal ID:", style={'font-weight': 'bold'}),
+                dcc.Input(
+                    id='animal-id-input',
+                    type='text',
+                    value=config.get('output.default_animal_id', 'ID1'),
+                    placeholder='Enter animal ID...',
+                    style={'width': '100%', 'margin-top': '5px'}
+                )
+            ], width=2),
+            
+            # Data selection checkboxes
+            dbc.Col([
+                html.Label("Include in Excel Export:", style={'font-weight': 'bold'}),
+                dbc.Checklist(
+                    id='export-data-checklist',
+                    options=[
+                        {'label': 'Session Histogram Data', 'value': 'session_hist'},
+                        {'label': 'Intraburst Frequency Data', 'value': 'intraburst_freq'},
+                        {'label': 'Lick Lengths Data', 'value': 'lick_lengths'},
+                        {'label': 'Burst Histogram Data', 'value': 'burst_hist'},
+                        {'label': 'Burst Probability Data', 'value': 'burst_prob'}
+                    ],
+                    value=['session_hist', 'intraburst_freq'],  # Default selections
+                    inline=False,
+                    style={'margin-top': '5px'}
+                )
+            ], width=4),
+            
+            # Output controls
+            dbc.Col([
+                html.Label("Export Options:", style={'font-weight': 'bold'}),
+                html.Br(),
+                html.Button(
+                    'Export Data to Excel', 
+                    id='export-btn', 
+                    n_clicks=0,
+                    className='btn btn-primary',
+                    style={'margin-top': '10px', 'margin-right': '10px'}
+                ),
+                dcc.Download(id="download-excel"),
+                html.Div(id='export-status', style={'margin-top': '10px'})
+            ], width=3)
+        ], style={'margin-bottom': '20px'}),
         
         
 ])])
@@ -465,27 +515,225 @@ def make_burstprob_graph(jsonified_df, ibi, minlicks):
 
         return fig , bNum, bMean, alpha, beta, rsq
 
-@app.callback(Output("download", "data"),
-              Input('btn', 'n_clicks'))
-def save_file(n):
-
+# Data collection callback to store figure data for export
+@app.callback(Output('figure-data-store', 'data'),
+              Input('lick-data', 'data'),
+              Input('session-bin-slider', 'value'),
+              Input('interburst-slider', 'value'),
+              Input('minlicks-slider', 'value'),
+              Input('longlick-threshold', 'value'),
+              State('data-store', 'data'),
+              State('offset-array', 'value'))
+def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, jsonified_dict, offset_key):
+    """Collect underlying data from all figures for export"""
+    if jsonified_df is None:
+        raise PreventUpdate
     
-    d = [('Filename',"hey there")]
-    #              ('Total licks',self.lickdata['total']),
-    #              ('Frequency',self.lickdata['freq']),
-    #              ('Number of bursts',self.lickdata['bNum']),
-    #              ('Licks per burst',self.lickdata['bMean']),
-    #              ('Licks per burst (first 3)',self.lickdata['bMean-first3']),
-    #              ('Number of long licks',len(self.lickdata['longlicks'])),
-    #              ('Weibull: alpha',self.lickdata['weib_alpha']),
-    #              ('Weibull: beta',self.lickdata['weib_beta']),
-    #              ('Weibull: rsquared',self.lickdata['weib_rsq'])]
-    # print(n)
-    with open(".\\output.csv", 'w', newline='') as file:
-        csv_out = csv.writer(file)
-        csv_out.writerow(['Parameter', 'Value'])
-        for row in d:
-            csv_out.writerow(row)
+    figure_data = {}
+    
+    try:
+        df = pd.read_json(io.StringIO(jsonified_df), orient='split')
+        lick_times = df["licks"].to_list()
+        
+        # Session histogram data
+        lastlick = max(lick_times)
+        hist_counts, hist_edges = np.histogram(lick_times, bins=int(lastlick/bin_size), range=(0, lastlick))
+        hist_centers = (hist_edges[:-1] + hist_edges[1:]) / 2
+        figure_data['session_hist'] = {
+            'bin_centers': hist_centers.tolist(),
+            'counts': hist_counts.tolist(),
+            'bin_size_seconds': bin_size
+        }
+        
+        # Intraburst frequency data (ILIs)
+        lickdata = lickCalc(lick_times)
+        ilis = lickdata["ilis"]
+        ili_counts, ili_edges = np.histogram(ilis, bins=50, range=(0, 0.5))
+        ili_centers = (ili_edges[:-1] + ili_edges[1:]) / 2
+        figure_data['intraburst_freq'] = {
+            'ili_centers': ili_centers.tolist(),
+            'counts': ili_counts.tolist(),
+            'raw_ilis': ilis
+        }
+        
+        # Lick lengths data (if offset data available)
+        if offset_key and offset_key != 'none' and jsonified_dict:
+            try:
+                data_array = json.loads(jsonified_dict)
+                offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                offset_times = offset_df["licks"].to_list()
+                
+                # Adjust arrays if needed
+                onset_times = lick_times.copy()
+                if len(onset_times) - len(offset_times) == 1:
+                    onset_times = onset_times[:-1]
+                elif len(onset_times) != len(offset_times):
+                    onset_times = onset_times[:len(offset_times)]
+                    
+                if len(onset_times) == len(offset_times):
+                    lickdata_with_offset = lickCalc(onset_times, offset=offset_times, longlickThreshold=longlick_th)
+                    licklength = lickdata_with_offset["licklength"]
+                    
+                    ll_counts, ll_edges = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
+                    ll_centers = (ll_edges[:-1] + ll_edges[1:]) / 2
+                    figure_data['lick_lengths'] = {
+                        'duration_centers': ll_centers.tolist(),
+                        'counts': ll_counts.tolist(),
+                        'raw_durations': licklength,
+                        'threshold': longlick_th
+                    }
+            except Exception as e:
+                print(f"Error processing lick lengths: {e}")
+                figure_data['lick_lengths'] = None
+        else:
+            figure_data['lick_lengths'] = None
+        
+        # Burst data
+        burst_lickdata = lickCalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+        bursts = burst_lickdata['bLicks']
+        
+        # Burst histogram data
+        burst_counts, burst_edges = np.histogram(bursts, bins=int(np.max(bursts)), range=(1, max(bursts)))
+        burst_centers = (burst_edges[:-1] + burst_edges[1:]) / 2
+        figure_data['burst_hist'] = {
+            'burst_sizes': burst_centers.tolist(),
+            'counts': burst_counts.tolist(),
+            'raw_burst_sizes': bursts
+        }
+        
+        # Burst probability data
+        x_prob, y_prob = burst_lickdata['burstprob']
+        figure_data['burst_prob'] = {
+            'burst_sizes': x_prob,
+            'probabilities': y_prob
+        }
+        
+        # Summary statistics
+        figure_data['summary_stats'] = {
+            'total_licks': burst_lickdata['total'],
+            'intraburst_freq': burst_lickdata['freq'],
+            'n_bursts': burst_lickdata['bNum'],
+            'mean_licks_per_burst': burst_lickdata['bMean'],
+            'weibull_alpha': burst_lickdata['weib_alpha'],
+            'weibull_beta': burst_lickdata['weib_beta'],
+            'weibull_rsq': burst_lickdata['weib_rsq']
+        }
+        
+        # Add long lick stats if available
+        if figure_data['lick_lengths']:
+            figure_data['summary_stats']['n_long_licks'] = len(lickdata_with_offset["longlicks"])
+            figure_data['summary_stats']['max_lick_duration'] = np.max(licklength)
+        
+    except Exception as e:
+        print(f"Error collecting figure data: {e}")
+        figure_data = {}
+    
+    return figure_data
+
+# Excel export callback
+@app.callback(Output("download-excel", "data"),
+              Output("export-status", "children"),
+              Input('export-btn', 'n_clicks'),
+              State('animal-id-input', 'value'),
+              State('export-data-checklist', 'value'),
+              State('figure-data-store', 'data'),
+              prevent_initial_call=True)
+def export_to_excel(n_clicks, animal_id, selected_data, figure_data):
+    """Export selected data to Excel with multiple sheets"""
+    if n_clicks == 0 or not figure_data:
+        raise PreventUpdate
+    
+    try:
+        # Create Excel writer object
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"LickCalc_Export_{animal_id}_{timestamp}.xlsx"
+        
+        # Create a BytesIO buffer
+        import io
+        output = io.BytesIO()
+        
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Main summary sheet
+            if 'summary_stats' in figure_data:
+                stats = figure_data['summary_stats']
+                summary_df = pd.DataFrame([
+                    ['Animal ID', animal_id],
+                    ['Export Date', datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+                    ['Total Licks', stats.get('total_licks', 'N/A')],
+                    ['Intraburst Frequency (Hz)', f"{stats.get('intraburst_freq', 'N/A'):.3f}" if stats.get('intraburst_freq') else 'N/A'],
+                    ['Number of Bursts', stats.get('n_bursts', 'N/A')],
+                    ['Mean Licks per Burst', f"{stats.get('mean_licks_per_burst', 'N/A'):.2f}" if stats.get('mean_licks_per_burst') else 'N/A'],
+                    ['Weibull Alpha', f"{stats.get('weibull_alpha', 'N/A'):.3f}" if stats.get('weibull_alpha') else 'N/A'],
+                    ['Weibull Beta', f"{stats.get('weibull_beta', 'N/A'):.3f}" if stats.get('weibull_beta') else 'N/A'],
+                    ['Weibull R-squared', f"{stats.get('weibull_rsq', 'N/A'):.3f}" if stats.get('weibull_rsq') else 'N/A'],
+                    ['Number of Long Licks', stats.get('n_long_licks', 'N/A')],
+                    ['Maximum Lick Duration (s)', f"{stats.get('max_lick_duration', 'N/A'):.4f}" if stats.get('max_lick_duration') else 'N/A']
+                ], columns=['Property', 'Value'])
+                summary_df.to_excel(writer, sheet_name='Summary', index=False)
+            
+            # Export selected figure data
+            if 'session_hist' in selected_data and 'session_hist' in figure_data:
+                data = figure_data['session_hist']
+                df = pd.DataFrame({
+                    'Time_Bin_Center_s': data['bin_centers'],
+                    'Lick_Count': data['counts']
+                })
+                df.to_excel(writer, sheet_name='Session_Histogram', index=False)
+            
+            if 'intraburst_freq' in selected_data and 'intraburst_freq' in figure_data:
+                data = figure_data['intraburst_freq']
+                df = pd.DataFrame({
+                    'ILI_Bin_Center_s': data['ili_centers'],
+                    'Frequency': data['counts']
+                })
+                df.to_excel(writer, sheet_name='Intraburst_Frequency', index=False)
+            
+            if 'lick_lengths' in selected_data and figure_data.get('lick_lengths'):
+                data = figure_data['lick_lengths']
+                df = pd.DataFrame({
+                    'Duration_Bin_Center_s': data['duration_centers'],
+                    'Frequency': data['counts']
+                })
+                df.to_excel(writer, sheet_name='Lick_Lengths', index=False)
+            
+            if 'burst_hist' in selected_data and 'burst_hist' in figure_data:
+                data = figure_data['burst_hist']
+                df = pd.DataFrame({
+                    'Burst_Size': data['burst_sizes'],
+                    'Frequency': data['counts']
+                })
+                df.to_excel(writer, sheet_name='Burst_Histogram', index=False)
+            
+            if 'burst_prob' in selected_data and 'burst_prob' in figure_data:
+                data = figure_data['burst_prob']
+                df = pd.DataFrame({
+                    'Burst_Size': data['burst_sizes'],
+                    'Probability': data['probabilities']
+                })
+                df.to_excel(writer, sheet_name='Burst_Probability', index=False)
+        
+        # Get the value from the buffer
+        output.seek(0)
+        excel_data = output.getvalue()
+        
+        status_msg = dbc.Alert(
+            f"✅ Successfully exported data for {animal_id} to {filename}",
+            color="success",
+            dismissable=True,
+            duration=4000
+        )
+        
+        return dcc.send_bytes(excel_data, filename), status_msg
+        
+    except Exception as e:
+        error_msg = dbc.Alert(
+            f"❌ Export failed: {str(e)}",
+            color="danger",
+            dismissable=True,
+            duration=4000
+        )
+        return None, error_msg
 
 if __name__ == '__main__':
     app.run(debug=app_config['debug'], dev_tools_hot_reload=app_config['hot_reload'])

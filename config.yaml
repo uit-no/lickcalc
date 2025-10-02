@@ -35,6 +35,11 @@ ui:
   # Hot reload for development
   hot_reload: true
 
+# Output configuration
+output:
+  # Default animal ID
+  default_animal_id: 'ID1'
+
 # Analysis parameters (advanced)
 analysis:
   # Maximum histogram bins for session analysis
