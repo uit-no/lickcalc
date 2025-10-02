@@ -556,37 +556,8 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, json
             'raw_ilis': ilis
         }
         
-        # Lick lengths data (if offset data available)
-        if offset_key and offset_key != 'none' and jsonified_dict:
-            try:
-                data_array = json.loads(jsonified_dict)
-                offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
-                offset_times = offset_df["licks"].to_list()
-                
-                # Adjust arrays if needed
-                onset_times = lick_times.copy()
-                if len(onset_times) - len(offset_times) == 1:
-                    onset_times = onset_times[:-1]
-                elif len(onset_times) != len(offset_times):
-                    onset_times = onset_times[:len(offset_times)]
-                    
-                if len(onset_times) == len(offset_times):
-                    lickdata_with_offset = lickCalc(onset_times, offset=offset_times, longlickThreshold=longlick_th)
-                    licklength = lickdata_with_offset["licklength"]
-                    
-                    ll_counts, ll_edges = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
-                    ll_centers = (ll_edges[:-1] + ll_edges[1:]) / 2
-                    figure_data['lick_lengths'] = {
-                        'duration_centers': ll_centers.tolist(),
-                        'counts': ll_counts.tolist(),
-                        'raw_durations': licklength,
-                        'threshold': longlick_th
-                    }
-            except Exception as e:
-                print(f"Error processing lick lengths: {e}")
-                figure_data['lick_lengths'] = None
-        else:
-            figure_data['lick_lengths'] = None
+        # Initialize lick lengths data as None
+        figure_data['lick_lengths'] = None
         
         # Burst data
         burst_lickdata = lickCalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
@@ -616,13 +587,50 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, json
             'mean_licks_per_burst': burst_lickdata['bMean'],
             'weibull_alpha': burst_lickdata['weib_alpha'],
             'weibull_beta': burst_lickdata['weib_beta'],
-            'weibull_rsq': burst_lickdata['weib_rsq']
+            'weibull_rsq': burst_lickdata['weib_rsq'],
+            'n_long_licks': 'N/A (requires offset data)',
+            'max_lick_duration': 'N/A (requires offset data)'
         }
         
-        # Add long lick stats if available
-        if figure_data['lick_lengths']:
-            figure_data['summary_stats']['n_long_licks'] = len(lickdata_with_offset["longlicks"])
-            figure_data['summary_stats']['max_lick_duration'] = np.max(licklength)
+        # Process offset data if available for lick lengths and long lick statistics
+        if offset_key and offset_key != 'none' and jsonified_dict:
+            try:
+                data_array = json.loads(jsonified_dict)
+                offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                offset_times = offset_df["licks"].to_list()
+                
+                # Adjust arrays if needed
+                onset_times = lick_times.copy()
+                if len(onset_times) - len(offset_times) == 1:
+                    onset_times = onset_times[:-1]
+                elif len(onset_times) != len(offset_times):
+                    onset_times = onset_times[:len(offset_times)]
+                    
+                if len(onset_times) == len(offset_times):
+                    lickdata_with_offset = lickCalc(onset_times, offset=offset_times, longlickThreshold=longlick_th)
+                    licklength = lickdata_with_offset["licklength"]
+                    
+                    # Create lick lengths histogram data
+                    ll_counts, ll_edges = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
+                    ll_centers = (ll_edges[:-1] + ll_edges[1:]) / 2
+                    figure_data['lick_lengths'] = {
+                        'duration_centers': ll_centers.tolist(),
+                        'counts': ll_counts.tolist(),
+                        'raw_durations': licklength,
+                        'threshold': longlick_th
+                    }
+                    
+                    # Update long lick statistics in summary
+                    figure_data['summary_stats']['n_long_licks'] = len(lickdata_with_offset["longlicks"])
+                    figure_data['summary_stats']['max_lick_duration'] = np.max(licklength)
+                    
+                    print(f"DEBUG: Calculated n_long_licks = {figure_data['summary_stats']['n_long_licks']}")
+                    print(f"DEBUG: Calculated max_lick_duration = {figure_data['summary_stats']['max_lick_duration']}")
+                    
+            except Exception as e:
+                print(f"Error processing offset data: {e}")
+                figure_data['summary_stats']['n_long_licks'] = 'N/A (error)'
+                figure_data['summary_stats']['max_lick_duration'] = 'N/A (error)'
         
     except Exception as e:
         print(f"Error collecting figure data: {e}")
@@ -668,7 +676,7 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data):
                     ['Weibull Beta', f"{stats.get('weibull_beta', 'N/A'):.3f}" if stats.get('weibull_beta') else 'N/A'],
                     ['Weibull R-squared', f"{stats.get('weibull_rsq', 'N/A'):.3f}" if stats.get('weibull_rsq') else 'N/A'],
                     ['Number of Long Licks', stats.get('n_long_licks', 'N/A')],
-                    ['Maximum Lick Duration (s)', f"{stats.get('max_lick_duration', 'N/A'):.4f}" if stats.get('max_lick_duration') else 'N/A']
+                    ['Maximum Lick Duration (s)', f"{stats.get('max_lick_duration', 'N/A'):.4f}" if isinstance(stats.get('max_lick_duration'), (int, float)) else stats.get('max_lick_duration', 'N/A')]
                 ], columns=['Property', 'Value'])
                 summary_df.to_excel(writer, sheet_name='Summary', index=False)
             
