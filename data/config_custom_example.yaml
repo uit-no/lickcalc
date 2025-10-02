@@ -1,0 +1,58 @@
+# LickCalc Custom Configuration Example
+# This file shows how to customize default values for different research scenarios
+
+# Session analysis defaults
+session:
+  # Default bin size for session histogram (seconds)
+  # For longer sessions, you might want larger bins
+  bin_size: 60  # Changed from 30 to 60 seconds
+  # Default figure type ('hist' or 'cumul')
+  fig_type: 'cumul'  # Changed to cumulative by default
+
+# Microstructural analysis defaults
+microstructure:
+  # Inter-burst interval threshold (seconds)
+  # For different species or experimental conditions, adjust this threshold
+  interburst_interval: 1.0  # Changed from 0.5 to 1.0 seconds
+  
+  # Minimum licks per burst (integer)
+  # Some protocols require different minimum burst sizes
+  min_licks_per_burst: 3  # Changed from 1 to 3 licks
+  
+  # Long lick threshold (seconds)
+  # Adjust based on your definition of "long licks"
+  long_lick_threshold: 0.5  # Changed from 0.3 to 0.5 seconds
+
+# File processing defaults
+files:
+  # Default file type for dropdown ('med', 'csv', 'dd')
+  # Change if you primarily use a different file format
+  default_file_type: 'csv'  # Changed from 'med' to 'csv'
+
+# UI Configuration
+ui:
+  # Default window title
+  title: 'LickCalc - Custom Research Lab'  # Customized title
+  
+  # Debug mode for development
+  debug: false  # Changed to false for production use
+  
+  # Hot reload for development
+  hot_reload: false  # Changed to false for production use
+
+# Analysis parameters (advanced)
+analysis:
+  # Session bin slider configuration
+  max_session_bins: 600  # Changed from 300 to 600 for longer sessions
+  min_session_bins: 10   # Changed from 5 to 10
+  session_bin_step: 10   # Changed from 5 to 10 second steps
+  
+  # Inter-burst interval slider configuration
+  max_interburst_interval: 5.0  # Changed from 3.0 to 5.0 seconds
+  min_interburst_interval: 0.1  # Changed from 0.0 to 0.1
+  interburst_step: 0.1          # Changed from 0.25 to 0.1 for finer control
+  
+  # Long lick threshold slider configuration
+  max_long_lick_threshold: 2.0  # Changed from 1.0 to 2.0 seconds
+  min_long_lick_threshold: 0.2  # Changed from 0.1 to 0.2
+  long_lick_step: 0.05          # Changed from 0.1 to 0.05 for finer control

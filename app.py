@@ -19,17 +19,13 @@ import numpy as np
 from helperfx import parse_medfile, parse_csvfile, parse_ddfile, lickCalc
 from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip, 
                      get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip)
-
-# template_df = pd.DataFrame(data=None, columns=["Property", "Value"])
-
-# external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-# app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-# app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+from config_manager import config
 
 # app = dash.Dash(__name__, external_stylesheets=[dbc.themes.GRID])
 
-app = dash.Dash(__name__, title='LickCalc', prevent_initial_callbacks=True)
+# Get app configuration
+app_config = config.get_app_config()
+app = dash.Dash(__name__, title=app_config['title'], prevent_initial_callbacks=True)
 
 # Get table cells and tooltips
 table_cells, table_tooltips = get_table_tooltips()
@@ -64,7 +60,7 @@ app.layout = dbc.Container([
                                   {'label': 'Med Associates', 'value': 'med'},
                                   {'label': 'CSV/TXT', 'value': 'csv'},
                                   {'label': 'DD Lab', 'value': 'dd'}],
-                              value='med'),
+                              value=config.get('files.default_file_type', 'med')),
             ], width=2),
             dbc.Col([
                 html.Div(id='fileloadLbl', children="No file loaded yet"),
@@ -128,18 +124,14 @@ app.layout = dbc.Container([
                     options=[
                         {"label": "Standard histogram", "value": "hist"},
                         {"label": "Cumulative plot", "value": "cumul"}],
-                    value="hist")
+                    value=config.get('session.fig_type', 'hist'))
                 ),
             dbc.Col(get_binsize_tooltip()[0], width=2),
             get_binsize_tooltip()[1],
             dbc.Col(
                 dcc.Slider(
                     id='session-bin-slider',
-                    min=5,
-                    max=300,
-                    step=5,
-                    marks={i: str(i) for i in [10, 30, 60, 120, 300]},
-                    value=30),
+                    **config.get_slider_config('session_bin')),
                 width=7),
             ]),
         dbc.Row(dbc.Col(html.H2("Microstructural analysis"), width='auto')),
@@ -150,31 +142,20 @@ app.layout = dbc.Container([
                 get_ibi_tooltip()[0],
                 get_ibi_tooltip()[1],
                 dcc.Slider(id='interburst-slider',              
-                    min=0,
-                    max=3,
-                    step=0.25,
-                    marks={i: str(i) for i in [0.5, 1, 1.5, 2, 2.5, 3]},
-                    value=0.5)
+                    **config.get_slider_config('interburst'))
             ], width=4),
             dbc.Col([
                 get_minlicks_tooltip()[0],
                 get_minlicks_tooltip()[1],
                 dcc.Slider(id='minlicks-slider',
-                           min=1, max=5,
-                           step=1,
-                            marks={i: str(i) for i in [1, 2, 3, 4, 5]},
-                                  value=1)
+                          **config.get_slider_config('minlicks'))
             ], width=4),
             dbc.Col([
                 get_longlick_tooltip()[0],
                 get_longlick_tooltip()[1],
                 dcc.Slider(
                     id='longlick-threshold',
-                    min=0.1,
-                    max=1.0,
-                    step=0.1,
-                    marks={i: str(i) for i in [0.2, 0.4, 0.6, 0.8, 1.0]},
-                    value=0.3)
+                    **config.get_slider_config('longlick'))
             ], width=4),
         ], style={'margin-bottom': '20px'}),
         
@@ -398,8 +379,6 @@ def make_longlicks_graph(offset_key, longlick_th, jsonified_dict, jsonified_df):
         
         lickdata = lickCalc(onset, offset=offset, longlickThreshold=longlick_th)
         licklength = lickdata["licklength"]
-
-        max_longlick = np.max(licklength)
         
         counts, bins = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
         bins = 0.5 * (bins[:-1] + bins[1:])
@@ -509,7 +488,7 @@ def save_file(n):
             csv_out.writerow(row)
 
 if __name__ == '__main__':
-    app.run(debug=True, dev_tools_hot_reload=True)
+    app.run(debug=app_config['debug'], dev_tools_hot_reload=app_config['hot_reload'])
     
 """
 TO DO:

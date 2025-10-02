@@ -1,0 +1,65 @@
+# LickCalc Default Configuration
+# This file contains default values for sliders and other configurable parameters
+
+# Session analysis defaults
+session:
+  # Default bin size for session histogram (seconds)
+  bin_size: 30
+  # Default figure type ('hist' or 'cumul')
+  fig_type: 'hist'
+
+# Microstructural analysis defaults
+microstructure:
+  # Inter-burst interval threshold (seconds)
+  interburst_interval: 0.5
+  
+  # Minimum licks per burst (integer)
+  min_licks_per_burst: 1
+  
+  # Long lick threshold (seconds)
+  long_lick_threshold: 0.3
+
+# File processing defaults
+files:
+  # Default file type for dropdown ('med', 'csv', 'dd')
+  default_file_type: 'med'
+
+# UI Configuration
+ui:
+  # Default window title
+  title: 'LickCalc'
+  
+  # Debug mode for development
+  debug: true
+  
+  # Hot reload for development
+  hot_reload: true
+
+# Analysis parameters (advanced)
+analysis:
+  # Maximum histogram bins for session analysis
+  max_session_bins: 300
+  
+  # Minimum histogram bins for session analysis
+  min_session_bins: 5
+  
+  # Step size for session bin slider
+  session_bin_step: 5
+  
+  # Maximum inter-burst interval (seconds)
+  max_interburst_interval: 3.0
+  
+  # Minimum inter-burst interval (seconds)
+  min_interburst_interval: 0.0
+  
+  # Inter-burst interval step size
+  interburst_step: 0.25
+  
+  # Maximum long lick threshold (seconds)
+  max_long_lick_threshold: 1.0
+  
+  # Minimum long lick threshold (seconds)
+  min_long_lick_threshold: 0.1
+  
+  # Long lick threshold step size
+  long_lick_step: 0.1
