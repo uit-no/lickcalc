@@ -39,6 +39,21 @@ app.layout = dbc.Container([
         dbc.Row(children=[
             
             dbc.Col(html.H1("LickCalc GUI"), width='auto'),
+            dbc.Col([
+                html.A(
+                    "📖 Help", 
+                    href="/help", 
+                    target="_blank",
+                    className="btn btn-info btn-sm",
+                    style={
+                        "position": "absolute", 
+                        "top": "20px", 
+                        "right": "20px",
+                        "z-index": "1000",
+                        "text-decoration": "none"
+                    }
+                )
+            ], width='auto', style={"position": "relative"}),
                     ]),
         dbc.Row(
             dbc.Col(html.Div(
@@ -383,6 +398,13 @@ app.layout = dbc.Container([
         
         
 ])])
+
+# Flask route to serve help file
+@app.server.route('/help')
+def serve_help():
+    """Serve the help documentation page"""
+    from flask import send_from_directory
+    return send_from_directory('assets', 'help.html')
     
 @app.callback(Output('data-store', 'data'),
               Output('fileloadLbl', 'children'),

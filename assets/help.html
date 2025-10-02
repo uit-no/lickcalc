@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LickCalc GUI - Help Documentation</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS to match your app -->
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .help-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .help-header {
+            background: linear-gradient(135deg, #007bff, #17a2b8);
+            color: white;
+            padding: 40px 0;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+        .section-header {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        .parameter-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .tip-box {
+            background-color: #d1edff;
+            border-left: 4px solid #0dcaf0;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .toc {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .toc li {
+            margin: 8px 0;
+        }
+        .toc a {
+            text-decoration: none;
+            color: #007bff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .toc a:hover {
+            background-color: #e3f2fd;
+            color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="help-container">
+        <!-- Header -->
+        <div class="help-header text-center">
+            <h1 class="display-4">LickCalc GUI Help</h1>
+            <p class="lead">Comprehensive guide for analyzing licking microstructure in rodent behavior experiments</p>
+        </div>
+
+        <!-- Table of Contents -->
+        <div class="toc">
+            <h3 class="text-center mb-3">📋 Table of Contents</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul>
+                        <li><a href="#overview">📖 Overview</a></li>
+                        <li><a href="#getting-started">🚀 Getting Started</a></li>
+                        <li><a href="#file-formats">📁 Supported File Formats</a></li>
+                        <li><a href="#session-analysis">📊 Session Analysis</a></li>
+                        <li><a href="#microstructural">🔬 Microstructural Analysis</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul>
+                        <li><a href="#parameters">⚙️ Parameters Explained</a></li>
+                        <li><a href="#data-export">💾 Data Export</a></li>
+                        <li><a href="#results-table">📋 Results Management</a></li>
+                        <li><a href="#troubleshooting">🔧 Troubleshooting</a></li>
+                        <li><a href="#glossary">📚 Glossary</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overview Section -->
+        <section id="overview">
+            <h2 class="section-header">📖 Overview</h2>
+            <div class="card">
+                <div class="card-body">
+                    <p>LickCalc GUI is a web-based application for analyzing licking microstructure in rodent behavioral experiments. It processes timestamp data from licking events and provides detailed statistical analysis including:</p>
+                    <ul>
+                        <li><strong>Session-level analysis:</strong> Overall licking patterns over time</li>
+                        <li><strong>Microstructural analysis:</strong> Burst patterns, intraburst frequency, and lick durations</li>
+                        <li><strong>Statistical modeling:</strong> Weibull distribution fitting for burst probability</li>
+                        <li><strong>Data export:</strong> Excel exports with customizable data selection</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Getting Started Section -->
+        <section id="getting-started">
+            <h2 class="section-header">🚀 Getting Started</h2>
+            <div class="accordion" id="gettingStartedAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#step1">
+                            Step 1: Select File Type
+                        </button>
+                    </h2>
+                    <div id="step1" class="accordion-collapse collapse show" data-bs-parent="#gettingStartedAccordion">
+                        <div class="accordion-body">
+                            <p>Choose your data file format from the dropdown:</p>
+                            <ul>
+                                <li><strong>Med Associates:</strong> For .txt files from Med-PC systems</li>
+                                <li><strong>CSV/TXT:</strong> For comma-separated or tab-separated files</li>
+                                <li><strong>DD Lab:</strong> For DD Lab specific format files</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step2">
+                            Step 2: Upload Your Data
+                        </button>
+                    </h2>
+                    <div id="step2" class="accordion-collapse collapse" data-bs-parent="#gettingStartedAccordion">
+                        <div class="accordion-body">
+                            <p>Upload your data file by either:</p>
+                            <ul>
+                                <li>Dragging and dropping the file onto the upload area</li>
+                                <li>Clicking "Select Files" to browse for your file</li>
+                            </ul>
+                            <div class="tip-box">
+                                <strong>💡 Tip:</strong> The app will automatically detect columns in your file and populate the onset/offset dropdowns.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step3">
+                            Step 3: Configure Data Columns
+                        </button>
+                    </h2>
+                    <div id="step3" class="accordion-collapse collapse" data-bs-parent="#gettingStartedAccordion">
+                        <div class="accordion-body">
+                            <p>Select which columns contain your data:</p>
+                            <ul>
+                                <li><strong>Onset Array:</strong> Column containing lick onset timestamps (required)</li>
+                                <li><strong>Offset Array:</strong> Column containing lick offset timestamps (optional, for lick duration analysis)</li>
+                            </ul>
+                            <div class="warning-box">
+                                <strong>⚠️ Note:</strong> If you only have onset data, select "None" for the offset array. This will disable lick duration analysis but all other features will work normally.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step4">
+                            Step 4: Analyze and Export
+                        </button>
+                    </h2>
+                    <div id="step4" class="accordion-collapse collapse" data-bs-parent="#gettingStartedAccordion">
+                        <div class="accordion-body">
+                            <p>Once your data is loaded:</p>
+                            <ul>
+                                <li>Adjust analysis parameters using the sliders</li>
+                                <li>View real-time updates in the graphs and statistics</li>
+                                <li>Export data to Excel for further analysis</li>
+                                <li>Add results to the comparison table</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- File Formats Section -->
+        <section id="file-formats">
+            <h2 class="section-header">📁 Supported File Formats</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">Med Associates</div>
+                        <div class="card-body">
+                            <p>Text files from Med-PC systems with array format:</p>
+                            <div class="code-block">
+A: 0.123 1.456 2.789<br>
+B: 0.145 1.478 2.801<br>
+...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">CSV/TXT</div>
+                        <div class="card-body">
+                            <p>Comma or tab-separated files with columns:</p>
+                            <div class="code-block">
+time,licks,other<br>
+0.123,1,data<br>
+1.456,1,data<br>
+...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">DD Lab</div>
+                        <div class="card-body">
+                            <p>Custom DD Lab format with specific parsing rules for behavioral data.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Session Analysis Section -->
+        <section id="session-analysis">
+            <h2 class="section-header">📊 Session Analysis</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h5>Session Overview Graph</h5>
+                    <p>The session graph shows the overall pattern of licking throughout your experimental session. You can choose between two visualization modes:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="parameter-box">
+                                <strong>Standard Histogram</strong><br>
+                                Shows licks per time bin, allowing you to see periods of high and low licking activity.
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="parameter-box">
+                                <strong>Cumulative Plot</strong><br>
+                                Shows the cumulative number of licks over time, useful for seeing overall session progress.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-3">Bin Size Control</h6>
+                    <p>Adjust the time bin size to change the temporal resolution of your analysis. Smaller bins show more detail but may be noisier.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Microstructural Analysis Section -->
+        <section id="microstructural">
+            <h2 class="section-header">🔬 Microstructural Analysis</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Burst Analysis</div>
+                        <div class="card-body">
+                            <p><strong>Burst Definition:</strong> A sequence of licks separated by intervals shorter than the interburst interval threshold.</p>
+                            
+                            <h6>Key Metrics:</h6>
+                            <ul>
+                                <li><strong>Number of Bursts:</strong> Total burst count in session</li>
+                                <li><strong>Mean Licks per Burst:</strong> Average burst size</li>
+                                <li><strong>Weibull Parameters:</strong> α and β parameters from probability distribution fitting</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Intraburst Frequency</div>
+                        <div class="card-body">
+                            <p><strong>Definition:</strong> The frequency of licking within bursts, calculated from interlick intervals (ILIs) within bursts.</p>
+                            
+                            <h6>Typical Values:</h6>
+                            <ul>
+                                <li>Normal range: 6-8 Hz</li>
+                                <li>Higher frequency may indicate more efficient licking</li>
+                                <li>Displayed as histogram of ILIs</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">Lick Duration Analysis</div>
+                <div class="card-body">
+                    <p><strong>Requirements:</strong> Both onset and offset data must be available.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Lick Lengths</h6>
+                            <ul>
+                                <li>Histogram of individual lick durations</li>
+                                <li>Typically range from 50-200ms</li>
+                                <li>Longer licks may indicate different tongue contact patterns</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Long Licks</h6>
+                            <ul>
+                                <li>Licks exceeding the long lick threshold</li>
+                                <li>May represent inefficient contact or spillage</li>
+                                <li>Count and maximum duration reported</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Parameters Section -->
+        <section id="parameters">
+            <h2 class="section-header">⚙️ Parameters Explained</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="parameter-box">
+                        <h6>🕐 Interburst Interval (IBI)</h6>
+                        <p><strong>Range:</strong> 0.25 - 2.0 seconds</p>
+                        <p><strong>Default:</strong> 0.5 seconds</p>
+                        <p>The minimum gap between licks that defines the end of one burst and the beginning of another. Shorter intervals = more bursts with fewer licks each.</p>
+                    </div>
+                    
+                    <div class="parameter-box">
+                        <h6>📊 Minimum Licks per Burst</h6>
+                        <p><strong>Range:</strong> 1 - 10 licks</p>
+                        <p><strong>Default:</strong> 3 licks</p>
+                        <p>The minimum number of licks required to classify a sequence as a burst. Sequences with fewer licks are excluded from burst analysis.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="parameter-box">
+                        <h6>⏱️ Long Lick Threshold</h6>
+                        <p><strong>Range:</strong> 0.1 - 1.0 seconds</p>
+                        <p><strong>Default:</strong> 0.3 seconds</p>
+                        <p>Licks longer than this duration are classified as "long licks" and may indicate inefficient contact or spillage events.</p>
+                    </div>
+                    
+                    <div class="parameter-box">
+                        <h6>📈 Bin Size</h6>
+                        <p><strong>Range:</strong> 1 - 600 seconds</p>
+                        <p><strong>Default:</strong> 60 seconds</p>
+                        <p>Time window for session histogram analysis. Smaller bins provide higher temporal resolution but may be noisier.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Export Section -->
+        <section id="data-export">
+            <h2 class="section-header">💾 Data Export</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h5>Excel Export Options</h5>
+                    <p>Export your analysis results to Excel format with customizable data selection:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Available Data Types:</h6>
+                            <ul>
+                                <li><strong>Session Histogram Data:</strong> Time bins and lick counts</li>
+                                <li><strong>Intraburst Frequency Data:</strong> ILI distributions</li>
+                                <li><strong>Lick Lengths Data:</strong> Duration histograms (requires offset data)</li>
+                                <li><strong>Burst Histogram Data:</strong> Burst size distributions</li>
+                                <li><strong>Burst Probability Data:</strong> Weibull fitting data</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Export Features:</h6>
+                            <ul>
+                                <li>Multiple Excel sheets per export</li>
+                                <li>Summary sheet with all key statistics</li>
+                                <li>Animal ID and timestamp tracking</li>
+                                <li>Source filename preservation</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="tip-box">
+                        <strong>💡 Pro Tip:</strong> Use the Animal ID field to organize your data exports. This makes it easier to track multiple subjects in your analysis pipeline.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Table Section -->
+        <section id="results-table">
+            <h2 class="section-header">📋 Results Management</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h5>Results Summary Table</h5>
+                    <p>Collect and compare results from multiple analyses in an interactive table:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Table Features:</h6>
+                            <ul>
+                                <li><strong>Add Results:</strong> Add current analysis to comparison table</li>
+                                <li><strong>Edit Cells:</strong> Modify Animal IDs and other editable fields</li>
+                                <li><strong>Delete Rows:</strong> Remove unwanted entries</li>
+                                <li><strong>Export Options:</strong> Export individual rows or full table</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Automatic Statistics:</h6>
+                            <p>When you have multiple entries, the table automatically calculates:</p>
+                            <ul>
+                                <li><strong>Mean:</strong> Average values across subjects</li>
+                                <li><strong>SD:</strong> Standard deviation</li>
+                                <li><strong>N:</strong> Sample size for each measure</li>
+                                <li><strong>SE:</strong> Standard error of the mean</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Troubleshooting Section -->
+        <section id="troubleshooting">
+            <h2 class="section-header">🔧 Troubleshooting</h2>
+            <div class="accordion" id="troubleshootingAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue1">
+                            File Upload Issues
+                        </button>
+                    </h2>
+                    <div id="issue1" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> File won't upload or process<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Check file format matches selected type</li>
+                                <li>Ensure file is not corrupted</li>
+                                <li>Verify file contains numeric timestamp data</li>
+                                <li>Try a smaller test file first</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue2">
+                            No Graphs Showing
+                        </button>
+                    </h2>
+                    <div id="issue2" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Graphs are empty or not updating<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Ensure onset array is selected correctly</li>
+                                <li>Check that your data contains valid timestamps</li>
+                                <li>Try adjusting parameter sliders</li>
+                                <li>Refresh the browser page</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue3">
+                            Lick Duration Analysis Not Working
+                        </button>
+                    </h2>
+                    <div id="issue3" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Long licks showing "N/A" or not calculated<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Ensure you have both onset and offset data</li>
+                                <li>Select proper offset array (not "None")</li>
+                                <li>Check that onset and offset arrays have matching lengths</li>
+                                <li>Verify offset timestamps are after onset timestamps</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue4">
+                            Export Problems
+                        </button>
+                    </h2>
+                    <div id="issue4" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Excel export fails or empty<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Ensure data is loaded and analyzed first</li>
+                                <li>Select at least one data type for export</li>
+                                <li>Enter a valid Animal ID</li>
+                                <li>Check browser download settings</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Glossary Section -->
+        <section id="glossary">
+            <h2 class="section-header">📚 Glossary</h2>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl>
+                                <dt>Burst</dt>
+                                <dd>A sequence of licks separated by intervals shorter than the interburst interval threshold</dd>
+                                
+                                <dt>Interlick Interval (ILI)</dt>
+                                <dd>Time between consecutive lick onsets within a burst</dd>
+                                
+                                <dt>Intraburst Frequency</dt>
+                                <dd>Rate of licking within bursts, typically 6-8 Hz in rodents</dd>
+                                
+                                <dt>Interburst Interval (IBI)</dt>
+                                <dd>Minimum gap between licks that defines burst boundaries</dd>
+                                
+                                <dt>Long Lick</dt>
+                                <dd>Lick duration exceeding the long lick threshold, may indicate inefficient contact</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl>
+                                <dt>Onset</dt>
+                                <dd>Timestamp when tongue contact begins (required data)</dd>
+                                
+                                <dt>Offset</dt>
+                                <dd>Timestamp when tongue contact ends (optional, enables duration analysis)</dd>
+                                
+                                <dt>Weibull Distribution</dt>
+                                <dd>Statistical model used to fit burst size probability distributions</dd>
+                                
+                                <dt>Microstructure</dt>
+                                <dd>Fine-grained temporal patterns of licking behavior within bursts</dd>
+                                
+                                <dt>Session</dt>
+                                <dd>Complete behavioral recording period, analyzed for overall licking patterns</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center mt-5 py-4" style="background-color: #007bff; color: white; border-radius: 10px;">
+            <p>&copy; 2025 LickCalc GUI - Behavioral Microstructure Analysis Tool</p>
+            <p>For technical support or questions about the analysis methods, consult your research supervisor or the documentation.</p>
+        </footer>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Smooth scrolling for internal links -->
+    <script>
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
