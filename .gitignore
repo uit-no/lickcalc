@@ -20,6 +20,9 @@ uploads/*
 *checkpoint.ipynb
 .ipynb_checkpoints/*
 
+trompy/*
+
+
 
 
 

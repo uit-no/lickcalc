@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import sys
 
 import dash
 from dash import dcc, html, dash_table, Input, Output, State
@@ -14,7 +15,36 @@ import pandas as pd
 import numpy as np
 
 from helperfx import parse_medfile, parse_csvfile, parse_ddfile # , lickCalc
+
+# Import from local trompy copy for testing enhanced division functionality
+import os
+import sys
+trompy_path = os.path.join(os.getcwd(), 'trompy')
+if trompy_path in sys.path:
+    sys.path.remove(trompy_path)
+sys.path.insert(0, trompy_path)
+
+# Force reload if already imported
+if 'trompy' in sys.modules:
+    del sys.modules['trompy']
+if 'trompy.lick_utils' in sys.modules:
+    del sys.modules['trompy.lick_utils']
+
 from trompy import lickCalc
+import inspect
+
+# Debug: Check if enhanced version is loaded
+try:
+    sig = inspect.signature(lickCalc)
+    print(f"lickCalc signature: {sig}")
+    if 'time_divisions' in sig.parameters:
+        print("✅ Enhanced trompy version loaded successfully")
+    else:
+        print("❌ Original trompy version loaded - enhanced parameters not found")
+        print(f"Available parameters: {list(sig.parameters.keys())}")
+except Exception as e:
+    print(f"Error checking lickCalc signature: {e}")
+
 from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip, 
                      get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip, get_session_length_tooltip)
 from config_manager import config
@@ -1384,99 +1414,91 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 elif len(lick_times) != len(offset_times):
                     lick_times = lick_times[:len(offset_times)]
             
-            # Calculate divisions
+            # Calculate divisions using enhanced lickCalc function
             division_rows = []
             
+            # Use enhanced lickCalc with division parameters
             if division_method == 'time':
-                # Divide by time using custom session length if provided
-                if session_length and session_length > 0:
-                    max_time = session_length
-                else:
-                    max_time = max(lick_times) if lick_times else 0
-                    
-                time_per_division = max_time / division_number
+                # Calculate with time divisions
+                enhanced_results = lickCalc(
+                    licks=lick_times,
+                    offset=offset_times if offset_times else [],
+                    burstThreshold=ibi,
+                    minburstlength=minlicks,
+                    longlickThreshold=longlick_th,
+                    time_divisions=division_number,
+                    session_length=session_length if session_length and session_length > 0 else None
+                )
                 
-                for i in range(division_number):
-                    start_time = i * time_per_division
-                    end_time = (i + 1) * time_per_division
-                    
-                    # Filter licks for this time period
-                    if i == division_number - 1:
-                        # For the last division, include licks exactly at the end time
-                        segment_licks = [t for t in lick_times if start_time <= t <= end_time]
-                    else:
-                        # For other divisions, exclude licks exactly at the end time
-                        segment_licks = [t for t in lick_times if start_time <= t < end_time]
-                    
-                    # Adjust offset times if available (even for empty segments)
-                    segment_offsets = None
-                    if offset_times:
-                        if i == division_number - 1:
-                            segment_offsets = [offset_times[j] for j, t in enumerate(lick_times) if start_time <= t <= end_time]
-                        else:
-                            segment_offsets = [offset_times[j] for j, t in enumerate(lick_times) if start_time <= t < end_time]
-                    
-                    # Calculate stats for this segment (handles empty segments with zeros/NaNs)
-                    segment_stats = calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th)
-                    
-                    # Always create a row for each division, even if no licks
-                    division_rows.append({
-                        'id': f"{animal_id}_T{i+1}" if animal_id else f"T{i+1}",
-                        'source_filename': f"{source_filename} (Time {i+1}/{division_number}: {start_time:.0f}-{end_time:.0f}s)" if source_filename else f"Time {i+1}/{division_number} ({start_time:.0f}-{end_time:.0f}s)",
-                        'start_time': start_time,
-                        'end_time': end_time,
-                        'duration': end_time - start_time,
-                        **segment_stats
-                    })
+                # Convert trompy division results to webapp format
+                if 'time_divisions' in enhanced_results:
+                    for div in enhanced_results['time_divisions']:
+                        division_rows.append({
+                            'id': f"{animal_id}_T{div['division_number']}" if animal_id else f"T{div['division_number']}",
+                            'source_filename': f"{source_filename} (Time {div['division_number']}/{division_number}: {div['start_time']:.0f}-{div['end_time']:.0f}s)" if source_filename else f"Time {div['division_number']}/{division_number} ({div['start_time']:.0f}-{div['end_time']:.0f}s)",
+                            'start_time': div['start_time'],
+                            'end_time': div['end_time'],
+                            'duration': div['duration'],
+                            'total_licks': div['total_licks'],
+                            'intraburst_freq': div['intraburst_freq'],
+                            'n_bursts': div['n_bursts'],
+                            'mean_licks_per_burst': div['mean_licks_per_burst'],
+                            'weibull_alpha': div['weibull_alpha'],
+                            'weibull_beta': div['weibull_beta'],
+                            'weibull_rsq': div['weibull_rsq'],
+                            'n_long_licks': div['n_long_licks'],
+                            'max_lick_duration': div['max_lick_duration']
+                        })
             
             elif division_method == 'bursts':
-                # First calculate bursts for the whole session
-                burst_lickdata = lickCalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
-                total_bursts = burst_lickdata['bNum']
+                # Calculate with burst divisions
+                enhanced_results = lickCalc(
+                    licks=lick_times,
+                    offset=offset_times if offset_times else [],
+                    burstThreshold=ibi,
+                    minburstlength=minlicks,
+                    longlickThreshold=longlick_th,
+                    burst_divisions=division_number
+                )
                 
-                if total_bursts > 0:
-                    # Calculate burst boundaries for uneven distribution
-                    # e.g., 3 bursts / 2 divisions = [2, 1] bursts per division
-                    # e.g., 8 bursts / 3 divisions = [3, 3, 2] bursts per division
-                    burst_boundaries = [0]
-                    
-                    base_bursts_per_division = total_bursts // division_number
-                    remainder = total_bursts % division_number
-                    
-                    for i in range(1, division_number + 1):
-                        # First 'remainder' divisions get one extra burst
-                        bursts_in_this_division = base_bursts_per_division + (1 if i <= remainder else 0)
-                        boundary = burst_boundaries[-1] + bursts_in_this_division
-                        burst_boundaries.append(boundary)
-                    
+                # Convert trompy division results to webapp format
+                if 'burst_divisions' in enhanced_results:
+                    for div in enhanced_results['burst_divisions']:
+                        bursts_in_segment = div['end_burst'] - div['start_burst']
+                        division_rows.append({
+                            'id': f"{animal_id}_B{div['division_number']}" if animal_id else f"B{div['division_number']}",
+                            'source_filename': f"{source_filename} (Bursts {div['start_burst']+1}-{div['end_burst']}, {bursts_in_segment} bursts)" if source_filename else f"Bursts {div['start_burst']+1}-{div['end_burst']} ({bursts_in_segment} bursts)",
+                            'start_time': div['start_time'],
+                            'end_time': div['end_time'],
+                            'duration': div['duration'],
+                            'total_licks': div['total_licks'],
+                            'intraburst_freq': div['intraburst_freq'],
+                            'n_bursts': div['n_bursts'],
+                            'mean_licks_per_burst': div['mean_licks_per_burst'],
+                            'weibull_alpha': div['weibull_alpha'],
+                            'weibull_beta': div['weibull_beta'],
+                            'weibull_rsq': div['weibull_rsq'],
+                            'n_long_licks': div['n_long_licks'],
+                            'max_lick_duration': div['max_lick_duration']
+                        })
+                else:
+                    # Handle case where no burst divisions could be created (e.g., no bursts)
                     for i in range(division_number):
-                        start_burst = burst_boundaries[i]
-                        end_burst = burst_boundaries[i + 1]
-                        
-                        # Get lick times for this burst range
-                        segment_licks = get_licks_for_burst_range(lick_times, start_burst, end_burst, ibi, minlicks)
-                        
-                        # Adjust offset times if available (even for empty segments)
-                        segment_offsets = None
-                        if offset_times:
-                            segment_offsets = get_offsets_for_licks(lick_times, offset_times, segment_licks)
-                        
-                        # Calculate stats for this segment (handles empty segments with zeros/NaNs)
-                        segment_stats = calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th)
-                        
-                        # Calculate actual start and end times for this burst segment
-                        segment_start_time = min(segment_licks) if segment_licks else start_burst * (max(lick_times) / total_bursts) if lick_times else 0
-                        segment_end_time = max(segment_licks) if segment_licks else end_burst * (max(lick_times) / total_bursts) if lick_times else 0
-                        
-                        bursts_in_segment = end_burst - start_burst
-                        # Always create a row for each burst division, even if no licks
                         division_rows.append({
                             'id': f"{animal_id}_B{i+1}" if animal_id else f"B{i+1}",
-                            'source_filename': f"{source_filename} (Bursts {start_burst+1}-{end_burst}, {bursts_in_segment} bursts)" if source_filename else f"Bursts {start_burst+1}-{end_burst} ({bursts_in_segment} bursts)",
-                            'start_time': segment_start_time,
-                            'end_time': segment_end_time,
-                            'duration': segment_end_time - segment_start_time,
-                            **segment_stats
+                            'source_filename': f"{source_filename} (Bursts {i+1}/{division_number} - no bursts found)" if source_filename else f"Bursts {i+1}/{division_number} (no bursts found)",
+                            'start_time': 0,
+                            'end_time': 0,
+                            'duration': 0,
+                            'total_licks': 0,
+                            'intraburst_freq': float('nan'),
+                            'n_bursts': 0,
+                            'mean_licks_per_burst': float('nan'),
+                            'weibull_alpha': float('nan'),
+                            'weibull_beta': float('nan'),
+                            'weibull_rsq': float('nan'),
+                            'n_long_licks': 0,
+                            'max_lick_duration': float('nan')
                         })
             
             # Add all division rows to existing data
