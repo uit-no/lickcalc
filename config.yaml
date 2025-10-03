@@ -7,6 +7,13 @@ session:
   bin_size: 30
   # Default figure type ('hist' or 'cumul')
   fig_type: 'hist'
+  # Session length configuration
+  # Options: 
+  #   'auto' - Automatically detect from lick data (round up to nearest minute)
+  #   number - Fixed duration in seconds (e.g., 3600 for 1 hour, 7200 for 2 hours)
+  # When set to a number, this value will be used for all loaded files
+  # When set to 'auto', the duration will be calculated from each file's data
+  length: 'auto'
 
 # Microstructural analysis defaults
 microstructure:

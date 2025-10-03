@@ -17,7 +17,7 @@ import numpy as np
 
 from helperfx import parse_medfile, parse_csvfile, parse_ddfile, lickCalc
 from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip, 
-                     get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip)
+                     get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip, get_session_length_tooltip)
 from config_manager import config
 
 # Get app configuration
@@ -135,21 +135,35 @@ app.layout = dbc.Container([
             dbc.Col(
                 dcc.Graph(id='session-fig'))),
         dbc.Row(children=[
-            dbc.Col(
+            dbc.Col([
+                html.Label("Plot Type:", style={'font-weight': 'bold', 'margin-bottom': '5px'}),
                 dcc.RadioItems(
                     id='session-fig-type',
                     options=[
                         {"label": "Standard histogram", "value": "hist"},
                         {"label": "Cumulative plot", "value": "cumul"}],
                     value=config.get('session.fig_type', 'hist'))
-                ),
+                ], width=3),
+            dbc.Col([
+                get_session_length_tooltip()[0],
+                dbc.Input(
+                    id='session-length-input',
+                    type='number',
+                    value=config.get('session.length', 3600) if config.get('session.length', 'auto') != 'auto' else 3600,
+                    min=1,
+                    step=1,
+                    placeholder="Session duration in seconds",
+                    style={'width': '100%'}
+                )
+            ], width=2),
+            get_session_length_tooltip()[1],
             dbc.Col(get_binsize_tooltip()[0], width=2),
             get_binsize_tooltip()[1],
             dbc.Col(
                 dcc.Slider(
                     id='session-bin-slider',
                     **config.get_slider_config('session_bin')),
-                width=7),
+                width=4),
             ]),
         
         # Add spacing before microstructural analysis section
@@ -517,8 +531,9 @@ def get_lick_data(jsonified_dict, df_key):
 @app.callback(Output('session-fig', 'figure'),
               Input('lick-data', 'data'),
               Input('session-fig-type', 'value'),
-              Input('session-bin-slider', 'value'))
-def make_session_graph(jsonified_df, figtype, binsize):
+              Input('session-bin-slider', 'value'),
+              Input('session-length-input', 'value'))
+def make_session_graph(jsonified_df, figtype, binsize, session_length):
     
     if jsonified_df is None:
         raise PreventUpdate
@@ -526,11 +541,14 @@ def make_session_graph(jsonified_df, figtype, binsize):
         df = pd.read_json(io.StringIO(jsonified_df), orient='split')
         lastlick = max(df["licks"]) if len(df) > 0 else 0
         
+        # Use custom session length if provided, otherwise use last lick time
+        plot_duration = session_length if session_length and session_length > 0 else lastlick
+        
         if figtype == "hist":
             fig = px.histogram(df,
                             x="licks",
-                            range_x=[0, lastlick],
-                            nbins=int(lastlick/binsize) if lastlick > 0 else 1)
+                            range_x=[0, plot_duration],
+                            nbins=int(plot_duration/binsize) if plot_duration > 0 else 1)
         
             fig.update_layout(
                 transition_duration=500,
@@ -544,9 +562,40 @@ def make_session_graph(jsonified_df, figtype, binsize):
                 transition_duration=500,
                 xaxis_title="Time (s)",
                 yaxis_title="Cumulative licks",
-                showlegend=False)
+                showlegend=False,
+                xaxis=dict(range=[0, plot_duration]))
 
         return fig
+
+@app.callback(Output('session-length-input', 'value'),
+              Input('lick-data', 'data'),
+              prevent_initial_call=True)
+def update_session_length_suggestion(jsonified_df):
+    """Auto-populate session length input based on config and data"""
+    if jsonified_df is None:
+        raise PreventUpdate
+    
+    # Check config for session length setting
+    session_length_config = config.get('session.length', 'auto')
+    
+    # If config specifies a fixed value, use it
+    if session_length_config != 'auto':
+        try:
+            # Try to convert config value to number
+            return int(session_length_config)
+        except (ValueError, TypeError):
+            # If config value is invalid, fall back to auto
+            pass
+    
+    # Auto-detect from data
+    df = pd.read_json(io.StringIO(jsonified_df), orient='split')
+    if len(df) > 0:
+        last_lick = max(df["licks"])
+        # Round up to nearest minute for convenience
+        suggested_length = int((last_lick // 60 + 1) * 60)
+        return suggested_length
+    else:
+        return 3600  # Default to 1 hour
 
 @app.callback(Output('intraburst-fig', 'figure'),
               Output('total-licks', 'children'),
@@ -1202,6 +1251,7 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
               State('filename-store', 'data'),
               State('division-number', 'value'),
               State('division-method', 'value'),
+              State('session-length-input', 'value'),
               State('data-store', 'data'),
               State('onset-array', 'value'),
               State('offset-array', 'value'),
@@ -1210,7 +1260,7 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
               State('longlick-threshold', 'value'),
               prevent_initial_call=True)
 def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source_filename, 
-                        division_number, division_method, data_store, onset_key, offset_key,
+                        division_number, division_method, session_length, data_store, onset_key, offset_key,
                         ibi, minlicks, longlick_th):
     """Add current analysis results to the results table with optional divisions"""
     if n_clicks == 0 or not figure_data or 'summary_stats' not in figure_data:
@@ -1275,8 +1325,12 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
             division_rows = []
             
             if division_method == 'time':
-                # Divide by time
-                max_time = max(lick_times) if lick_times else 0
+                # Divide by time using custom session length if provided
+                if session_length and session_length > 0:
+                    max_time = session_length
+                else:
+                    max_time = max(lick_times) if lick_times else 0
+                    
                 time_per_division = max_time / division_number
                 
                 for i in range(division_number):
@@ -1297,7 +1351,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                         
                         division_rows.append({
                             'id': f"{animal_id}_T{i+1}" if animal_id else f"T{i+1}",
-                            'source_filename': f"{source_filename} (Time {i+1}/{division_number})" if source_filename else f"Time {i+1}/{division_number}",
+                            'source_filename': f"{source_filename} (Time {i+1}/{division_number}: {start_time:.0f}-{end_time:.0f}s)" if source_filename else f"Time {i+1}/{division_number} ({start_time:.0f}-{end_time:.0f}s)",
                             **segment_stats
                         })
             

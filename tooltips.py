@@ -48,6 +48,12 @@ TOOLTIP_TEXTS = {
         "Select the data column containing lick offset timestamps. "
         "These are the times when licks end. Optional - used for lick duration analysis."
     ),
+    'session_length': (
+        "Set the total intended session duration in seconds. "
+        "This controls the time axis range for the session plot and time-based divisions. "
+        "Use this when your session was planned for a specific duration (e.g., 3600s = 1 hour) "
+        "but the animal may have stopped licking before the session ended."
+    ),
 }
 
 # Helper function to create a labeled element with tooltip
@@ -122,6 +128,9 @@ def get_onset_tooltip():
 
 def get_offset_tooltip():
     return create_labeled_element_with_tooltip("Offset array", "offset-help", "offset_array", "top")
+
+def get_session_length_tooltip():
+    return create_labeled_element_with_tooltip("Session Length (s)", "session-length-help", "session_length", "top")
 
 # Table cell tooltips
 def get_table_tooltips():
