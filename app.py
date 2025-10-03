@@ -369,6 +369,9 @@ app.layout = dbc.Container([
                 columns=[
                     {'name': 'ID', 'id': 'id', 'type': 'text', 'editable': True},
                     {'name': 'Source File', 'id': 'source_filename', 'type': 'text', 'editable': False},
+                    {'name': 'Start Time (s)', 'id': 'start_time', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                    {'name': 'End Time (s)', 'id': 'end_time', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                    {'name': 'Duration (s)', 'id': 'duration', 'type': 'numeric', 'format': {'specifier': '.1f'}},
                     {'name': 'Total Licks', 'id': 'total_licks', 'type': 'numeric', 'format': {'specifier': '.0f'}},
                     {'name': 'Intraburst Freq (Hz)', 'id': 'intraburst_freq', 'type': 'numeric', 'format': {'specifier': '.3f'}},
                     {'name': 'N Bursts', 'id': 'n_bursts', 'type': 'numeric', 'format': {'specifier': '.0f'}},
@@ -863,9 +866,10 @@ def make_burstprob_graph(jsonified_df, ibi, minlicks):
               Input('interburst-slider', 'value'),
               Input('minlicks-slider', 'value'),
               Input('longlick-threshold', 'value'),
+              Input('session-length-input', 'value'),
               State('data-store', 'data'),
               State('offset-array', 'value'))
-def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, jsonified_dict, offset_key):
+def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, session_length, jsonified_dict, offset_key):
     """Collect underlying data from all figures for export"""
     if jsonified_df is None:
         raise PreventUpdate
@@ -892,9 +896,23 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, json
         
         lick_times = df["licks"].to_list()
         
-        # Session histogram data
-        lastlick = max(lick_times)
-        hist_counts, hist_edges = np.histogram(lick_times, bins=int(lastlick/bin_size) if lastlick > 0 else 1, range=(0, lastlick))
+        if not lick_times:  # If no licks in data
+            figure_data['summary_stats'] = {
+                'total_licks': 0,
+                'intraburst_freq': 0,
+                'n_bursts': 0,
+                'mean_licks_per_burst': 0,
+                'weibull_alpha': 0,
+                'weibull_beta': 0,
+                'weibull_rsq': 0,
+                'n_long_licks': 0,
+                'max_lick_duration': 0
+            }
+            return figure_data
+        
+        # Session histogram data (use session_length for display range if specified)
+        max_time = session_length if session_length and session_length > 0 else max(lick_times)
+        hist_counts, hist_edges = np.histogram(lick_times, bins=int(max_time/bin_size) if max_time > 0 else 1, range=(0, max_time))
         hist_centers = (hist_edges[:-1] + hist_edges[1:]) / 2
         figure_data['session_hist'] = {
             'bin_centers': hist_centers.tolist(),
@@ -1298,10 +1316,28 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
         if division_number == 1:
             stats = figure_data['summary_stats']
             
+            # For whole session: start time is always 0, end time uses session length input
+            start_time = 0
+            
+            # Use session length from input box, or fall back to max lick time
+            if session_length and session_length > 0:
+                end_time = session_length
+            elif data_store and onset_key:
+                import json
+                data_array = json.loads(data_store)
+                df = pd.read_json(io.StringIO(data_array[onset_key]), orient='split')
+                lick_times = df["licks"].to_list()
+                end_time = max(lick_times) if lick_times else 0
+            else:
+                end_time = 0
+            
             # Create new row
             new_row = {
                 'id': animal_id or 'Unknown',
                 'source_filename': source_filename if source_filename else 'N/A',
+                'start_time': start_time,
+                'end_time': end_time,
+                'duration': end_time - start_time,
                 'total_licks': stats.get('total_licks', np.nan),
                 'intraburst_freq': stats.get('intraburst_freq', np.nan),
                 'n_bursts': stats.get('n_bursts', np.nan),
@@ -1365,22 +1401,33 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     end_time = (i + 1) * time_per_division
                     
                     # Filter licks for this time period
-                    segment_licks = [t for t in lick_times if start_time <= t < end_time or (i == division_number - 1 and t <= end_time)]
+                    if i == division_number - 1:
+                        # For the last division, include licks exactly at the end time
+                        segment_licks = [t for t in lick_times if start_time <= t <= end_time]
+                    else:
+                        # For other divisions, exclude licks exactly at the end time
+                        segment_licks = [t for t in lick_times if start_time <= t < end_time]
                     
-                    if segment_licks:
-                        # Adjust offset times if available
-                        segment_offsets = None
-                        if offset_times:
-                            segment_offsets = [offset_times[j] for j, t in enumerate(lick_times) if start_time <= t < end_time or (i == division_number - 1 and t <= end_time)]
-                        
-                        # Calculate stats for this segment
-                        segment_stats = calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th)
-                        
-                        division_rows.append({
-                            'id': f"{animal_id}_T{i+1}" if animal_id else f"T{i+1}",
-                            'source_filename': f"{source_filename} (Time {i+1}/{division_number}: {start_time:.0f}-{end_time:.0f}s)" if source_filename else f"Time {i+1}/{division_number} ({start_time:.0f}-{end_time:.0f}s)",
-                            **segment_stats
-                        })
+                    # Adjust offset times if available (even for empty segments)
+                    segment_offsets = None
+                    if offset_times:
+                        if i == division_number - 1:
+                            segment_offsets = [offset_times[j] for j, t in enumerate(lick_times) if start_time <= t <= end_time]
+                        else:
+                            segment_offsets = [offset_times[j] for j, t in enumerate(lick_times) if start_time <= t < end_time]
+                    
+                    # Calculate stats for this segment (handles empty segments with zeros/NaNs)
+                    segment_stats = calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th)
+                    
+                    # Always create a row for each division, even if no licks
+                    division_rows.append({
+                        'id': f"{animal_id}_T{i+1}" if animal_id else f"T{i+1}",
+                        'source_filename': f"{source_filename} (Time {i+1}/{division_number}: {start_time:.0f}-{end_time:.0f}s)" if source_filename else f"Time {i+1}/{division_number} ({start_time:.0f}-{end_time:.0f}s)",
+                        'start_time': start_time,
+                        'end_time': end_time,
+                        'duration': end_time - start_time,
+                        **segment_stats
+                    })
             
             elif division_method == 'bursts':
                 # First calculate bursts for the whole session
@@ -1409,21 +1456,28 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                         # Get lick times for this burst range
                         segment_licks = get_licks_for_burst_range(lick_times, start_burst, end_burst, ibi, minlicks)
                         
-                        if segment_licks:
-                            # Adjust offset times if available
-                            segment_offsets = None
-                            if offset_times:
-                                segment_offsets = get_offsets_for_licks(lick_times, offset_times, segment_licks)
-                            
-                            # Calculate stats for this segment
-                            segment_stats = calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th)
-                            
-                            bursts_in_segment = end_burst - start_burst
-                            division_rows.append({
-                                'id': f"{animal_id}_B{i+1}" if animal_id else f"B{i+1}",
-                                'source_filename': f"{source_filename} (Bursts {start_burst+1}-{end_burst}, {bursts_in_segment} bursts)" if source_filename else f"Bursts {start_burst+1}-{end_burst} ({bursts_in_segment} bursts)",
-                                **segment_stats
-                            })
+                        # Adjust offset times if available (even for empty segments)
+                        segment_offsets = None
+                        if offset_times:
+                            segment_offsets = get_offsets_for_licks(lick_times, offset_times, segment_licks)
+                        
+                        # Calculate stats for this segment (handles empty segments with zeros/NaNs)
+                        segment_stats = calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th)
+                        
+                        # Calculate actual start and end times for this burst segment
+                        segment_start_time = min(segment_licks) if segment_licks else start_burst * (max(lick_times) / total_bursts) if lick_times else 0
+                        segment_end_time = max(segment_licks) if segment_licks else end_burst * (max(lick_times) / total_bursts) if lick_times else 0
+                        
+                        bursts_in_segment = end_burst - start_burst
+                        # Always create a row for each burst division, even if no licks
+                        division_rows.append({
+                            'id': f"{animal_id}_B{i+1}" if animal_id else f"B{i+1}",
+                            'source_filename': f"{source_filename} (Bursts {start_burst+1}-{end_burst}, {bursts_in_segment} bursts)" if source_filename else f"Bursts {start_burst+1}-{end_burst} ({bursts_in_segment} bursts)",
+                            'start_time': segment_start_time,
+                            'end_time': segment_end_time,
+                            'duration': segment_end_time - segment_start_time,
+                            **segment_stats
+                        })
             
             # Add all division rows to existing data
             updated_data = existing_data.copy() if existing_data else []
@@ -1459,6 +1513,9 @@ def update_results_table(stored_data):
             empty_row = {
                 'id': '',
                 'source_filename': '',
+                'start_time': None,
+                'end_time': None,
+                'duration': None,
                 'total_licks': None,
                 'intraburst_freq': None,
                 'n_bursts': None,
@@ -1477,7 +1534,7 @@ def update_results_table(stored_data):
     
     # Calculate statistics (ignoring NaN values)
     if len(table_data) > 1:  # Only add stats if there's more than one row
-        numeric_columns = ['total_licks', 'intraburst_freq', 'n_bursts', 'mean_licks_per_burst', 
+        numeric_columns = ['start_time', 'end_time', 'duration', 'total_licks', 'intraburst_freq', 'n_bursts', 'mean_licks_per_burst', 
                           'weibull_alpha', 'weibull_beta', 'weibull_rsq', 'n_long_licks', 'max_lick_duration']
         
         # Convert data to DataFrame for easier calculation
