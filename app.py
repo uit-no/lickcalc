@@ -1,7 +1,5 @@
 import base64
-import datetime
 import io
-import string
 import json
 
 import dash
@@ -15,7 +13,8 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 
-from helperfx import parse_medfile, parse_csvfile, parse_ddfile, lickCalc
+from helperfx import parse_medfile, parse_csvfile, parse_ddfile # , lickCalc
+from trompy import lickCalc
 from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip, 
                      get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip, get_session_length_tooltip)
 from config_manager import config
@@ -874,9 +873,6 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, json
     
     try:
         df = pd.read_json(io.StringIO(jsonified_df), orient='split')
-        
-        # Store original session info
-        original_duration = max(df["licks"]) if len(df) > 0 else 0
         
         if len(df) == 0:
             # Return minimal data if no licks
