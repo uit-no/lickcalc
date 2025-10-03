@@ -283,6 +283,36 @@ app.layout = dbc.Container([
         dbc.Row(dbc.Col(html.Hr(), width=12), style={'margin-top': '30px'}),  # Separator line
         dbc.Row(dbc.Col(html.H2("Results Summary"), width='auto')),
         
+        # Division controls for temporal/burst analysis
+        dbc.Row(children=[
+            dbc.Col([
+                html.Label("Divide Session:", style={'font-weight': 'bold'}),
+                dcc.Dropdown(
+                    id='division-number',
+                    options=[
+                        {'label': 'Whole session', 'value': 1},
+                        {'label': 'Divide in 2', 'value': 2},
+                        {'label': 'Divide in 3', 'value': 3},
+                        {'label': 'Divide in 4', 'value': 4}
+                    ],
+                    value=1,
+                    style={'margin-top': '5px'}
+                )
+            ], width=3),
+            dbc.Col([
+                html.Label("Division Method:", style={'font-weight': 'bold'}),
+                dcc.Dropdown(
+                    id='division-method',
+                    options=[
+                        {'label': 'By Time', 'value': 'time'},
+                        {'label': 'By Burst Number', 'value': 'bursts'}
+                    ],
+                    value='time',
+                    style={'margin-top': '5px'}
+                )
+            ], width=3),
+        ], style={'margin-bottom': '20px'}),
+        
         dbc.Row(children=[
             # Add to table button
             dbc.Col([
@@ -929,6 +959,130 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, json
     
     return figure_data
 
+# Helper functions for temporal/burst division analysis
+def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th):
+    """Calculate statistics for a segment of licks"""
+    if not segment_licks:
+        return {
+            'total_licks': 0,
+            'intraburst_freq': np.nan,
+            'n_bursts': 0,
+            'mean_licks_per_burst': np.nan,
+            'weibull_alpha': np.nan,
+            'weibull_beta': np.nan,
+            'weibull_rsq': np.nan,
+            'n_long_licks': np.nan,
+            'max_lick_duration': np.nan
+        }
+    
+    # Calculate basic burst statistics
+    burst_lickdata = lickCalc(segment_licks, burstThreshold=ibi, minburstlength=minlicks)
+    
+    stats = {
+        'total_licks': burst_lickdata['total'],
+        'intraburst_freq': burst_lickdata['freq'],
+        'n_bursts': burst_lickdata['bNum'],
+        'mean_licks_per_burst': burst_lickdata['bMean'],
+        'weibull_alpha': burst_lickdata['weib_alpha'],
+        'weibull_beta': burst_lickdata['weib_beta'],
+        'weibull_rsq': burst_lickdata['weib_rsq'],
+        'n_long_licks': np.nan,
+        'max_lick_duration': np.nan
+    }
+    
+    # Calculate long lick statistics if offset data available
+    if segment_offsets and len(segment_licks) == len(segment_offsets):
+        try:
+            lickdata_with_offset = lickCalc(segment_licks, offset=segment_offsets, longlickThreshold=longlick_th)
+            licklength = lickdata_with_offset["licklength"]
+            stats['n_long_licks'] = len(lickdata_with_offset["longlicks"])
+            stats['max_lick_duration'] = np.max(licklength) if len(licklength) > 0 else np.nan
+        except Exception:
+            pass
+    
+    return stats
+
+def get_licks_for_burst_range(lick_times, start_burst, end_burst, ibi, minlicks):
+    """Get lick times that belong to a specific range of bursts"""
+    if not lick_times or start_burst >= end_burst:
+        return []
+    
+    # Calculate bursts for the whole session first
+    burst_lickdata = lickCalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+    total_bursts = burst_lickdata.get('bNum', 0)
+    
+    if total_bursts == 0:
+        # No bursts detected, fall back to time-based division
+        session_duration = lick_times[-1] - lick_times[0] if len(lick_times) > 1 else 0
+        if session_duration == 0:
+            return lick_times if start_burst == 0 else []
+            
+        # Simple time-based fallback
+        start_proportion = start_burst / max(end_burst, 1)
+        end_proportion = end_burst / max(end_burst, 1)
+        start_time = lick_times[0] + start_proportion * session_duration
+        end_time = lick_times[0] + end_proportion * session_duration
+        
+        return [t for t in lick_times if start_time <= t < end_time]
+    
+    # We have bursts - extract them properly
+    # The key insight: re-run lickCalc on the full data to get clean burst boundaries
+    # Then extract the licks that belong to our target burst range
+    
+    # Ensure valid burst range
+    start_burst = max(0, min(start_burst, total_bursts))
+    end_burst = max(start_burst, min(end_burst, total_bursts))
+    
+    if start_burst == end_burst:
+        return []
+    
+    # Get burst start times from the burst analysis
+    burst_start_times = burst_lickdata.get('bStart', [])
+    burst_end_times = burst_lickdata.get('bEnd', [])
+    
+    if not burst_start_times or not burst_end_times:
+        # Fallback to proportional time-based approach
+        start_proportion = start_burst / total_bursts
+        end_proportion = end_burst / total_bursts
+        session_duration = lick_times[-1] - lick_times[0]
+        start_time = lick_times[0] + start_proportion * session_duration
+        end_time = lick_times[0] + end_proportion * session_duration
+        return [t for t in lick_times if start_time <= t <= end_time]
+    
+    # Extract the time boundaries for our burst range
+    if start_burst < len(burst_start_times):
+        range_start_time = float(burst_start_times[start_burst])
+    else:
+        range_start_time = lick_times[0]
+    
+    if end_burst - 1 < len(burst_end_times):
+        range_end_time = float(burst_end_times[end_burst - 1])
+    else:
+        range_end_time = lick_times[-1]
+    
+    # Return licks within this time range
+    return [t for t in lick_times if range_start_time <= t <= range_end_time]
+
+def get_offsets_for_licks(original_licks, original_offsets, segment_licks):
+    """Get corresponding offset times for a segment of licks"""
+    if not original_offsets or not segment_licks:
+        return None
+    
+    # Find indices of segment licks in original lick list
+    segment_indices = []
+    for seg_lick in segment_licks:
+        try:
+            idx = original_licks.index(seg_lick)
+            segment_indices.append(idx)
+        except ValueError:
+            continue
+    
+    # Return corresponding offsets
+    if segment_indices and len(original_offsets) > max(segment_indices):
+        return [original_offsets[i] for i in segment_indices if i < len(original_offsets)]
+    
+    return None
+
 # Excel export callback
 @app.callback(Output("download-excel", "data"),
               Output("export-status", "children"),
@@ -1046,42 +1200,162 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
               State('figure-data-store', 'data'),
               State('results-table-store', 'data'),
               State('filename-store', 'data'),
+              State('division-number', 'value'),
+              State('division-method', 'value'),
+              State('data-store', 'data'),
+              State('onset-array', 'value'),
+              State('offset-array', 'value'),
+              State('interburst-slider', 'value'),
+              State('minlicks-slider', 'value'),
+              State('longlick-threshold', 'value'),
               prevent_initial_call=True)
-def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source_filename):
-    """Add current analysis results to the results table"""
+def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source_filename, 
+                        division_number, division_method, data_store, onset_key, offset_key,
+                        ibi, minlicks, longlick_th):
+    """Add current analysis results to the results table with optional divisions"""
     if n_clicks == 0 or not figure_data or 'summary_stats' not in figure_data:
         raise PreventUpdate
     
     try:
-        stats = figure_data['summary_stats']
+        # If no division (whole session), use existing stats
+        if division_number == 1:
+            stats = figure_data['summary_stats']
+            
+            # Create new row
+            new_row = {
+                'id': animal_id or 'Unknown',
+                'source_filename': source_filename if source_filename else 'N/A',
+                'total_licks': stats.get('total_licks', np.nan),
+                'intraburst_freq': stats.get('intraburst_freq', np.nan),
+                'n_bursts': stats.get('n_bursts', np.nan),
+                'mean_licks_per_burst': stats.get('mean_licks_per_burst', np.nan),
+                'weibull_alpha': stats.get('weibull_alpha', np.nan),
+                'weibull_beta': stats.get('weibull_beta', np.nan),
+                'weibull_rsq': stats.get('weibull_rsq', np.nan),
+                'n_long_licks': stats.get('n_long_licks', np.nan) if isinstance(stats.get('n_long_licks'), (int, float)) else np.nan,
+                'max_lick_duration': stats.get('max_lick_duration', np.nan) if isinstance(stats.get('max_lick_duration'), (int, float)) else np.nan
+            }
+            
+            # Add to existing data
+            updated_data = existing_data.copy() if existing_data else []
+            updated_data.append(new_row)
+            
+            status_msg = dbc.Alert(
+                f"✅ Added results for {animal_id} to table",
+                color="success",
+                dismissable=True,
+                duration=3000
+            )
+            
+            return updated_data, status_msg
         
-        # Create new row
-        new_row = {
-            'id': animal_id or 'Unknown',
-            'source_filename': source_filename if source_filename else 'N/A',
-            'total_licks': stats.get('total_licks', np.nan),
-            'intraburst_freq': stats.get('intraburst_freq', np.nan),
-            'n_bursts': stats.get('n_bursts', np.nan),
-            'mean_licks_per_burst': stats.get('mean_licks_per_burst', np.nan),
-            'weibull_alpha': stats.get('weibull_alpha', np.nan),
-            'weibull_beta': stats.get('weibull_beta', np.nan),
-            'weibull_rsq': stats.get('weibull_rsq', np.nan),
-            'n_long_licks': stats.get('n_long_licks', np.nan) if isinstance(stats.get('n_long_licks'), (int, float)) else np.nan,
-            'max_lick_duration': stats.get('max_lick_duration', np.nan) if isinstance(stats.get('max_lick_duration'), (int, float)) else np.nan
-        }
-        
-        # Add to existing data
-        updated_data = existing_data.copy() if existing_data else []
-        updated_data.append(new_row)
-        
-        status_msg = dbc.Alert(
-            f"✅ Added results for {animal_id} to table",
-            color="success",
-            dismissable=True,
-            duration=3000
-        )
-        
-        return updated_data, status_msg
+        else:
+            # Handle divisions - need to reanalyze data in segments
+            if not data_store or not onset_key:
+                raise Exception("No data available for division analysis")
+            
+            import json
+            data_array = json.loads(data_store)
+            df = pd.read_json(io.StringIO(data_array[onset_key]), orient='split')
+            lick_times = df["licks"].to_list()
+            
+            # Get offset data if available
+            offset_times = None
+            if offset_key and offset_key != 'none':
+                offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                offset_times = offset_df["licks"].to_list()
+                
+                # Adjust arrays if needed
+                if len(lick_times) - len(offset_times) == 1:
+                    lick_times = lick_times[:-1]
+                elif len(lick_times) != len(offset_times):
+                    lick_times = lick_times[:len(offset_times)]
+            
+            # Calculate divisions
+            division_rows = []
+            
+            if division_method == 'time':
+                # Divide by time
+                max_time = max(lick_times) if lick_times else 0
+                time_per_division = max_time / division_number
+                
+                for i in range(division_number):
+                    start_time = i * time_per_division
+                    end_time = (i + 1) * time_per_division
+                    
+                    # Filter licks for this time period
+                    segment_licks = [t for t in lick_times if start_time <= t < end_time or (i == division_number - 1 and t <= end_time)]
+                    
+                    if segment_licks:
+                        # Adjust offset times if available
+                        segment_offsets = None
+                        if offset_times:
+                            segment_offsets = [offset_times[j] for j, t in enumerate(lick_times) if start_time <= t < end_time or (i == division_number - 1 and t <= end_time)]
+                        
+                        # Calculate stats for this segment
+                        segment_stats = calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th)
+                        
+                        division_rows.append({
+                            'id': f"{animal_id}_T{i+1}" if animal_id else f"T{i+1}",
+                            'source_filename': f"{source_filename} (Time {i+1}/{division_number})" if source_filename else f"Time {i+1}/{division_number}",
+                            **segment_stats
+                        })
+            
+            elif division_method == 'bursts':
+                # First calculate bursts for the whole session
+                burst_lickdata = lickCalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+                total_bursts = burst_lickdata['bNum']
+                
+                if total_bursts > 0:
+                    # Calculate burst boundaries for uneven distribution
+                    # e.g., 3 bursts / 2 divisions = [2, 1] bursts per division
+                    # e.g., 8 bursts / 3 divisions = [3, 3, 2] bursts per division
+                    burst_boundaries = [0]
+                    
+                    base_bursts_per_division = total_bursts // division_number
+                    remainder = total_bursts % division_number
+                    
+                    for i in range(1, division_number + 1):
+                        # First 'remainder' divisions get one extra burst
+                        bursts_in_this_division = base_bursts_per_division + (1 if i <= remainder else 0)
+                        boundary = burst_boundaries[-1] + bursts_in_this_division
+                        burst_boundaries.append(boundary)
+                    
+                    for i in range(division_number):
+                        start_burst = burst_boundaries[i]
+                        end_burst = burst_boundaries[i + 1]
+                        
+                        # Get lick times for this burst range
+                        segment_licks = get_licks_for_burst_range(lick_times, start_burst, end_burst, ibi, minlicks)
+                        
+                        if segment_licks:
+                            # Adjust offset times if available
+                            segment_offsets = None
+                            if offset_times:
+                                segment_offsets = get_offsets_for_licks(lick_times, offset_times, segment_licks)
+                            
+                            # Calculate stats for this segment
+                            segment_stats = calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th)
+                            
+                            bursts_in_segment = end_burst - start_burst
+                            division_rows.append({
+                                'id': f"{animal_id}_B{i+1}" if animal_id else f"B{i+1}",
+                                'source_filename': f"{source_filename} (Bursts {start_burst+1}-{end_burst}, {bursts_in_segment} bursts)" if source_filename else f"Bursts {start_burst+1}-{end_burst} ({bursts_in_segment} bursts)",
+                                **segment_stats
+                            })
+            
+            # Add all division rows to existing data
+            updated_data = existing_data.copy() if existing_data else []
+            updated_data.extend(division_rows)
+            
+            status_msg = dbc.Alert(
+                f"✅ Added {len(division_rows)} divided results for {animal_id} to table",
+                color="success",
+                dismissable=True,
+                duration=3000
+            )
+            
+            return updated_data, status_msg
         
     except Exception as e:
         error_msg = dbc.Alert(
