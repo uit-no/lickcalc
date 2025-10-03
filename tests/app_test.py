@@ -31,7 +31,7 @@ app.layout = dbc.Container([
     dcc.Store(id='data-store'),
     html.Div(
     [
-        dbc.Row(dbc.Col(html.H1("LickCalc GUI"), width='auto')),
+        dbc.Row(dbc.Col(html.H1("lickcalc GUI"), width='auto')),
         dbc.Row(
             dbc.Col(html.Div(
                 '''

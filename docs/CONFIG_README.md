@@ -1,6 +1,6 @@
-# LickCalc Configuration System
+# lickcalc Configuration System
 
-The LickCalc webapp now supports customizable default values through a `config.yaml` file. This allows you to set default slider values, UI preferences, and analysis parameters without modifying the source code.
+The lickcalc webapp now supports customizable default values through a `config.yaml` file. This allows you to set default slider values, UI preferences, and analysis parameters without modifying the source code.
 
 ## Quick Start
 
@@ -34,7 +34,7 @@ files:
 ### UI Configuration
 ```yaml
 ui:
-  title: 'LickCalc'           # Application window title
+  title: 'lickcalc'           # Application window title
   debug: true                 # Enable debug mode
   hot_reload: true            # Enable hot reload for development
 ```
@@ -86,7 +86,7 @@ For deployed applications in a research lab:
 
 ```yaml
 ui:
-  title: 'Lab Name - LickCalc Analysis'
+  title: 'Lab Name - lickcalc Analysis'
   debug: false                # Disable debug mode
   hot_reload: false          # Disable hot reload
 

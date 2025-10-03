@@ -1,5 +1,5 @@
 """
-Configuration module for LickCalc webapp.
+Configuration module for lickcalc webapp.
 Handles loading and validation of configuration from config.yaml
 """
 

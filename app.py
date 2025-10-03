@@ -51,7 +51,7 @@ app.layout = dbc.Container([
         ),
         
         dbc.Row(children=[
-            dbc.Col(html.H1("LickCalc GUI"), width=12),
+            dbc.Col(html.H1("lickcalc"), width=12),
         ]),
         dbc.Row(
             dbc.Col(html.Div(
@@ -947,7 +947,7 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
         # Create Excel writer object
         from datetime import datetime
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"LickCalc_Export_{animal_id}_{timestamp}.xlsx"
+        filename = f"lickcalc_Export_{animal_id}_{timestamp}.xlsx"
         
         # Create a BytesIO buffer
         import io
@@ -1265,13 +1265,13 @@ def export_table_data(export_row_clicks, export_table_clicks, selected_rows, sto
             # Export single row
             export_data = [stored_data[selected_idx]]
             row_id = export_data[0].get('id', 'Unknown')
-            filename = f"LickCalc_SingleRow_{row_id}_{timestamp}.xlsx"
+            filename = f"lickcalc_SingleRow_{row_id}_{timestamp}.xlsx"
             success_msg = f"✅ Exported row for {row_id}"
             
         else:  # export-table-btn
             # Export full table
             export_data = stored_data.copy()
-            filename = f"LickCalc_ResultsTable_{timestamp}.xlsx"
+            filename = f"lickcalc_ResultsTable_{timestamp}.xlsx"
             success_msg = f"✅ Exported full table ({len(stored_data)} rows)"
         
         # Create Excel file

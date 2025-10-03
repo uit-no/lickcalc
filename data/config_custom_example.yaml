@@ -1,4 +1,4 @@
-# LickCalc Custom Configuration Example
+# lickcalc Custom Configuration Example
 # This file shows how to customize default values for different research scenarios
 
 # Session analysis defaults
@@ -32,7 +32,7 @@ files:
 # UI Configuration
 ui:
   # Default window title
-  title: 'LickCalc - Custom Research Lab'  # Customized title
+  title: 'lickcalc - Custom Research Lab'  # Customized title
   
   # Debug mode for development
   debug: false  # Changed to false for production use

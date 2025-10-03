@@ -1,4 +1,4 @@
-# LickCalc Default Configuration
+# lickcalc Default Configuration
 # This file contains default values for sliders and other configurable parameters
 
 # Session analysis defaults
@@ -27,7 +27,7 @@ files:
 # UI Configuration
 ui:
   # Default window title
-  title: 'LickCalc'
+  title: 'lickcalc'
   
   # Debug mode for development
   debug: true

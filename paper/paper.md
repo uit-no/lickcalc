@@ -1,5 +1,5 @@
 ---
-title: 'LickCalc: Easy analysis of lick microstructure in experiments of rodent ingestive behaviour'
+title: 'lickcalc: Easy analysis of lick microstructure in experiments of rodent ingestive behaviour'
 tags:
   - Python
   - feeding behaviour
@@ -29,7 +29,7 @@ Lick microstructure
 
 # Statement of need
 
-`LickCalc` is a software suite that...
+`lickcalc` is a software suite that...
 
 microstructural analysis first described in [@davis:1992]
 used more recently to understand [@naneix:2020]

@@ -1,5 +1,5 @@
 """
-Tooltip definitions for the LickCalc web application.
+Tooltip definitions for the lickcalc web application.
 This file contains all the help text and tooltip configurations.
 """
 
