@@ -268,7 +268,8 @@ app.layout = dbc.Container([
                         {'label': 'Intraburst Frequency Data', 'value': 'intraburst_freq'},
                         {'label': 'Lick Lengths Data', 'value': 'lick_lengths'},
                         {'label': 'Burst Histogram Data', 'value': 'burst_hist'},
-                        {'label': 'Burst Probability Data', 'value': 'burst_prob'}
+                        {'label': 'Burst Probability Data', 'value': 'burst_prob'},
+                        {'label': 'Burst Details Data', 'value': 'burst_details'}
                     ],
                     value=['session_hist', 'intraburst_freq'],  # Default selections
                     inline=False,
@@ -935,6 +936,25 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, json
             'probabilities': y_prob
         }
         
+        # Burst details data - individual burst information
+        if burst_lickdata['bNum'] > 0:  # Only if bursts were detected
+            burst_starts = burst_lickdata['bStart']
+            burst_ends = burst_lickdata['bEnd']
+            burst_licks = burst_lickdata['bLicks']
+            
+            # Calculate burst durations
+            burst_durations = [end - start for start, end in zip(burst_starts, burst_ends)]
+            
+            figure_data['burst_details'] = {
+                'burst_numbers': list(range(1, len(burst_starts) + 1)),
+                'n_licks': burst_licks,
+                'start_times': burst_starts,
+                'end_times': burst_ends,
+                'durations': burst_durations
+            }
+        else:
+            figure_data['burst_details'] = None
+        
         # Summary statistics
         figure_data['summary_stats'] = {
             'total_licks': burst_lickdata['total'],
@@ -1212,6 +1232,17 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
                     'Probability': data['probabilities']
                 })
                 df.to_excel(writer, sheet_name='Burst_Probability', index=False)
+            
+            if 'burst_details' in selected_data and figure_data.get('burst_details'):
+                data = figure_data['burst_details']
+                df = pd.DataFrame({
+                    'Burst_Number': data['burst_numbers'],
+                    'N_Licks': data['n_licks'],
+                    'Start_Time_s': data['start_times'],
+                    'End_Time_s': data['end_times'],
+                    'Duration_s': data['durations']
+                })
+                df.to_excel(writer, sheet_name='Burst_Details', index=False)
         
         # Get the value from the buffer
         output.seek(0)
