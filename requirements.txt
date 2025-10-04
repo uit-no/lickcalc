@@ -31,7 +31,7 @@ setuptools==52.0.0.post20210125
 six==1.16.0
 tdt==0.4.3
 tenacity==7.0.0
-trompy==0.13.3
+trompy==0.15.8
 typing-extensions==3.10.0.0
 Werkzeug==2.0.1
 wheel==0.36.2

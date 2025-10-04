@@ -6,10 +6,7 @@ Created on Tue Jul  6 20:18:49 2021
 """
 import numpy as np
 import string
-import scipy.optimize as opt
-import scipy.stats as stats
 import pandas as pd
-import json
 import csv
 import datetime
 from trompy import tstamp_to_tdate
@@ -17,16 +14,16 @@ from trompy import tstamp_to_tdate
 
 def parse_medfile(f):
     
-    sessionToExtract=1
+    session_to_extract = 1
 
     f.seek(0)
     filerows = f.readlines()[8:]
     datarows = [isnumeric(x) for x in filerows]
-    matches = [i for i,x in enumerate(datarows) if x == 0.3]
-    if sessionToExtract > len(matches):
-        print('Session ' + str(sessionToExtract) + ' does not exist.')
+    matches = [i for i, x in enumerate(datarows) if x == 0.3]
+    if session_to_extract > len(matches):
+        raise ValueError(f'Session {session_to_extract} does not exist.')
     
-    varstart = matches[sessionToExtract - 1]    
+    varstart = matches[session_to_extract - 1]    
     loaded_vars = {}
    
     k = int(varstart + 27)

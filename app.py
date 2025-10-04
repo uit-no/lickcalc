@@ -1,7 +1,7 @@
 import base64
 import io
 import json
-import sys
+import logging
 
 import dash
 from dash import dcc, html, dash_table, Input, Output, State
@@ -14,40 +14,22 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 
-from helperfx import parse_medfile, parse_csvfile, parse_ddfile # , lickCalc
-
-# Import from local trompy copy for testing enhanced division functionality
-import os
-import sys
-trompy_path = os.path.join(os.getcwd(), 'trompy')
-if trompy_path in sys.path:
-    sys.path.remove(trompy_path)
-sys.path.insert(0, trompy_path)
-
-# Force reload if already imported
-if 'trompy' in sys.modules:
-    del sys.modules['trompy']
-if 'trompy.lick_utils' in sys.modules:
-    del sys.modules['trompy.lick_utils']
-
+from helperfx import parse_medfile, parse_csvfile, parse_ddfile
 from trompy import lickCalc
-import inspect
-
-# Debug: Check if enhanced version is loaded
-try:
-    sig = inspect.signature(lickCalc)
-    print(f"lickCalc signature: {sig}")
-    if 'time_divisions' in sig.parameters:
-        print("✅ Enhanced trompy version loaded successfully")
-    else:
-        print("❌ Original trompy version loaded - enhanced parameters not found")
-        print(f"Available parameters: {list(sig.parameters.keys())}")
-except Exception as e:
-    print(f"Error checking lickCalc signature: {e}")
 
 from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip, 
                      get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip, get_session_length_tooltip)
 from config_manager import config
+
+# Configure logging
+logging.basicConfig(
+    level=logging.WARNING,  # Set to WARNING to reduce noise in production
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # Log to console
+        # logging.FileHandler('lickcalc.log')  # Uncomment to log to file
+    ]
+)
 
 # Get app configuration
 app_config = config.get_app_config()
@@ -733,13 +715,14 @@ def make_longlicks_graph(offset_key, longlick_th, jsonified_dict, jsonified_df):
         offset=offset_df["licks"].to_list()
         
         if len(onset) - len(offset) == 0:
-            print("arrays are the same size, making figure...")
+            # Arrays are the same size, proceed normally
+            pass
         elif len(onset) - len(offset) == 1:
-            print("arrays are different lengths by 1, need to remove a value")
+            # Arrays differ by 1, remove last onset value if needed
             if len(offset) > 0 and offset[0] > onset[0]:
-                onset = onset [:-1]
+                onset = onset[:-1]
         else:
-            print("offset array seems wrong")
+            logging.warning(f"Onset/offset array length mismatch: {len(onset)} vs {len(offset)}")
             fig = go.Figure()
             fig.update_layout(
                 title="Lick Duration Analysis",
@@ -783,7 +766,7 @@ def make_longlicks_graph(offset_key, longlick_th, jsonified_dict, jsonified_df):
         return fig, nlonglicks, longlick_max
         
     except Exception as e:
-        print(f"Error in longlicks callback: {e}")
+        logging.error(f"Error in longlicks callback: {e}")
         fig = go.Figure()
         fig.update_layout(
             title="Lick Duration Analysis - Error",
@@ -1023,7 +1006,7 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, sess
                 
                 # Check if the offset key exists in the data
                 if offset_key not in data_array:
-                    print(f"Warning: Offset key '{offset_key}' not found in data")
+                    logging.warning(f"Offset key '{offset_key}' not found in data")
                     figure_data['summary_stats']['n_long_licks'] = 'N/A (offset column not found)'
                     figure_data['summary_stats']['max_lick_duration'] = 'N/A (offset column not found)'
                 else:
@@ -1055,19 +1038,19 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, sess
                         figure_data['summary_stats']['n_long_licks'] = len(lickdata_with_offset["longlicks"])
                         figure_data['summary_stats']['max_lick_duration'] = np.max(licklength) if len(licklength) > 0 else 0
                         
-                        print(f"DEBUG: Calculated n_long_licks = {figure_data['summary_stats']['n_long_licks']}")
-                        print(f"DEBUG: Calculated max_lick_duration = {figure_data['summary_stats']['max_lick_duration']}")
+                        logging.debug(f"Calculated n_long_licks = {figure_data['summary_stats']['n_long_licks']}")
+                        logging.debug(f"Calculated max_lick_duration = {figure_data['summary_stats']['max_lick_duration']}")
                     else:
                         figure_data['summary_stats']['n_long_licks'] = 'N/A (array length mismatch)'
                         figure_data['summary_stats']['max_lick_duration'] = 'N/A (array length mismatch)'
                     
-            except Exception as e:
-                print(f"Error processing offset data: {e}")
+            except (ValueError, KeyError, TypeError) as e:
+                logging.error(f"Error processing offset data: {e}")
                 figure_data['summary_stats']['n_long_licks'] = 'N/A (error)'
                 figure_data['summary_stats']['max_lick_duration'] = 'N/A (error)'
         
-    except Exception as e:
-        print(f"Error collecting figure data: {e}")
+    except (ValueError, KeyError, TypeError) as e:
+        logging.error(f"Error collecting figure data: {e}")
         figure_data = {}
     
     return figure_data
@@ -1110,8 +1093,8 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
             licklength = lickdata_with_offset["licklength"]
             stats['n_long_licks'] = len(lickdata_with_offset["longlicks"])
             stats['max_lick_duration'] = np.max(licklength) if len(licklength) > 0 else np.nan
-        except Exception:
-            pass
+        except (ValueError, TypeError, KeyError) as e:
+            logging.warning(f"Could not calculate lick durations for burst range: {e}")
     
     return stats
 
