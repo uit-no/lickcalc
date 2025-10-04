@@ -142,6 +142,14 @@ app.layout = dbc.Container([
                     # Allow multiple files to be uploaded
                     multiple=False
                 ))),
+        
+        # Data validation status display
+        dbc.Row([
+            dbc.Col([
+                html.Div(id='validation-status', style={'margin': '10px 0'})
+            ], width=12)
+        ]),
+        
         dbc.Row(
             dbc.Col(
                 dcc.Graph(id='session-fig'))),
@@ -533,6 +541,67 @@ def load_and_clean_data(list_of_contents, list_of_names, list_of_dates, input_fi
             
         return jsonified_dict, file_info, onset_options, onset_default, offset_options, offset_default, list_of_names
 
+# Callback to validate onset/offset data and display status
+@app.callback(Output('validation-status', 'children'),
+              Input('data-store', 'data'),
+              Input('onset-array', 'value'),
+              Input('offset-array', 'value'),
+              prevent_initial_call=True)
+def update_validation_status(data_store, onset_key, offset_key):
+    """Display validation status for onset/offset data"""
+    if not data_store or not onset_key or onset_key == 'none':
+        return ""
+    
+    if not offset_key or offset_key == 'none':
+        return dbc.Alert(
+            "ℹ️ Onset-only data loaded (no offset column selected). Lick duration analysis will not be available.",
+            color="info",
+            dismissable=True
+        )
+    
+    try:
+        data_array = json.loads(data_store)
+        
+        if onset_key not in data_array or offset_key not in data_array:
+            return ""
+        
+        # Get the data
+        onset_df = pd.read_json(io.StringIO(data_array[onset_key]), orient='split')
+        offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+        
+        onset_times = onset_df["licks"].to_list()
+        offset_times = offset_df["licks"].to_list()
+        
+        # Validate the data
+        validation = validate_onset_offset_pairs(onset_times, offset_times)
+        
+        if validation['valid']:
+            if "Warning" in validation['message']:
+                return dbc.Alert(
+                    f"⚠️ Data loaded with warnings: {validation['message']}",
+                    color="warning",
+                    dismissable=True
+                )
+            else:
+                return dbc.Alert(
+                    f"✅ Data validation successful: {validation['message']}",
+                    color="success",
+                    dismissable=True
+                )
+        else:
+            return dbc.Alert(
+                f"❌ Data validation failed: {validation['message']}",
+                color="danger",
+                dismissable=True
+            )
+            
+    except Exception as e:
+        return dbc.Alert(
+            f"❌ Error during validation: {str(e)}",
+            color="danger",
+            dismissable=True
+        )
+
 @app.callback(Output('lick-data', 'data'),
               Output('session-duration-store', 'data'),
               Input('data-store', 'data'),
@@ -657,6 +726,93 @@ def make_intraburstfreq_graph(jsonified_df):
         
         return fig, nlicks, freq
 
+# Helper function for onset/offset validation
+def validate_onset_offset_pairs(onset_times, offset_times):
+    """
+    Validate that onset and offset times form proper lick pairs.
+    
+    Returns:
+        dict: Contains 'valid', 'message', 'corrected_onset', 'corrected_offset'
+    """
+    if not onset_times or not offset_times:
+        return {
+            'valid': False,
+            'message': "Empty onset or offset data",
+            'corrected_onset': onset_times,
+            'corrected_offset': offset_times
+        }
+    
+    original_onset_len = len(onset_times)
+    original_offset_len = len(offset_times)
+    
+    # Make copies for potential correction
+    corrected_onset = onset_times.copy()
+    corrected_offset = offset_times.copy()
+    
+    # Handle length mismatches first
+    if abs(len(corrected_onset) - len(corrected_offset)) > 1:
+        return {
+            'valid': False,
+            'message': f"Severe length mismatch: {original_onset_len} onsets vs {original_offset_len} offsets. Arrays differ by more than 1.",
+            'corrected_onset': corrected_onset,
+            'corrected_offset': corrected_offset
+        }
+    
+    # Handle length difference of 1
+    if len(corrected_onset) - len(corrected_offset) == 1:
+        # One more onset than offset - remove last onset
+        corrected_onset = corrected_onset[:-1]
+    elif len(corrected_offset) - len(corrected_onset) == 1:
+        # One more offset than onset - remove last offset
+        corrected_offset = corrected_offset[:-1]
+    
+    # Now check temporal order
+    warnings = []
+    errors = []
+    
+    for i in range(len(corrected_onset)):
+        onset_time = corrected_onset[i]
+        offset_time = corrected_offset[i]
+        
+        # Check if offset comes after onset
+        if offset_time <= onset_time:
+            errors.append(f"Pair {i+1}: Offset ({offset_time:.3f}s) is not after onset ({onset_time:.3f}s)")
+        
+        # Check if this offset comes before next onset (no overlap)
+        if i < len(corrected_onset) - 1:
+            next_onset = corrected_onset[i + 1]
+            if offset_time >= next_onset:
+                warnings.append(f"Pair {i+1}: Offset ({offset_time:.3f}s) occurs after or at next onset ({next_onset:.3f}s)")
+    
+    # Determine overall validity
+    if errors:
+        return {
+            'valid': False,
+            'message': f"Temporal order errors found: {'; '.join(errors[:3])}{'...' if len(errors) > 3 else ''}",
+            'corrected_onset': corrected_onset,
+            'corrected_offset': corrected_offset
+        }
+    elif warnings:
+        return {
+            'valid': True,
+            'message': f"Warning - overlapping licks detected: {'; '.join(warnings[:2])}{'...' if len(warnings) > 2 else ''}",
+            'corrected_onset': corrected_onset,
+            'corrected_offset': corrected_offset
+        }
+    else:
+        length_msg = ""
+        if original_onset_len != len(corrected_onset):
+            length_msg = f" (adjusted from {original_onset_len} to {len(corrected_onset)} onsets)"
+        elif original_offset_len != len(corrected_offset):
+            length_msg = f" (adjusted from {original_offset_len} to {len(corrected_offset)} offsets)"
+            
+        return {
+            'valid': True,
+            'message': f"Valid onset/offset pairs{length_msg}",
+            'corrected_onset': corrected_onset,
+            'corrected_offset': corrected_offset
+        }
+
 @app.callback(Output('longlicks-fig', 'figure'),
               Output('nlonglicks', 'children'),
               Output('longlicks-max', 'children'),
@@ -721,29 +877,36 @@ def make_longlicks_graph(offset_key, longlick_th, jsonified_dict, jsonified_df):
         onset=df["licks"].to_list()
         offset=offset_df["licks"].to_list()
         
-        if len(onset) - len(offset) == 0:
-            # Arrays are the same size, proceed normally
-            pass
-        elif len(onset) - len(offset) == 1:
-            # Arrays differ by 1, remove last onset value if needed
-            if len(offset) > 0 and offset[0] > onset[0]:
-                onset = onset[:-1]
-        else:
-            logging.warning(f"Onset/offset array length mismatch: {len(onset)} vs {len(offset)}")
+        # Validate onset/offset pairs
+        validation = validate_onset_offset_pairs(onset, offset)
+        
+        if not validation['valid']:
+            # Show error for invalid data
+            logging.error(f"Onset/offset validation failed: {validation['message']}")
             fig = go.Figure()
             fig.update_layout(
-                title="Lick Duration Analysis",
+                title="Lick Duration Analysis - Data Validation Error",
                 annotations=[
                     dict(
-                        text=f"Onset/Offset array length mismatch: {len(onset)} vs {len(offset)}",
+                        text=f"Data validation error: {validation['message']}",
                         xref="paper", yref="paper",
                         x=0.5, y=0.5, xanchor='center', yanchor='middle',
                         showarrow=False,
-                        font=dict(size=14, color="red")
+                        font=dict(size=12, color="red")
                     )
                 ]
             )
-            return fig, "N/A", "N/A"
+            return fig, "Error", "Error"
+        
+        # Use corrected arrays
+        onset = validation['corrected_onset']
+        offset = validation['corrected_offset']
+        
+        # Log validation message (could be warning about overlaps)
+        if "Warning" in validation['message']:
+            logging.warning(f"Onset/offset validation: {validation['message']}")
+        else:
+            logging.info(f"Onset/offset validation: {validation['message']}")
         
         lickdata = lickCalc(onset, offset=offset, longlickThreshold=longlick_th)
         licklength = lickdata["licklength"]
@@ -1020,14 +1183,20 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, sess
                     offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
                     offset_times = offset_df["licks"].to_list()
                     
-                    # Adjust arrays if needed
-                    onset_times = lick_times.copy()
-                    if len(onset_times) - len(offset_times) == 1:
-                        onset_times = onset_times[:-1]
-                    elif len(onset_times) != len(offset_times):
-                        onset_times = onset_times[:len(offset_times)]
+                    # Validate onset/offset pairs
+                    validation = validate_onset_offset_pairs(lick_times, offset_times)
+                    
+                    if validation['valid']:
+                        # Use validated/corrected arrays
+                        onset_times = validation['corrected_onset']
+                        offset_times = validation['corrected_offset']
                         
-                    if len(onset_times) == len(offset_times) and len(onset_times) > 0:
+                        # Log validation message
+                        if "Warning" in validation['message']:
+                            logging.warning(f"Data export validation: {validation['message']}")
+                        else:
+                            logging.info(f"Data export validation: {validation['message']}")
+                            
                         lickdata_with_offset = lickCalc(onset_times, offset=offset_times, longlickThreshold=longlick_th)
                         licklength = lickdata_with_offset["licklength"]
                         
@@ -1048,8 +1217,10 @@ def collect_figure_data(jsonified_df, bin_size, ibi, minlicks, longlick_th, sess
                         logging.debug(f"Calculated n_long_licks = {figure_data['summary_stats']['n_long_licks']}")
                         logging.debug(f"Calculated max_lick_duration = {figure_data['summary_stats']['max_lick_duration']}")
                     else:
-                        figure_data['summary_stats']['n_long_licks'] = 'N/A (array length mismatch)'
-                        figure_data['summary_stats']['max_lick_duration'] = 'N/A (array length mismatch)'
+                        # Validation failed - log the issue and set error status
+                        logging.error(f"Onset/offset validation failed for data export: {validation['message']}")
+                        figure_data['summary_stats']['n_long_licks'] = f'N/A (validation failed: {validation["message"][:50]}...)'
+                        figure_data['summary_stats']['max_lick_duration'] = 'N/A (validation failed)'
                     
             except (ValueError, KeyError, TypeError) as e:
                 logging.error(f"Error processing offset data: {e}")
@@ -1094,14 +1265,30 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
     }
     
     # Calculate long lick statistics if offset data available
-    if segment_offsets and len(segment_licks) == len(segment_offsets):
-        try:
-            lickdata_with_offset = lickCalc(segment_licks, offset=segment_offsets, longlickThreshold=longlick_th)
-            licklength = lickdata_with_offset["licklength"]
-            stats['n_long_licks'] = len(lickdata_with_offset["longlicks"])
-            stats['max_lick_duration'] = np.max(licklength) if len(licklength) > 0 else np.nan
-        except (ValueError, TypeError, KeyError) as e:
-            logging.warning(f"Could not calculate lick durations for burst range: {e}")
+    if segment_offsets:
+        # Validate onset/offset pairs for this segment
+        validation = validate_onset_offset_pairs(segment_licks, segment_offsets)
+        
+        if validation['valid']:
+            try:
+                # Use validated arrays
+                validated_onsets = validation['corrected_onset']
+                validated_offsets = validation['corrected_offset']
+                
+                lickdata_with_offset = lickCalc(validated_onsets, offset=validated_offsets, longlickThreshold=longlick_th)
+                licklength = lickdata_with_offset["licklength"]
+                stats['n_long_licks'] = len(lickdata_with_offset["longlicks"])
+                stats['max_lick_duration'] = np.max(licklength) if len(licklength) > 0 else np.nan
+                
+                # Log validation warnings for segments
+                if "Warning" in validation['message']:
+                    logging.debug(f"Segment validation warning: {validation['message']}")
+                    
+            except (ValueError, TypeError, KeyError) as e:
+                logging.warning(f"Could not calculate lick durations for burst range: {e}")
+        else:
+            logging.warning(f"Segment onset/offset validation failed: {validation['message']}")
+            # Leave as NaN to indicate validation failure
     
     return stats
 
