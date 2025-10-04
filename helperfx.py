@@ -51,62 +51,70 @@ def isnumeric(s):
 def parse_csvfile(f):                      
     
     with f:
-        # First, try to read as a regular CSV with headers
-        try:
-            reader = csv.DictReader(f)
-            cols = reader.fieldnames
-            loaded_vars = {}
-            for col in cols:
-                loaded_vars[col] = []
+        # Read all rows first to determine if we have headers
+        f.seek(0)
+        reader = csv.reader(f)
+        rows = list(reader)
+        
+        if len(rows) == 0:
+            loaded_vars = {'Col. 1': []}
+        else:
+            # Check if first row looks like headers (contains non-numeric data)
+            first_row = rows[0]
+            has_headers = False
             
-            f.seek(0)
-            reader = csv.DictReader(f)  # Reset reader after seek
-            for row in reader:
-                for col in cols:
-                    try:
-                        loaded_vars[col].append(float(row[col]))
-                    except (ValueError, TypeError):
-                        pass  # Skip non-numeric values
-        except:
-            # If that fails, try reading as a simple CSV without headers
-            f.seek(0)
-            reader = csv.reader(f)
-            rows = list(reader)
-            
-            if len(rows) == 0:
-                loaded_vars = {'Column_1': []}
-            else:
-                # Check if first row looks like headers (contains non-numeric data)
-                first_row = rows[0]
-                has_headers = False
-                try:
-                    [float(x) for x in first_row]
-                except ValueError:
-                    has_headers = True
+            # Check if first row contains timestamp-like data (floats)
+            try:
+                # Try to convert all values in first row to float
+                numeric_count = 0
+                total_count = 0
                 
-                if has_headers:
-                    headers = first_row
-                    data_rows = rows[1:]
+                for value in first_row:
+                    # Strip whitespace and check if it's a valid number
+                    clean_value = str(value).strip()
+                    if clean_value:  # Not empty
+                        total_count += 1
+                        try:
+                            float(clean_value)  # This will raise ValueError if not a number
+                            numeric_count += 1
+                        except ValueError:
+                            pass
+                
+                # If all non-empty values in first row are numeric, treat as data
+                # If any non-empty value is non-numeric, treat as headers
+                if total_count > 0 and numeric_count == total_count:
+                    has_headers = False
                 else:
-                    headers = [f'Column_{i+1}' for i in range(len(first_row))]
-                    data_rows = rows
-                
-                loaded_vars = {header: [] for header in headers}
-                
-                for row in data_rows:
-                    for i, value in enumerate(row):
-                        if i < len(headers):
-                            try:
-                                loaded_vars[headers[i]].append(float(value))
-                            except (ValueError, TypeError):
-                                pass  # Skip non-numeric values
+                    has_headers = True
+                    
+            except Exception:
+                # If any error occurs, assume headers for safety
+                has_headers = True
+            
+            if has_headers:
+                headers = first_row
+                data_rows = rows[1:]
+            else:
+                # No headers detected, create generic column names
+                headers = [f'Col. {i+1}' for i in range(len(first_row))]
+                data_rows = rows
+            
+            loaded_vars = {header: [] for header in headers}
+            
+            for row in data_rows:
+                for i, value in enumerate(row):
+                    if i < len(headers):
+                        try:
+                            loaded_vars[headers[i]].append(float(value))
+                        except (ValueError, TypeError):
+                            pass  # Skip non-numeric values
     
     # Remove empty columns
     loaded_vars = {k: v for k, v in loaded_vars.items() if len(v) > 0}
     
     # If no columns have data, create a dummy column
     if not loaded_vars:
-        loaded_vars = {'No_Data': []}
+        loaded_vars = {'Col. 1': []}
     
     data_array = vars2dict(loaded_vars)
     

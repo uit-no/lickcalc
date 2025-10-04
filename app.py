@@ -510,7 +510,7 @@ def load_and_clean_data(list_of_contents, list_of_names, list_of_dates, input_fi
         if len(column_names) > 0:
             # Try to find common column names for onsets
             onset_default = None
-            for potential_name in ['licks', 'onset', 'timestamps', 'time', column_names[0]]:
+            for potential_name in ['licks', 'onset', 'timestamps', 'time', 'Col. 1', column_names[0]]:
                 if potential_name in column_names:
                     onset_default = potential_name
                     break
@@ -519,7 +519,7 @@ def load_and_clean_data(list_of_contents, list_of_names, list_of_dates, input_fi
             
             # Try to find common column names for offsets
             offset_default = 'none'
-            for potential_name in ['offset', 'offsets', 'end', 'stop']:
+            for potential_name in ['offset', 'offsets', 'end', 'stop', 'Col. 2']:
                 if potential_name in column_names:
                     offset_default = potential_name
                     break
