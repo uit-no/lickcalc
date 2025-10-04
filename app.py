@@ -1519,9 +1519,19 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
         raise PreventUpdate
     
     try:
-        # If no division (whole session), use existing stats
+        # If no division (whole session), recalculate with proper onset/offset validation
         if division_number == 1:
-            stats = figure_data['summary_stats']
+            # Load the data and recalculate to ensure proper long lick statistics
+            import json
+            data_array = json.loads(data_store)
+            df = pd.read_json(io.StringIO(data_array[onset_key]), orient='split')
+            lick_times = df["licks"].to_list()
+            
+            # Get offset data if available
+            offset_times = None
+            if offset_key and offset_key != 'none':
+                offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                offset_times = offset_df["licks"].to_list()
             
             # For whole session: start time is always 0, end time uses session length input
             start_time = 0
@@ -1529,32 +1539,80 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
             # Use session length from input box, or fall back to max lick time
             if session_length and session_length > 0:
                 end_time = session_length
-            elif data_store and onset_key:
-                import json
-                data_array = json.loads(data_store)
-                df = pd.read_json(io.StringIO(data_array[onset_key]), orient='split')
-                lick_times = df["licks"].to_list()
-                end_time = max(lick_times) if lick_times else 0
             else:
-                end_time = 0
+                end_time = max(lick_times) if lick_times else 0
             
-            # Create new row
-            new_row = {
-                'id': animal_id or 'Unknown',
-                'source_filename': source_filename if source_filename else 'N/A',
-                'start_time': start_time,
-                'end_time': end_time,
-                'duration': end_time - start_time,
-                'total_licks': stats.get('total_licks', np.nan),
-                'intraburst_freq': stats.get('intraburst_freq', np.nan),
-                'n_bursts': stats.get('n_bursts', np.nan),
-                'mean_licks_per_burst': stats.get('mean_licks_per_burst', np.nan),
-                'weibull_alpha': stats.get('weibull_alpha', np.nan),
-                'weibull_beta': stats.get('weibull_beta', np.nan),
-                'weibull_rsq': stats.get('weibull_rsq', np.nan),
-                'n_long_licks': stats.get('n_long_licks', np.nan) if isinstance(stats.get('n_long_licks'), (int, float)) else np.nan,
-                'max_lick_duration': stats.get('max_lick_duration', np.nan) if isinstance(stats.get('max_lick_duration'), (int, float)) else np.nan
-            }
+            # Recalculate stats with proper onset/offset validation
+            try:
+                # Use enhanced lickCalc with current parameters to get accurate long lick stats
+                enhanced_results = lickCalc(
+                    licks=lick_times,
+                    offset=offset_times if offset_times else [],
+                    burstThreshold=ibi,
+                    minburstlength=minlicks,
+                    longlickThreshold=longlick_th
+                )
+                
+                # Create new row with recalculated stats
+                new_row = {
+                    'id': animal_id or 'Unknown',
+                    'source_filename': source_filename if source_filename else 'N/A',
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'duration': end_time - start_time,
+                    'total_licks': enhanced_results.get('total', np.nan),
+                    'intraburst_freq': enhanced_results.get('freq', np.nan),
+                    'n_bursts': enhanced_results.get('bNum', np.nan),
+                    'mean_licks_per_burst': enhanced_results.get('bMean', np.nan),
+                    'weibull_alpha': enhanced_results.get('weib_alpha', np.nan),
+                    'weibull_beta': enhanced_results.get('weib_beta', np.nan),
+                    'weibull_rsq': enhanced_results.get('weib_rsq', np.nan),
+                    'n_long_licks': len(enhanced_results.get('longlicks', [])) if offset_times else np.nan,
+                    'max_lick_duration': np.max(enhanced_results.get('licklength', [])) if offset_times and enhanced_results.get('licklength') is not None and len(enhanced_results.get('licklength', [])) > 0 else np.nan
+                }
+                
+            except Exception as e:
+                logging.error(f"Error recalculating whole session stats: {e}")
+                # Fall back to figure_data stats - check if they contain valid long lick data
+                stats = figure_data['summary_stats']
+                
+                # Try to get properly calculated long lick values from figure_data
+                n_long_licks = np.nan
+                max_lick_duration = np.nan
+                
+                if isinstance(stats.get('n_long_licks'), (int, float)):
+                    n_long_licks = stats.get('n_long_licks')
+                elif offset_times:
+                    # If figure_data doesn't have proper values but we have offset data, try a quick calculation
+                    try:
+                        temp_results = lickCalc(lick_times, offset=offset_times, longlickThreshold=longlick_th)
+                        n_long_licks = len(temp_results.get('longlicks', []))
+                        licklength_array = temp_results.get('licklength', [])
+                        if licklength_array is not None and len(licklength_array) > 0:
+                            max_lick_duration = np.max(licklength_array)
+                    except:
+                        pass
+                
+                # Only use figure_data value if we haven't calculated it above
+                if max_lick_duration is np.nan and isinstance(stats.get('max_lick_duration'), (int, float)):
+                    max_lick_duration = stats.get('max_lick_duration')
+                
+                new_row = {
+                    'id': animal_id or 'Unknown',
+                    'source_filename': source_filename if source_filename else 'N/A',
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'duration': end_time - start_time,
+                    'total_licks': stats.get('total_licks', np.nan),
+                    'intraburst_freq': stats.get('intraburst_freq', np.nan),
+                    'n_bursts': stats.get('n_bursts', np.nan),
+                    'mean_licks_per_burst': stats.get('mean_licks_per_burst', np.nan),
+                    'weibull_alpha': stats.get('weibull_alpha', np.nan),
+                    'weibull_beta': stats.get('weibull_beta', np.nan),
+                    'weibull_rsq': stats.get('weibull_rsq', np.nan),
+                    'n_long_licks': n_long_licks,
+                    'max_lick_duration': max_lick_duration
+                }
             
             # Add to existing data
             updated_data = existing_data.copy() if existing_data else []
