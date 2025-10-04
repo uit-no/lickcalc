@@ -1415,13 +1415,21 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 
                 # Convert trompy division results to webapp format
                 if 'time_divisions' in enhanced_results:
-                    for div in enhanced_results['time_divisions']:
+                    # Determine the total session duration for proper time division calculation
+                    total_session_duration = session_length if session_length and session_length > 0 else max(lick_times) if lick_times else 0
+                    division_duration = total_session_duration / division_number
+                    
+                    for i, div in enumerate(enhanced_results['time_divisions']):
+                        # Ensure divisions start from 0 and cover the full session
+                        division_start = i * division_duration
+                        division_end = (i + 1) * division_duration
+                        
                         division_rows.append({
                             'id': f"{animal_id}_T{div['division_number']}" if animal_id else f"T{div['division_number']}",
-                            'source_filename': f"{source_filename} (Time {div['division_number']}/{division_number}: {div['start_time']:.0f}-{div['end_time']:.0f}s)" if source_filename else f"Time {div['division_number']}/{division_number} ({div['start_time']:.0f}-{div['end_time']:.0f}s)",
-                            'start_time': div['start_time'],
-                            'end_time': div['end_time'],
-                            'duration': div['duration'],
+                            'source_filename': f"{source_filename} (Time {div['division_number']}/{division_number}: {division_start:.0f}-{division_end:.0f}s)" if source_filename else f"Time {div['division_number']}/{division_number} ({division_start:.0f}-{division_end:.0f}s)",
+                            'start_time': division_start,
+                            'end_time': division_end,
+                            'duration': division_duration,
                             'total_licks': div['total_licks'],
                             'intraburst_freq': div['intraburst_freq'],
                             'n_bursts': div['n_bursts'],
