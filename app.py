@@ -431,6 +431,11 @@ app.layout = dbc.Container([
                         'backgroundColor': 'rgb(248, 248, 248)'
                     },
                     {
+                        'if': {'filter_query': '{id} contains "Sum"'},
+                        'backgroundColor': '#f0f8e6',
+                        'fontWeight': 'bold'
+                    },
+                    {
                         'if': {'filter_query': '{id} contains "Mean"'},
                         'backgroundColor': '#e6f3ff',
                         'fontWeight': 'bold'
@@ -1807,6 +1812,17 @@ def update_results_table(stored_data):
         
         # Calculate statistics
         stats_rows = []
+        
+        # Sum (for appropriate columns)
+        sum_row = {'id': 'Sum', 'source_filename': ''}
+        # Only sum certain columns that make sense to sum
+        summable_columns = ['duration', 'total_licks', 'n_bursts', 'n_long_licks']
+        for col in numeric_columns:
+            if col in summable_columns:
+                sum_row[col] = df[col].sum() if not df[col].isna().all() else None
+            else:
+                sum_row[col] = None  # Don't sum rates, ratios, or other derived metrics
+        stats_rows.append(sum_row)
         
         # Mean
         mean_row = {'id': 'Mean', 'source_filename': ''}
