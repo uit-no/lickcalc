@@ -357,6 +357,13 @@ app.layout = dbc.Container([
                     style={'margin-right': '10px'}
                 ),
                 html.Button(
+                    'Clear All Results', 
+                    id='clear-all-btn', 
+                    n_clicks=0,
+                    className='btn btn-warning',
+                    style={'margin-right': '10px'}
+                ),
+                html.Button(
                     'Export Selected Row', 
                     id='export-row-btn', 
                     n_clicks=0,
@@ -1646,6 +1653,25 @@ def delete_selected_row(n_clicks, selected_rows, stored_data):
             duration=4000
         )
         return stored_data, error_msg
+
+# Clear all results
+@app.callback(Output('results-table-store', 'data', allow_duplicate=True),
+              Output('table-status', 'children', allow_duplicate=True),
+              Input('clear-all-btn', 'n_clicks'),
+              prevent_initial_call=True)
+def clear_all_results(n_clicks):
+    """Clear all results from the table"""
+    if n_clicks == 0:
+        raise PreventUpdate
+    
+    status_msg = dbc.Alert(
+        "✅ All results cleared from table",
+        color="info",
+        dismissable=True,
+        duration=3000
+    )
+    
+    return [], status_msg
 
 # Export selected row
 @app.callback(Output("download-table", "data"),
