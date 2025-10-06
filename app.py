@@ -628,13 +628,15 @@ def serve_help():
     Output('minlicks-slider', 'value'),
     Output('longlick-threshold', 'value'),
     Output('session-fig-type', 'value'),
+    Output('session-length-input', 'value', allow_duplicate=True),
     Output('config-button-content', 'children'),
     Output('config-button-content', 'className'),
     Input('upload-config', 'contents'),
     State('upload-config', 'filename'),
+    State('session-length-input', 'value'),
     prevent_initial_call=True
 )
-def load_config(config_contents, config_filename):
+def load_config(config_contents, config_filename, current_session_length):
     """Handle custom config file upload"""
     if not config_contents:
         raise PreventUpdate
@@ -654,6 +656,15 @@ def load_config(config_contents, config_filename):
         minlicks = custom_config.get('microstructure', {}).get('min_licks_per_burst', config.get('microstructure.min_licks_per_burst', 1))
         longlick = custom_config.get('microstructure', {}).get('long_lick_threshold', config.get('microstructure.long_lick_threshold', 0.3))
         figtype = custom_config.get('session', {}).get('fig_type', config.get('session.fig_type', 'hist'))
+        session_length_config = custom_config.get('session', {}).get('length', 3600)
+        
+        # Handle 'auto' value for session length
+        # If config says 'auto', keep the current value (don't override existing auto-detected value)
+        if session_length_config == 'auto':
+            session_length = current_session_length if current_session_length else 3600
+        else:
+            # Use the specified value from config
+            session_length = session_length_config
         
         return (
             custom_config,  # Store the full custom config
@@ -662,6 +673,7 @@ def load_config(config_contents, config_filename):
             minlicks,
             longlick,
             figtype,
+            session_length,
             "✅ Custom Config Loaded",  # Change button text
             "btn btn-success btn-sm"  # Change to green button
         )
@@ -675,6 +687,7 @@ def load_config(config_contents, config_filename):
             dash.no_update,
             dash.no_update,
             dash.no_update,
+            dash.no_update,
             f"❌ YAML Error",
             "btn btn-danger btn-sm"
         )
@@ -682,6 +695,7 @@ def load_config(config_contents, config_filename):
     except Exception as e:
         # Return current values on error
         return (
+            dash.no_update,
             dash.no_update,
             dash.no_update,
             dash.no_update,
@@ -874,16 +888,29 @@ def make_session_graph(jsonified_df, figtype, binsize, session_length):
 
 @app.callback(Output('session-length-input', 'value'),
               Input('lick-data', 'data'),
+              State('custom-config-store', 'data'),
               prevent_initial_call=True)
-def update_session_length_suggestion(jsonified_df):
+def update_session_length_suggestion(jsonified_df, custom_config):
     """Auto-populate session length input based on config and data"""
     if jsonified_df is None:
         raise PreventUpdate
     
-    # Check config for session length setting
+    # First, check if there's a custom config loaded with a session length
+    if custom_config:
+        session_length_custom = custom_config.get('session', {}).get('length', 'auto')
+        # If custom config specifies a fixed value (not 'auto'), use it
+        if session_length_custom != 'auto':
+            try:
+                # Return the custom config value, overriding auto-detection
+                return int(session_length_custom) if session_length_custom else 3600
+            except (ValueError, TypeError):
+                # If custom config value is invalid, fall through to auto-detect
+                pass
+    
+    # If no custom config, check default config for session length setting
     session_length_config = config.get('session.length', 'auto')
     
-    # If config specifies a fixed value, use it
+    # If default config specifies a fixed value, use it
     if session_length_config != 'auto':
         try:
             # Try to convert config value to number
