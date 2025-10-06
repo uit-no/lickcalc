@@ -2020,17 +2020,10 @@ if __name__ == '__main__':
     
 """
 TO DO:
-    make stats look attractive, table maybe? maybe collect all stats on right hand side and have graphs next to each other??
     Add log scale option for y axis on intraburst frequency
-    
-    1. deal with files that don't work, error handling
-    2. go through and sort out naming of variables
-    5. margins for graphs and other customization
+
     8. change slider dynamically to match different length files, e.g. 24h data gets 1, 2, 3, 4 h etc'
-    11. header rows for csvs, dd lab
     12. multiple sessions in medfiles
-    13. naming of arrays/columns
-    14. scale x-axis for different file lengths
     16. make histograms look the same, i.e. space between bars
 
     
