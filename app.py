@@ -44,22 +44,47 @@ app.layout = dbc.Container([
     dcc.Store(id='figure-data-store'),  # Store for figure underlying data
     dcc.Store(id='filename-store'),  # Store for uploaded filename
     dcc.Store(id='session-duration-store'),  # Store for total session duration
+    dcc.Store(id='custom-config-store'),  # Store for custom config values
     html.Div(
     [
-        # Help button positioned at top right of entire page
-        html.A(
-            "📖 Help", 
-            href="/help", 
-            target="_blank",
-            className="btn btn-info btn-sm",
-            style={
-                "position": "fixed", 
-                "top": "10px", 
-                "right": "10px",
-                "z-index": "9999",
-                "text-decoration": "none"
-            }
-        ),
+        # Floating buttons at top right - vertically arranged
+        html.Div([
+            # Help button
+            html.A(
+                "📖 Help", 
+                href="/help", 
+                target="_blank",
+                className="btn btn-info btn-sm",
+                style={
+                    "position": "fixed", 
+                    "top": "10px", 
+                    "right": "10px",
+                    "z-index": "9999",
+                    "text-decoration": "none"
+                }
+            ),
+            # Config upload button
+            dcc.Upload(
+                id='upload-config',
+                children=html.Div(
+                    id='config-button-content',
+                    children="📁 Load Config",
+                    className="btn btn-outline-primary btn-sm",
+                    style={
+                        "cursor": "pointer",
+                        "text-align": "center",
+                        "white-space": "nowrap"
+                    }
+                ),
+                multiple=False,
+                style={
+                    "position": "fixed",
+                    "top": "45px",
+                    "right": "10px",
+                    "z-index": "9999"
+                }
+            ),
+        ]),
         
         dbc.Row(children=[
             dbc.Col(html.H1("lickcalc"), width=12),
@@ -594,6 +619,78 @@ def serve_help():
     """Serve the help documentation page"""
     from flask import send_from_directory
     return send_from_directory('assets', 'help.html')
+
+# Config file management callback
+@app.callback(
+    Output('custom-config-store', 'data'),
+    Output('session-bin-slider', 'value'),
+    Output('interburst-slider', 'value'),
+    Output('minlicks-slider', 'value'),
+    Output('longlick-threshold', 'value'),
+    Output('session-fig-type', 'value'),
+    Output('config-button-content', 'children'),
+    Output('config-button-content', 'className'),
+    Input('upload-config', 'contents'),
+    State('upload-config', 'filename'),
+    prevent_initial_call=True
+)
+def load_config(config_contents, config_filename):
+    """Handle custom config file upload"""
+    if not config_contents:
+        raise PreventUpdate
+    
+    try:
+        content_type, content_string = config_contents.split(',')
+        decoded = base64.b64decode(content_string)
+        config_text = decoded.decode('utf-8')
+        
+        # Parse YAML
+        import yaml
+        custom_config = yaml.safe_load(config_text)
+        
+        # Extract values with fallbacks to defaults
+        session_bin = custom_config.get('session', {}).get('bin_size', config.get('session.bin_size', 30))
+        ibi = custom_config.get('microstructure', {}).get('interburst_interval', config.get('microstructure.interburst_interval', 0.5))
+        minlicks = custom_config.get('microstructure', {}).get('min_licks_per_burst', config.get('microstructure.min_licks_per_burst', 1))
+        longlick = custom_config.get('microstructure', {}).get('long_lick_threshold', config.get('microstructure.long_lick_threshold', 0.3))
+        figtype = custom_config.get('session', {}).get('fig_type', config.get('session.fig_type', 'hist'))
+        
+        return (
+            custom_config,  # Store the full custom config
+            session_bin,
+            ibi,
+            minlicks,
+            longlick,
+            figtype,
+            "✅ Custom Config Loaded",  # Change button text
+            "btn btn-success btn-sm"  # Change to green button
+        )
+        
+    except yaml.YAMLError as e:
+        # Return current values on error
+        return (
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            f"❌ YAML Error",
+            "btn btn-danger btn-sm"
+        )
+        
+    except Exception as e:
+        # Return current values on error
+        return (
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            f"❌ Load Error",
+            "btn btn-danger btn-sm"
+        )
     
 @app.callback(Output('data-store', 'data'),
               Output('fileloadLbl', 'children'),
