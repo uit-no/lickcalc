@@ -991,8 +991,8 @@ def make_bursthist_graph(jsonified_df, ibi, minlicks):
         fig.update_layout(
             transition_duration=500,
             title="Burst frequency histogram",
-            xaxis_title="Frequency",
-            yaxis_title="Burst size",
+            xaxis_title="Burst size",
+            yaxis_title="Frequency",
             showlegend=False)
 
         return fig
