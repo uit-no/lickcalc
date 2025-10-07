@@ -223,7 +223,7 @@ app.layout = dbc.Container([
                     dbc.Col([
                         dcc.Slider(id='interburst-slider',              
                             **config.get_slider_config('interburst'))
-                    ], width=8),
+                    ], width=9),
                     dbc.Col([
                         html.Div([
                             html.Span(
@@ -231,19 +231,20 @@ app.layout = dbc.Container([
                                 children=str(config.get_slider_config('interburst')['value']),
                                 style={'font-weight': 'bold', 'font-size': '16px'}
                             ),
-                            html.Span(' s', style={'font-size': '12px', 'color': '#6c757d', 'margin-left': '2px'})
+                            html.Span(' s', style={'font-size': '16px', 'font-weight': 'bold', 'color': '#6c757d', 'margin-left': '2px'})
                         ], style={
                             'text-align': 'center',
-                            'padding': '8px',
+                            'padding': '6px 4px',
                             'background-color': '#f8f9fa',
                             'border': '1px solid #dee2e6',
                             'border-radius': '4px',
                             'color': '#495057',
-                            'margin-top': '5px'
+                            'margin-top': '5px',
+                            'margin-left': '-5px'  # Pull slightly closer to slider
                         })
-                    ], width=4)
+                    ], width=3)
                 ])
-            ], width=4),
+            ], width=4, style={'padding-right': '20px'}),  # Add spacing to the right
             dbc.Col([
                 get_minlicks_tooltip()[0],
                 get_minlicks_tooltip()[1],
@@ -251,26 +252,27 @@ app.layout = dbc.Container([
                     dbc.Col([
                         dcc.Slider(id='minlicks-slider',
                                   **config.get_slider_config('minlicks'))
-                    ], width=8),
+                    ], width=9),
                     dbc.Col([
                         html.Div(
                             id='minlicks-display',
                             children=str(config.get_slider_config('minlicks')['value']),
                             style={
                                 'text-align': 'center',
-                                'padding': '8px',
+                                'padding': '6px 4px',
                                 'background-color': '#f8f9fa',
                                 'border': '1px solid #dee2e6',
                                 'border-radius': '4px',
                                 'font-weight': 'bold',
                                 'font-size': '16px',
                                 'color': '#495057',
-                                'margin-top': '5px'
+                                'margin-top': '5px',
+                                'margin-left': '-5px'  # Pull slightly closer to slider
                             }
                         )
-                    ], width=4)
+                    ], width=3)
                 ])
-            ], width=4),
+            ], width=4, style={'padding-right': '20px'}),  # Add spacing to the right
             dbc.Col([
                 get_longlick_tooltip()[0],
                 get_longlick_tooltip()[1],
@@ -279,7 +281,7 @@ app.layout = dbc.Container([
                         dcc.Slider(
                             id='longlick-threshold',
                             **config.get_slider_config('longlick'))
-                    ], width=6),
+                    ], width=9),
                     dbc.Col([
                         html.Div([
                             html.Span(
@@ -287,28 +289,33 @@ app.layout = dbc.Container([
                                 children=str(config.get_slider_config('longlick')['value']),
                                 style={'font-weight': 'bold', 'font-size': '16px'}
                             ),
-                            html.Span(' s', style={'font-size': '12px', 'color': '#6c757d', 'margin-left': '2px'})
+                            html.Span(' s', style={'font-size': '16px', 'font-weight': 'bold', 'color': '#6c757d', 'margin-left': '2px'})
                         ], style={
                             'text-align': 'center',
-                            'padding': '8px',
+                            'padding': '6px 4px',
                             'background-color': '#f8f9fa',
                             'border': '1px solid #dee2e6',
                             'border-radius': '4px',
                             'color': '#495057',
-                            'margin-top': '5px'
+                            'margin-top': '5px',
+                            'margin-left': '-5px'  # Pull slightly closer to slider
                         })
-                    ], width=3),
+                    ], width=3)
+                ]),
+                # Move the remove long licks checkbox below the slider and value box
+                dbc.Row([
                     dbc.Col([
                         html.Div([
+                            html.Span("Remove long licks", style={'font-size': '16px', 'color': '#495057'}),  # Not bold, larger font
+                            html.Span(" ⓘ", id="remove-longlicks-help", 
+                                    style={"color": "#007bff", "cursor": "help", "margin-left": "8px"}),
                             dbc.Checklist(
                                 id='remove-longlicks-checkbox',
-                                options=[{'label': 'Remove long licks', 'value': 'remove'}],
+                                options=[{'label': '', 'value': 'remove'}],  # Empty label since we have text above
                                 value=[],  # Default unchecked
                                 inline=True,
-                                style={'margin-top': '10px', 'font-size': '14px'}
+                                style={'margin-left': '10px', 'display': 'inline-block'}
                             ),
-                            html.Span(" ⓘ", id="remove-longlicks-help", 
-                                    style={"color": "#007bff", "cursor": "help", "margin-left": "5px"}),
                             dbc.Tooltip(
                                 "Removes licks longer than the threshold from analysis. "
                                 "Requires offset data to calculate lick durations. "
@@ -316,10 +323,10 @@ app.layout = dbc.Container([
                                 target="remove-longlicks-help",
                                 placement="top"
                             )
-                        ])
-                    ], width=3)
+                        ], style={'margin-top': '15px', 'display': 'flex', 'align-items': 'center'})
+                    ], width=12)
                 ])
-            ], width=4),
+            ], width=4),  # Back to equal 4-4-4 columns
         ], style={'margin-bottom': '20px'}),
         
         dbc.Row(children=[
