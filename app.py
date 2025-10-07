@@ -963,7 +963,6 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
     longlick_th = longlick_slider
     remove_long = 'remove' in remove_longlicks
     
-    print(f"DEBUG intraburst callback: checkbox={remove_longlicks}, remove_long={remove_long}, offset_key={offset_key}")
     if jsonified_df is None:
         raise PreventUpdate
     else:        
@@ -985,21 +984,15 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
                 if offset_key in data_array:
                     offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
                     offset_times = offset_df["licks"].to_list()
-                    print(f"DEBUG intraburst: Using offset data for remove_longlicks")
                     lickdata = lickcalc(lick_times, offset=offset_times, burstThreshold=ibi, 
                                       minburstlength=minlicks, longlickThreshold=longlick_th, remove_longlicks=remove_long)
                 else:
-                    print(f"DEBUG intraburst: Offset key not found, using onset only")
                     lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
             except Exception as e:
-                print(f"DEBUG intraburst: Error with offset data: {e}, using onset only")
                 lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
         else:
-            print(f"DEBUG intraburst: Using onset only (no offset or checkbox unchecked)")
             lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
             
-        print(f"DEBUG intraburst callback: lickcalc returned {lickdata['total']} total licks, {lickdata['freq']:.2f} Hz")
- 
         ilis = lickdata["ilis"]
 
         fig = px.histogram(ilis,
@@ -1134,7 +1127,6 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
     longlick_th = longlick_slider
     remove_long = 'remove' in remove_longlicks
     
-    print(f"DEBUG longlicks callback: remove_longlicks={remove_longlicks}, remove_long={remove_long}")
     if jsonified_df is None:
         raise PreventUpdate
     
@@ -1223,7 +1215,27 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
             logging.info(f"Onset/offset validation: {validation['message']}")
         
         lickdata = lickcalc(onset, offset=offset, longlickThreshold=longlick_th, remove_longlicks=remove_long)
+        
+        # Simple validation of the result
+        if lickdata is None:
+            logging.error("lickcalc returned None")
+            fig = go.Figure()
+            fig.update_layout(title="Analysis Error")
+            return fig, "Error", "Error"
+        
+        if "licklength" not in lickdata:
+            logging.error(f"licklength key not found in lickdata. Available keys: {list(lickdata.keys())}")
+            fig = go.Figure()
+            fig.update_layout(title="Analysis Error")
+            return fig, "Error", "Error"
+            
         licklength = lickdata["licklength"]
+        
+        if licklength is None:
+            logging.error("licklength is None")
+            fig = go.Figure()
+            fig.update_layout(title="Analysis Error") 
+            return fig, "Error", "Error"
         
         if len(licklength) == 0:
             fig = go.Figure()
@@ -1251,6 +1263,17 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
         
     except Exception as e:
         logging.error(f"Error in longlicks callback: {e}")
+        logging.error(f"Error details - offset_key: {offset_key}, jsonified_dict type: {type(jsonified_dict)}")
+        if jsonified_dict:
+            try:
+                data_array = json.loads(jsonified_dict)
+                logging.error(f"Available keys in data_array: {list(data_array.keys())}")
+                if offset_key in data_array:
+                    offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                    logging.error(f"Offset data shape: {offset_df.shape}, first few values: {offset_df.head()}")
+            except Exception as parse_error:
+                logging.error(f"Error parsing data for debugging: {parse_error}")
+        
         fig = go.Figure()
         fig.update_layout(
             title="Lick Duration Analysis - Error",
@@ -1419,6 +1442,7 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
               State('offset-array', 'value'))
 def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, session_length, jsonified_dict, offset_key):
     """Collect underlying data from all figures for export"""
+    import json
     # Use slider values directly
     ibi = ibi_slider
     minlicks = minlicks_slider
@@ -1477,7 +1501,6 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, lon
         # Check if we have offset data available and checkbox is checked
         if remove_long and offset_key and offset_key != 'none' and jsonified_dict:
             try:
-                import json
                 data_array = json.loads(jsonified_dict)
                 if offset_key in data_array:
                     offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
