@@ -201,13 +201,13 @@ app.layout = dbc.Container([
                 )
             ], width=2),
             get_session_length_tooltip()[1],
-            dbc.Col(get_binsize_tooltip()[0], width=2),
-            get_binsize_tooltip()[1],
-            dbc.Col(
+            dbc.Col([
+                get_binsize_tooltip()[0],
+                get_binsize_tooltip()[1],
                 dcc.Slider(
                     id='session-bin-slider',
-                    **config.get_slider_config('session_bin')),
-                width=4),
+                    **config.get_slider_config('session_bin'))
+            ], width=6),
             ]),
         
         # Add spacing before microstructural analysis section
