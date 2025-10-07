@@ -225,22 +225,16 @@ app.layout = dbc.Container([
                             **config.get_slider_config('interburst'))
                     ], width=8),
                     dbc.Col([
-                        dbc.Input(
-                            id='interburst-input',
-                            type='number',
-                            value=config.get_slider_config('interburst')['value'],
-                            min=config.get_slider_config('interburst')['min'],
-                            max=config.get_slider_config('interburst')['max'],
-                            step=0.01,  # Allow fine-grained input
-                            size='sm',
-                            debounce=True,  # Only trigger callback on Enter or blur
+                        html.Div(
+                            id='interburst-display',
+                            children=str(config.get_slider_config('interburst')['value']),
                             style={
-                                'border': '1px solid transparent',
-                                'background': 'transparent',
                                 'text-align': 'center',
-                                'cursor': 'pointer'
-                            },
-                            className='editable-field'
+                                'padding': '5px',
+                                'font-weight': 'bold',
+                                'font-size': '14px',
+                                'color': '#495057'
+                            }
                         )
                     ], width=4)
                 ])
@@ -254,22 +248,16 @@ app.layout = dbc.Container([
                                   **config.get_slider_config('minlicks'))
                     ], width=8),
                     dbc.Col([
-                        dbc.Input(
-                            id='minlicks-input',
-                            type='number',
-                            value=config.get_slider_config('minlicks')['value'],
-                            min=config.get_slider_config('minlicks')['min'],
-                            max=config.get_slider_config('minlicks')['max'],
-                            step=0.1,  # Allow decimal input (will be rounded to integer in callback)
-                            size='sm',
-                            debounce=True,  # Only trigger callback on Enter or blur
+                        html.Div(
+                            id='minlicks-display',
+                            children=str(config.get_slider_config('minlicks')['value']),
                             style={
-                                'border': '1px solid transparent',
-                                'background': 'transparent',
                                 'text-align': 'center',
-                                'cursor': 'pointer'
-                            },
-                            className='editable-field'
+                                'padding': '5px',
+                                'font-weight': 'bold',
+                                'font-size': '14px',
+                                'color': '#495057'
+                            }
                         )
                     ], width=4)
                 ])
@@ -284,22 +272,16 @@ app.layout = dbc.Container([
                             **config.get_slider_config('longlick'))
                     ], width=8),
                     dbc.Col([
-                        dbc.Input(
-                            id='longlick-input',
-                            type='number',
-                            value=config.get_slider_config('longlick')['value'],
-                            min=config.get_slider_config('longlick')['min'],
-                            max=config.get_slider_config('longlick')['max'],
-                            step=0.001,  # Allow fine-grained input for milliseconds
-                            size='sm',
-                            debounce=True,  # Only trigger callback on Enter or blur
+                        html.Div(
+                            id='longlick-display',
+                            children=str(config.get_slider_config('longlick')['value']),
                             style={
-                                'border': '1px solid transparent',
-                                'background': 'transparent',
                                 'text-align': 'center',
-                                'cursor': 'pointer'
-                            },
-                            className='editable-field'
+                                'padding': '5px',
+                                'font-weight': 'bold',
+                                'font-size': '14px',
+                                'color': '#495057'
+                            }
                         )
                     ], width=4)
                 ])
@@ -934,20 +916,13 @@ def update_session_length_suggestion(jsonified_df, custom_config):
               Output('intraburst-freq', 'children'),
               Input('lick-data', 'data'),
               Input('interburst-slider', 'value'),
-              Input('interburst-input', 'value'),
-              Input('minlicks-slider', 'value'),
-              Input('minlicks-input', 'value'))
-def make_intraburstfreq_graph(jsonified_df, ibi_slider, ibi_input, minlicks_slider, minlicks_input):
-    # Use input field values if available and not None/empty, otherwise use slider values
-    # Debug: Print values to understand what's happening
-    ibi = ibi_input if (ibi_input is not None and ibi_input != "" and str(ibi_input).strip() != "") else ibi_slider
+              Input('minlicks-slider', 'value'))
+def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider):
+    # Use slider values directly
+    ibi = ibi_slider
+    minlicks = minlicks_slider
     
-    # Handle minlicks with automatic rounding using helper function
-    minlicks = get_minlicks_value(minlicks_input, minlicks_slider)
-    
-    # Debug output (will appear in browser console in dev mode)
-    print(f"DEBUG intraburst callback: ibi_input={ibi_input}, ibi_slider={ibi_slider}, using ibi={ibi}")
-    print(f"DEBUG intraburst callback: minlicks_input={minlicks_input}, minlicks_slider={minlicks_slider}, using minlicks={minlicks}")
+    print(f"DEBUG intraburst callback: using ibi={ibi}, minlicks={minlicks}")
     print(f"DEBUG intraburst callback: About to call lickcalc with burstThreshold={ibi}, minburstlength={minlicks}")
     if jsonified_df is None:
         raise PreventUpdate
@@ -983,36 +958,18 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, ibi_input, minlicks_slid
         
         return fig, nlicks, freq
 
-# Helper function to get minlicks value with automatic rounding
-def get_minlicks_value(minlicks_input, minlicks_slider):
-    """Get minlicks value, automatically rounding input field values to integers"""
-    print(f"DEBUG get_minlicks_value: input={minlicks_input}, slider={minlicks_slider}")
-    if minlicks_input is not None and minlicks_input != "" and str(minlicks_input).strip() != "":
-        try:
-            result = int(round(float(minlicks_input)))  # Round to nearest integer
-            print(f"DEBUG get_minlicks_value: using input value, rounded {minlicks_input} to {result}")
-            return result
-        except (ValueError, TypeError):
-            print(f"DEBUG get_minlicks_value: input conversion failed, using slider value {minlicks_slider}")
-            return minlicks_slider
-    else:
-        print(f"DEBUG get_minlicks_value: input is None/empty, using slider value {minlicks_slider}")
-        return minlicks_slider
-
 # Callback to sync input fields with sliders when sliders change
 @app.callback(
-    [Output('interburst-input', 'value'),
-     Output('minlicks-input', 'value'),
-     Output('longlick-input', 'value')],
+    [Output('interburst-display', 'children'),
+     Output('minlicks-display', 'children'),
+     Output('longlick-display', 'children')],
     [Input('interburst-slider', 'value'),
      Input('minlicks-slider', 'value'),
-     Input('longlick-threshold', 'value')],
-    prevent_initial_call=True
+     Input('longlick-threshold', 'value')]
 )
-def sync_inputs_with_sliders(ibi_slider, minlicks_slider, longlick_slider):
-    """Update input fields when sliders change"""
-    print(f"DEBUG sync_inputs: Updating inputs to match sliders: ibi={ibi_slider}, minlicks={minlicks_slider}, longlick={longlick_slider}")
-    return ibi_slider, minlicks_slider, longlick_slider
+def update_display_values(ibi_value, minlicks_value, longlick_value):
+    """Update display fields when sliders change"""
+    return str(ibi_value), str(minlicks_value), str(longlick_value)
 
 # Helper function for onset/offset validation
 def validate_onset_offset_pairs(onset_times, offset_times):
@@ -1106,12 +1063,11 @@ def validate_onset_offset_pairs(onset_times, offset_times):
               Output('longlicks-max', 'children'),
               Input('offset-array', 'value'),
               Input('longlick-threshold', 'value'),
-              Input('longlick-input', 'value'),
               State('data-store', 'data'),
               State('lick-data', 'data'))
-def make_longlicks_graph(offset_key, longlick_slider, longlick_input, jsonified_dict, jsonified_df):
-    # Use input field value if it exists and is valid, otherwise use slider value
-    longlick_th = longlick_input if (longlick_input is not None and longlick_input != "") else longlick_slider
+def make_longlicks_graph(offset_key, longlick_slider, jsonified_dict, jsonified_df):
+    # Use slider value directly
+    longlick_th = longlick_slider
     if jsonified_df is None:
         raise PreventUpdate
     
@@ -1246,13 +1202,11 @@ def make_longlicks_graph(offset_key, longlick_slider, longlick_input, jsonified_
 @app.callback(Output('bursthist-fig', 'figure'),
               Input('lick-data', 'data'),
               Input('interburst-slider', 'value'),
-              Input('interburst-input', 'value'),
-              Input('minlicks-slider', 'value'),
-              Input('minlicks-input', 'value'))
-def make_bursthist_graph(jsonified_df, ibi_slider, ibi_input, minlicks_slider, minlicks_input):
-    # Use input field value if it exists and is valid, otherwise use slider value
-    ibi = ibi_input if (ibi_input is not None and ibi_input != "") else ibi_slider
-    minlicks = get_minlicks_value(minlicks_input, minlicks_slider)
+              Input('minlicks-slider', 'value'))
+def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider):
+    # Use slider values directly
+    ibi = ibi_slider
+    minlicks = minlicks_slider
     if jsonified_df is None:
         raise PreventUpdate
     else:
@@ -1296,13 +1250,11 @@ def make_bursthist_graph(jsonified_df, ibi_slider, ibi_input, minlicks_slider, m
               Output('weibull-rsq', 'children'),
               Input('lick-data', 'data'),
               Input('interburst-slider', 'value'),
-              Input('interburst-input', 'value'),
-              Input('minlicks-slider', 'value'),
-              Input('minlicks-input', 'value'))
-def make_burstprob_graph(jsonified_df, ibi_slider, ibi_input, minlicks_slider, minlicks_input):
-    # Use input field value if it exists and is valid, otherwise use slider value
-    ibi = ibi_input if (ibi_input is not None and ibi_input != "") else ibi_slider
-    minlicks = get_minlicks_value(minlicks_input, minlicks_slider)
+              Input('minlicks-slider', 'value'))
+def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider):
+    # Use slider values directly
+    ibi = ibi_slider
+    minlicks = minlicks_slider
     if jsonified_df is None:
         raise PreventUpdate
     else:
@@ -1348,20 +1300,17 @@ def make_burstprob_graph(jsonified_df, ibi_slider, ibi_input, minlicks_slider, m
               Input('lick-data', 'data'),
               Input('session-bin-slider', 'value'),
               Input('interburst-slider', 'value'),
-              Input('interburst-input', 'value'),
               Input('minlicks-slider', 'value'),
-              Input('minlicks-input', 'value'),
               Input('longlick-threshold', 'value'),
-              Input('longlick-input', 'value'),
               Input('session-length-input', 'value'),
               State('data-store', 'data'),
               State('offset-array', 'value'))
-def collect_figure_data(jsonified_df, bin_size, ibi_slider, ibi_input, minlicks_slider, minlicks_input, longlick_slider, longlick_input, session_length, jsonified_dict, offset_key):
+def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, longlick_slider, session_length, jsonified_dict, offset_key):
     """Collect underlying data from all figures for export"""
-    # Use input field values if available and not None/empty, otherwise use slider values
-    ibi = ibi_input if (ibi_input is not None and ibi_input != "") else ibi_slider
-    minlicks = get_minlicks_value(minlicks_input, minlicks_slider)
-    longlick_th = longlick_input if (longlick_input is not None and longlick_input != "") else longlick_slider
+    # Use slider values directly
+    ibi = ibi_slider
+    minlicks = minlicks_slider
+    longlick_th = longlick_slider
     if jsonified_df is None:
         raise PreventUpdate
     
@@ -1816,20 +1765,17 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
               State('onset-array', 'value'),
               State('offset-array', 'value'),
               State('interburst-slider', 'value'),
-              State('interburst-input', 'value'),
               State('minlicks-slider', 'value'),
-              State('minlicks-input', 'value'),
               State('longlick-threshold', 'value'),
-              State('longlick-input', 'value'),
               prevent_initial_call=True)
 def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source_filename, 
                         division_number, division_method, session_length, data_store, onset_key, offset_key,
-                        ibi_slider, ibi_input, minlicks_slider, minlicks_input, longlick_slider, longlick_input):
+                        ibi_slider, minlicks_slider, longlick_slider):
     """Add current analysis results to the results table with optional divisions"""
-    # Use input field values if available and not None/empty, otherwise use slider values
-    ibi = ibi_input if (ibi_input is not None and ibi_input != "") else ibi_slider
-    minlicks = get_minlicks_value(minlicks_input, minlicks_slider)
-    longlick_th = longlick_input if (longlick_input is not None and longlick_input != "") else longlick_slider
+    # Use slider values directly
+    ibi = ibi_slider
+    minlicks = minlicks_slider
+    longlick_th = longlick_slider
     if n_clicks == 0 or not figure_data or 'summary_stats' not in figure_data:
         raise PreventUpdate
     
