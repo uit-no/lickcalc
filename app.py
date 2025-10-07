@@ -520,7 +520,8 @@ app.layout = dbc.Container([
                     {'name': 'Weibull Beta', 'id': 'weibull_beta', 'type': 'numeric', 'format': {'specifier': '.3f'}},
                     {'name': 'Weibull R²', 'id': 'weibull_rsq', 'type': 'numeric', 'format': {'specifier': '.3f'}},
                     {'name': 'N Long Licks', 'id': 'n_long_licks', 'type': 'numeric', 'format': {'specifier': '.0f'}},
-                    {'name': 'Max Lick Duration (s)', 'id': 'max_lick_duration', 'type': 'numeric', 'format': {'specifier': '.4f'}}
+                    {'name': 'Max Lick Duration (s)', 'id': 'max_lick_duration', 'type': 'numeric', 'format': {'specifier': '.4f'}},
+                    {'name': 'Long Licks Removed?', 'id': 'long_licks_removed', 'type': 'text'}
                 ],
                 data=[],
                 editable=True,
@@ -1473,7 +1474,22 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, lon
         }
         
         # Intraburst frequency data (ILIs)
-        lickdata = lickcalc(lick_times, remove_longlicks=remove_long)
+        # Check if we have offset data available and checkbox is checked
+        if remove_long and offset_key and offset_key != 'none' and jsonified_dict:
+            try:
+                import json
+                data_array = json.loads(jsonified_dict)
+                if offset_key in data_array:
+                    offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                    offset_times = offset_df["licks"].to_list()
+                    lickdata = lickcalc(lick_times, offset=offset_times, burstThreshold=ibi, 
+                                      minburstlength=minlicks, longlickThreshold=longlick_th, remove_longlicks=remove_long)
+                else:
+                    lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+            except Exception:
+                lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+        else:
+            lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
         ilis = lickdata["ilis"]
         ili_counts, ili_edges = np.histogram(ilis, bins=50, range=(0, 0.5))
         ili_centers = (ili_edges[:-1] + ili_edges[1:]) / 2
@@ -1487,7 +1503,8 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, lon
         figure_data['lick_lengths'] = None
         
         # Burst data
-        burst_lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks, remove_longlicks=remove_long)
+        # Use the same lickdata result from intraburst calculation for consistency
+        burst_lickdata = lickdata
         bursts = burst_lickdata['bLicks']
         
         # Burst histogram data
@@ -1925,7 +1942,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     offset=offset_times if offset_times else [],
                     burstThreshold=ibi,
                     minburstlength=minlicks,
-                    longlickThreshold=longlick_th
+                    longlickThreshold=longlick_th,
+                    remove_longlicks=remove_long if offset_times else False
                 )
                 
                 # Create new row with recalculated stats
@@ -1946,7 +1964,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'weibull_beta': enhanced_results.get('weib_beta', np.nan),
                     'weibull_rsq': enhanced_results.get('weib_rsq', np.nan),
                     'n_long_licks': len(enhanced_results.get('longlicks', [])) if offset_times else np.nan,
-                    'max_lick_duration': np.max(enhanced_results.get('licklength', [])) if offset_times and enhanced_results.get('licklength') is not None and len(enhanced_results.get('licklength', [])) > 0 else np.nan
+                    'max_lick_duration': np.max(enhanced_results.get('licklength', [])) if offset_times and enhanced_results.get('licklength') is not None and len(enhanced_results.get('licklength', [])) > 0 else np.nan,
+                    'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                 }
                 
             except Exception as e:
@@ -1992,7 +2011,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'weibull_beta': stats.get('weibull_beta', np.nan),
                     'weibull_rsq': stats.get('weibull_rsq', np.nan),
                     'n_long_licks': n_long_licks,
-                    'max_lick_duration': max_lick_duration
+                    'max_lick_duration': max_lick_duration,
+                    'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                 }
             
             # Add to existing data
@@ -2043,7 +2063,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     minburstlength=minlicks,
                     longlickThreshold=longlick_th,
                     time_divisions=division_number,
-                    session_length=session_length if session_length and session_length > 0 else None
+                    session_length=session_length if session_length and session_length > 0 else None,
+                    remove_longlicks=remove_long if offset_times else False
                 )
                 
                 # Convert trompy division results to webapp format
@@ -2074,7 +2095,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                             'weibull_beta': div['weibull_beta'],
                             'weibull_rsq': div['weibull_rsq'],
                             'n_long_licks': div['n_long_licks'],
-                            'max_lick_duration': div['max_lick_duration']
+                            'max_lick_duration': div['max_lick_duration'],
+                            'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                         })
             
             elif division_method == 'bursts':
@@ -2085,7 +2107,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     burstThreshold=ibi,
                     minburstlength=minlicks,
                     longlickThreshold=longlick_th,
-                    burst_divisions=division_number
+                    burst_divisions=division_number,
+                    remove_longlicks=remove_long if offset_times else False
                 )
                 
                 # Convert trompy division results to webapp format
@@ -2109,7 +2132,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                             'weibull_beta': div['weibull_beta'],
                             'weibull_rsq': div['weibull_rsq'],
                             'n_long_licks': div['n_long_licks'],
-                            'max_lick_duration': div['max_lick_duration']
+                            'max_lick_duration': div['max_lick_duration'],
+                            'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                         })
                 else:
                     # Handle case where no burst divisions could be created (e.g., no bursts)
@@ -2131,7 +2155,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                             'weibull_beta': float('nan'),
                             'weibull_rsq': float('nan'),
                             'n_long_licks': 0,
-                            'max_lick_duration': float('nan')
+                            'max_lick_duration': float('nan'),
+                            'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                         })
             
             # Add all division rows to existing data
