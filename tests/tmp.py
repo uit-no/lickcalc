@@ -12,7 +12,8 @@ import trompy as tp
 import plotly.express as px
 import json
 
-from helperfx import parse_medfile, lickCalc
+from helperfx import parse_medfile
+from trompy import lickcalc
 
 file = "D:\\Test Data\\medfiles\\!2017-07-28_07h43m.Subject pcf1.07"
 # file = "D:\\Test Data\\medfiles\\!2018-10-16_11h33m.Subject IPP2.16"
@@ -28,7 +29,7 @@ jsonified_df = df.to_json(orient='split')
 
 df_new = pd.read_json(jsonified_df, orient='split')
 
-lickdata = tp.lickCalc(df[0].tolist(), offset=df_offset[0].tolist())
+lickdata = tp.lickcalc(df[0].tolist(), offset=df_offset[0].tolist())
 
 
 

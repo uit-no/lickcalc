@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 class ConfigManager:
-    """Manages configuration loading and access for LickCalc."""
+    """Manages configuration loading and access for lickcalc."""
     
     def __init__(self, config_path: str = "config.yaml"):
         """
@@ -58,7 +58,7 @@ class ConfigManager:
                 'default_file_type': 'med'
             },
             'ui': {
-                'title': 'LickCalc',
+                'title': 'lickcalc',
                 'debug': True,
                 'hot_reload': True
             },
@@ -170,7 +170,7 @@ class ConfigManager:
     def get_app_config(self) -> Dict[str, Any]:
         """Get application-level configuration."""
         return {
-            'title': self.get('ui.title', 'LickCalc'),
+            'title': self.get('ui.title', 'lickcalc'),
             'debug': self.get('ui.debug', True),
             'hot_reload': self.get('ui.hot_reload', True)
         }

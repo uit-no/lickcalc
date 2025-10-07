@@ -116,7 +116,7 @@ def load_and_clean_data(list_of_contents, list_of_names, list_of_dates, input_fi
 def make_session_graph(jsonified_df):
     
     df = pd.read_json(jsonified_df, orient='split')
-    lickdata = tp.lickCalc(df[0].to_list())
+    lickdata = tp.lickcalc(df[0].to_list())
     
     fig = px.histogram(df)
 
@@ -129,7 +129,7 @@ def make_session_graph(jsonified_df):
               Input('lick-data', 'data'))
 def make_burst_graphs(jsonified_df):
     df = pd.read_json(jsonified_df, orient='split')
-    lickdata = tp.lickCalc(df[0].to_list())
+    lickdata = tp.lickcalc(df[0].to_list())
     print("To do")
     
     # make subplots???

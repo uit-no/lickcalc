@@ -99,7 +99,7 @@ app.layout = html.Div([
             
 #             print(df)
         
-#         # lick_dictionary = tp.lickCalc(data)
+#         # lick_dictionary = tp.lickcalc(data)
         
 #         jsonified_df = df.to_json(orient='split')
             
@@ -111,7 +111,7 @@ app.layout = html.Div([
 def make_session_graph(n_clicks):
     if n_clicks == 1:
     # df = pd.read_json(jsonified_df, orient='split')
-    # lickdata = tp.lickCalc(df[0].to_list())
+    # lickdata = tp.lickcalc(df[0].to_list())
     
         fig = go.Figure(data=[go.Scatter(x=[], y=[])])
         # fig.update_traces()

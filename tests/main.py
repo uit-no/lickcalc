@@ -64,7 +64,7 @@ def analyze():
     
     variables["onsetArray"] = variables["data"][variables["onset"].split(':')[0]]
     
-    variables["lickdata"] = tp.lickCalc(variables["onsetArray"], offset=[])
+    variables["lickdata"] = tp.lickcalc(variables["onsetArray"], offset=[])
     
     return redirect(url_for('index'))
 

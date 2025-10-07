@@ -15,7 +15,7 @@ import pandas as pd
 import numpy as np
 
 from helperfx import parse_medfile, parse_csvfile, parse_ddfile
-from trompy import lickCalc
+from trompy import lickcalc
 
 from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip, 
                      get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip, get_session_length_tooltip)
@@ -948,7 +948,7 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, ibi_input, minlicks_slid
     # Debug output (will appear in browser console in dev mode)
     print(f"DEBUG intraburst callback: ibi_input={ibi_input}, ibi_slider={ibi_slider}, using ibi={ibi}")
     print(f"DEBUG intraburst callback: minlicks_input={minlicks_input}, minlicks_slider={minlicks_slider}, using minlicks={minlicks}")
-    print(f"DEBUG intraburst callback: About to call lickCalc with burstThreshold={ibi}, minburstlength={minlicks}")
+    print(f"DEBUG intraburst callback: About to call lickcalc with burstThreshold={ibi}, minburstlength={minlicks}")
     if jsonified_df is None:
         raise PreventUpdate
     else:        
@@ -960,8 +960,8 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, ibi_input, minlicks_slid
             fig.update_layout(title="No data available")
             return fig, "0", "0.00 Hz"
         
-        lickdata = lickCalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
-        print(f"DEBUG intraburst callback: lickCalc returned {lickdata['total']} total licks, {lickdata['freq']:.2f} Hz")
+        lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
+        print(f"DEBUG intraburst callback: lickcalc returned {lickdata['total']} total licks, {lickdata['freq']:.2f} Hz")
  
         ilis = lickdata["ilis"]
 
@@ -1199,7 +1199,7 @@ def make_longlicks_graph(offset_key, longlick_slider, longlick_input, jsonified_
         else:
             logging.info(f"Onset/offset validation: {validation['message']}")
         
-        lickdata = lickCalc(onset, offset=offset, longlickThreshold=longlick_th)
+        lickdata = lickcalc(onset, offset=offset, longlickThreshold=longlick_th)
         licklength = lickdata["licklength"]
         
         if len(licklength) == 0:
@@ -1264,7 +1264,7 @@ def make_bursthist_graph(jsonified_df, ibi_slider, ibi_input, minlicks_slider, m
             fig.update_layout(title="No data available")
             return fig
         
-        lickdata = lickCalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
+        lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
     
         bursts=lickdata['bLicks']
         
@@ -1314,7 +1314,7 @@ def make_burstprob_graph(jsonified_df, ibi_slider, ibi_input, minlicks_slider, m
             fig.update_layout(title="No data available")
             return fig, "0", "0.00", "0.00", "0.00", "0.00"
         
-        lickdata = lickCalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
+        lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
     
         if len(lickdata['burstprob'][0]) == 0:
             fig = go.Figure()
@@ -1412,7 +1412,7 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, ibi_input, minlicks_
         }
         
         # Intraburst frequency data (ILIs)
-        lickdata = lickCalc(lick_times)
+        lickdata = lickcalc(lick_times)
         ilis = lickdata["ilis"]
         ili_counts, ili_edges = np.histogram(ilis, bins=50, range=(0, 0.5))
         ili_centers = (ili_edges[:-1] + ili_edges[1:]) / 2
@@ -1426,7 +1426,7 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, ibi_input, minlicks_
         figure_data['lick_lengths'] = None
         
         # Burst data
-        burst_lickdata = lickCalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+        burst_lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
         bursts = burst_lickdata['bLicks']
         
         # Burst histogram data
@@ -1505,7 +1505,7 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, ibi_input, minlicks_
                         else:
                             logging.info(f"Data export validation: {validation['message']}")
                             
-                        lickdata_with_offset = lickCalc(onset_times, offset=offset_times, longlickThreshold=longlick_th)
+                        lickdata_with_offset = lickcalc(onset_times, offset=offset_times, longlickThreshold=longlick_th)
                         licklength = lickdata_with_offset["licklength"]
                         
                         # Create lick lengths histogram data
@@ -1558,7 +1558,7 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
         }
     
     # Calculate basic burst statistics
-    burst_lickdata = lickCalc(segment_licks, burstThreshold=ibi, minburstlength=minlicks)
+    burst_lickdata = lickcalc(segment_licks, burstThreshold=ibi, minburstlength=minlicks)
     
     stats = {
         'total_licks': burst_lickdata['total'],
@@ -1583,7 +1583,7 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
                 validated_onsets = validation['corrected_onset']
                 validated_offsets = validation['corrected_offset']
                 
-                lickdata_with_offset = lickCalc(validated_onsets, offset=validated_offsets, longlickThreshold=longlick_th)
+                lickdata_with_offset = lickcalc(validated_onsets, offset=validated_offsets, longlickThreshold=longlick_th)
                 licklength = lickdata_with_offset["licklength"]
                 stats['n_long_licks'] = len(lickdata_with_offset["longlicks"])
                 stats['max_lick_duration'] = np.max(licklength) if len(licklength) > 0 else np.nan
@@ -1606,7 +1606,7 @@ def get_licks_for_burst_range(lick_times, start_burst, end_burst, ibi, minlicks)
         return []
     
     # Calculate bursts for the whole session first
-    burst_lickdata = lickCalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+    burst_lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
     total_bursts = burst_lickdata.get('bNum', 0)
     
     if total_bursts == 0:
@@ -1624,7 +1624,7 @@ def get_licks_for_burst_range(lick_times, start_burst, end_burst, ibi, minlicks)
         return [t for t in lick_times if start_time <= t < end_time]
     
     # We have bursts - extract them properly
-    # The key insight: re-run lickCalc on the full data to get clean burst boundaries
+    # The key insight: re-run lickcalc on the full data to get clean burst boundaries
     # Then extract the licks that belong to our target burst range
     
     # Ensure valid burst range
@@ -1859,8 +1859,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
             
             # Recalculate stats with proper onset/offset validation
             try:
-                # Use enhanced lickCalc with current parameters to get accurate long lick stats
-                enhanced_results = lickCalc(
+                # Use enhanced lickcalc with current parameters to get accurate long lick stats
+                enhanced_results = lickcalc(
                     licks=lick_times,
                     offset=offset_times if offset_times else [],
                     burstThreshold=ibi,
@@ -1903,7 +1903,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 elif offset_times:
                     # If figure_data doesn't have proper values but we have offset data, try a quick calculation
                     try:
-                        temp_results = lickCalc(lick_times, offset=offset_times, longlickThreshold=longlick_th)
+                        temp_results = lickcalc(lick_times, offset=offset_times, longlickThreshold=longlick_th)
                         n_long_licks = len(temp_results.get('longlicks', []))
                         licklength_array = temp_results.get('licklength', [])
                         if licklength_array is not None and len(licklength_array) > 0:
@@ -1970,13 +1970,13 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 elif len(lick_times) != len(offset_times):
                     lick_times = lick_times[:len(offset_times)]
             
-            # Calculate divisions using enhanced lickCalc function
+            # Calculate divisions using enhanced lickcalc function
             division_rows = []
             
-            # Use enhanced lickCalc with division parameters
+            # Use enhanced lickcalc with division parameters
             if division_method == 'time':
                 # Calculate with time divisions
-                enhanced_results = lickCalc(
+                enhanced_results = lickcalc(
                     licks=lick_times,
                     offset=offset_times if offset_times else [],
                     burstThreshold=ibi,
@@ -2019,7 +2019,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
             
             elif division_method == 'bursts':
                 # Calculate with burst divisions
-                enhanced_results = lickCalc(
+                enhanced_results = lickcalc(
                     licks=lick_times,
                     offset=offset_times if offset_times else [],
                     burstThreshold=ibi,

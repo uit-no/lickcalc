@@ -18,7 +18,8 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 
-from helperfx import parse_medfile, lickCalc
+from helperfx import parse_medfile
+from trompy import lickcalc
 
 # external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -261,7 +262,7 @@ def make_intraburstfreq_graph(jsonified_df):
         raise PreventUpdate
     else:        
         df = pd.read_json(jsonified_df, orient='split')
-        lickdata = lickCalc(df["licks"].to_list())
+        lickdata = lickcalc(df["licks"].to_list())
         
         ilis = lickdata["ilis"]
         freq = lickdata['freq']
@@ -292,7 +293,7 @@ def make_bursthist_graph(jsonified_df, ibi, minlicks):
         raise PreventUpdate
     else:
         df = pd.read_json(jsonified_df, orient='split')
-        lickdata = lickCalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
+        lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
     
         bursts=lickdata['bLicks']
         bNum=lickdata['bNum']
@@ -325,7 +326,7 @@ def make_burstprob_graph(jsonified_df, ibi, minlicks):
         raise PreventUpdate
     else:
         df = pd.read_json(jsonified_df, orient='split')
-        lickdata = lickCalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
+        lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
     
         x=lickdata['burstprob'][0]
         y=lickdata['burstprob'][1]

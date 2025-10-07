@@ -21,7 +21,8 @@ try:
     print("✓ Dash imports working")
     
     # Test our helper modules
-    from helperfx import parse_medfile, parse_csvfile, parse_ddfile, lickCalc
+    from helperfx import parse_medfile, parse_csvfile, parse_ddfile
+    from trompy import lickcalc
     print("✓ Helper functions imported")
     
     from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip, 
