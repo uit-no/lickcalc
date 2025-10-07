@@ -130,7 +130,7 @@ def get_offset_tooltip():
     return create_labeled_element_with_tooltip("Offset array", "offset-help", "offset_array", "top")
 
 def get_session_length_tooltip():
-    return create_labeled_element_with_tooltip("Session Length (s)", "session-length-help", "session_length", "top")
+    return create_labeled_element_with_tooltip("Session Length", "session-length-help", "session_length", "top")
 
 # Table cell tooltips
 def get_table_tooltips():

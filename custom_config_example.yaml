@@ -5,7 +5,8 @@
 session:
   bin_size: 30          # Default bin size for session histogram (seconds)
   fig_type: 'hist'      # Default figure type: 'hist' or 'cumul'
-  length: 3600          # Default session length in seconds (use 'auto' for automatic)
+  length: 3600          # Default session length value (use 'auto' for automatic)
+  length_unit: 's'      # Unit for session length: 's' (seconds), 'min' (minutes), or 'hr' (hours)
 
 microstructure:
   interburst_interval: 0.5      # Default inter-burst interval (seconds)

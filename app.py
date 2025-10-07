@@ -45,6 +45,7 @@ app.layout = dbc.Container([
     dcc.Store(id='filename-store'),  # Store for uploaded filename
     dcc.Store(id='session-duration-store'),  # Store for total session duration
     dcc.Store(id='custom-config-store'),  # Store for custom config values
+    dcc.Store(id='session-length-seconds'),  # Store for session length in seconds (latent variable)
     html.Div(
     [
         # Floating buttons at top right - vertically arranged
@@ -190,15 +191,32 @@ app.layout = dbc.Container([
                 ], width=3),
             dbc.Col([
                 get_session_length_tooltip()[0],
-                dbc.Input(
-                    id='session-length-input',
-                    type='number',
-                    value=config.get('session.length', 3600) if config.get('session.length', 'auto') != 'auto' else 3600,
-                    min=1,
-                    step=1,
-                    placeholder="Session duration in seconds",
-                    style={'width': '100%'}
-                )
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Input(
+                            id='session-length-input',
+                            type='number',
+                            value=config.get('session.length', 3600) if config.get('session.length', 'auto') != 'auto' else 3600,
+                            min=1,
+                            step=1,
+                            placeholder="Duration",
+                            style={'width': '100%'}
+                        )
+                    ], width=7),
+                    dbc.Col([
+                        dcc.Dropdown(
+                            id='session-length-unit',
+                            options=[
+                                {'label': 's', 'value': 's'},
+                                {'label': 'min', 'value': 'min'},
+                                {'label': 'hr', 'value': 'hr'}
+                            ],
+                            value=config.get('session.length_unit', 's'),
+                            clearable=False,
+                            style={'width': '100%'}
+                        )
+                    ], width=5)
+                ], className="g-1")
             ], width=2),
             get_session_length_tooltip()[1],
             dbc.Col([
@@ -653,6 +671,7 @@ def serve_help():
     Output('longlick-threshold', 'value'),
     Output('session-fig-type', 'value'),
     Output('session-length-input', 'value', allow_duplicate=True),
+    Output('session-length-unit', 'value'),
     Output('config-button-content', 'children'),
     Output('config-button-content', 'className'),
     Input('upload-config', 'contents'),
@@ -681,6 +700,7 @@ def load_config(config_contents, config_filename, current_session_length):
         longlick = custom_config.get('microstructure', {}).get('long_lick_threshold', config.get('microstructure.long_lick_threshold', 0.3))
         figtype = custom_config.get('session', {}).get('fig_type', config.get('session.fig_type', 'hist'))
         session_length_config = custom_config.get('session', {}).get('length', 3600)
+        session_length_unit = custom_config.get('session', {}).get('length_unit', config.get('session.length_unit', 's'))
         
         # Handle 'auto' value for session length
         # If config says 'auto', keep the current value (don't override existing auto-detected value)
@@ -698,6 +718,7 @@ def load_config(config_contents, config_filename, current_session_length):
             longlick,
             figtype,
             session_length,
+            session_length_unit,
             "✅ Custom Config Loaded",  # Change button text
             "btn btn-success btn-sm"  # Change to green button
         )
@@ -705,6 +726,7 @@ def load_config(config_contents, config_filename, current_session_length):
     except yaml.YAMLError as e:
         # Return current values on error
         return (
+            dash.no_update,
             dash.no_update,
             dash.no_update,
             dash.no_update,
@@ -726,9 +748,55 @@ def load_config(config_contents, config_filename, current_session_length):
             dash.no_update,
             dash.no_update,
             dash.no_update,
+            dash.no_update,
             f"❌ Load Error",
             "btn btn-danger btn-sm"
         )
+
+# Callback to update session-length-seconds store whenever session length or unit changes
+@app.callback(
+    Output('session-length-seconds', 'data'),
+    Input('session-length-input', 'value'),
+    Input('session-length-unit', 'value')
+)
+def update_session_length_seconds(session_length, unit):
+    """Convert session length to seconds based on the selected unit."""
+    if session_length is None or session_length <= 0:
+        return None
+    
+    # Convert to seconds based on unit
+    if unit == 'min':
+        return session_length * 60
+    elif unit == 'hr':
+        return session_length * 3600
+    else:  # unit == 's' or default
+        return session_length
+
+# Callback to update the input field when unit changes (convert display value)
+@app.callback(
+    Output('session-length-input', 'value', allow_duplicate=True),
+    Input('session-length-unit', 'value'),
+    State('session-length-seconds', 'data'),
+    prevent_initial_call=True
+)
+def convert_display_value_on_unit_change(new_unit, current_seconds):
+    """When unit changes, convert the display value to show equivalent in new unit."""
+    if current_seconds is None or current_seconds <= 0:
+        raise PreventUpdate
+    
+    # Convert from seconds to the new unit
+    if new_unit == 'min':
+        new_value = current_seconds / 60
+    elif new_unit == 'hr':
+        new_value = current_seconds / 3600
+    else:  # 's'
+        new_value = current_seconds
+    
+    # Round to reasonable precision
+    if new_value >= 10:
+        return round(new_value)
+    else:
+        return round(new_value, 2)
     
 @app.callback(Output('data-store', 'data'),
               Output('fileloadLbl', 'children'),
@@ -875,8 +943,8 @@ def get_lick_data(jsonified_dict, df_key):
               Input('lick-data', 'data'),
               Input('session-fig-type', 'value'),
               Input('session-bin-slider', 'value'),
-              Input('session-length-input', 'value'))
-def make_session_graph(jsonified_df, figtype, binsize, session_length):
+              Input('session-length-seconds', 'data'))
+def make_session_graph(jsonified_df, figtype, binsize, session_length_seconds):
     
     if jsonified_df is None:
         raise PreventUpdate
@@ -885,7 +953,7 @@ def make_session_graph(jsonified_df, figtype, binsize, session_length):
         lastlick = max(df["licks"]) if len(df) > 0 else 0
         
         # Use custom session length if provided, otherwise use last lick time
-        plot_duration = session_length if session_length and session_length > 0 else lastlick
+        plot_duration = session_length_seconds if session_length_seconds and session_length_seconds > 0 else lastlick
         
         if figtype == "hist":
             fig = px.histogram(df,
@@ -1446,10 +1514,10 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
               Input('minlicks-slider', 'value'),
               Input('longlick-threshold', 'value'),
               Input('remove-longlicks-checkbox', 'value'),
-              Input('session-length-input', 'value'),
+              Input('session-length-seconds', 'data'),
               State('data-store', 'data'),
               State('offset-array', 'value'))
-def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, session_length, jsonified_dict, offset_key):
+def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, session_length_seconds, jsonified_dict, offset_key):
     """Collect underlying data from all figures for export"""
     import json
     # Use slider values directly
@@ -1496,8 +1564,8 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, lon
             }
             return figure_data
         
-        # Session histogram data (use session_length for display range if specified)
-        max_time = session_length if session_length and session_length > 0 else max(lick_times)
+        # Session histogram data (use session_length_seconds for display range if specified)
+        max_time = session_length_seconds if session_length_seconds and session_length_seconds > 0 else max(lick_times)
         hist_counts, hist_edges = np.histogram(lick_times, bins=int(max_time/bin_size) if max_time > 0 else 1, range=(0, max_time))
         hist_centers = (hist_edges[:-1] + hist_edges[1:]) / 2
         figure_data['session_hist'] = {
@@ -1922,7 +1990,7 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
               State('filename-store', 'data'),
               State('division-number', 'value'),
               State('division-method', 'value'),
-              State('session-length-input', 'value'),
+              State('session-length-seconds', 'data'),
               State('data-store', 'data'),
               State('onset-array', 'value'),
               State('offset-array', 'value'),
@@ -1932,7 +2000,7 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
               State('remove-longlicks-checkbox', 'value'),
               prevent_initial_call=True)
 def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source_filename, 
-                        division_number, division_method, session_length, data_store, onset_key, offset_key,
+                        division_number, division_method, session_length_seconds, data_store, onset_key, offset_key,
                         ibi_slider, minlicks_slider, longlick_slider, remove_longlicks):
     """Add current analysis results to the results table with optional divisions"""
     # Use slider values directly
@@ -1940,6 +2008,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
     minlicks = minlicks_slider
     longlick_th = longlick_slider
     remove_long = 'remove' in remove_longlicks
+    
     if n_clicks == 0 or not figure_data or 'summary_stats' not in figure_data:
         raise PreventUpdate
     
@@ -1961,9 +2030,9 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
             # For whole session: start time is always 0, end time uses session length input
             start_time = 0
             
-            # Use session length from input box, or fall back to max lick time
-            if session_length and session_length > 0:
-                end_time = session_length
+            # Use session length from input box (already converted to seconds), or fall back to max lick time
+            if session_length_seconds and session_length_seconds > 0:
+                end_time = session_length_seconds
             else:
                 end_time = max(lick_times) if lick_times else 0
             
@@ -2096,14 +2165,14 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     minburstlength=minlicks,
                     longlickThreshold=longlick_th,
                     time_divisions=division_number,
-                    session_length=session_length if session_length and session_length > 0 else None,
+                    session_length=session_length_seconds if session_length_seconds and session_length_seconds > 0 else None,
                     remove_longlicks=remove_long if offset_times else False
                 )
                 
                 # Convert trompy division results to webapp format
                 if 'time_divisions' in enhanced_results:
                     # Determine the total session duration for proper time division calculation
-                    total_session_duration = session_length if session_length and session_length > 0 else max(lick_times) if lick_times else 0
+                    total_session_duration = session_length_seconds if session_length_seconds and session_length_seconds > 0 else max(lick_times) if lick_times else 0
                     division_duration = total_session_duration / division_number
                     
                     for i, div in enumerate(enhanced_results['time_divisions']):

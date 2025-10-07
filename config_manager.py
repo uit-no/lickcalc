@@ -47,7 +47,8 @@ class ConfigManager:
         return {
             'session': {
                 'bin_size': 30,
-                'fig_type': 'hist'
+                'fig_type': 'hist',
+                'length_unit': 's'
             },
             'microstructure': {
                 'interburst_interval': 0.5,
