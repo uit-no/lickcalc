@@ -1256,7 +1256,9 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
             # margin=dict(l=20, r=20, t=20, b=20),
             )
         
-        nlonglicks = "{}".format(len(lickdata["longlicks"]))
+        # Handle case where longlicks might be None (no licks above threshold)
+        longlicks_array = lickdata["longlicks"]
+        nlonglicks = "{}".format(len(longlicks_array) if longlicks_array is not None else 0)
         longlick_max = "{:.2f}".format(np.max(licklength)) if len(licklength) > 0 else "0.00"
         
         return fig, nlonglicks, longlick_max
@@ -1619,8 +1621,9 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, lon
                             'threshold': longlick_th
                         }
                         
-                        # Update long lick statistics in summary
-                        figure_data['summary_stats']['n_long_licks'] = len(lickdata_with_offset["longlicks"])
+                        # Update long lick statistics in summary (handle case where longlicks might be None)
+                        longlicks_array = lickdata_with_offset["longlicks"]
+                        figure_data['summary_stats']['n_long_licks'] = len(longlicks_array) if longlicks_array is not None else 0
                         figure_data['summary_stats']['max_lick_duration'] = np.max(licklength) if len(licklength) > 0 else 0
                         
                         logging.debug(f"Calculated n_long_licks = {figure_data['summary_stats']['n_long_licks']}")
