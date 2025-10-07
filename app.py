@@ -225,17 +225,22 @@ app.layout = dbc.Container([
                             **config.get_slider_config('interburst'))
                     ], width=8),
                     dbc.Col([
-                        html.Div(
-                            id='interburst-display',
-                            children=str(config.get_slider_config('interburst')['value']),
-                            style={
-                                'text-align': 'center',
-                                'padding': '5px',
-                                'font-weight': 'bold',
-                                'font-size': '14px',
-                                'color': '#495057'
-                            }
-                        )
+                        html.Div([
+                            html.Span(
+                                id='interburst-display',
+                                children=str(config.get_slider_config('interburst')['value']),
+                                style={'font-weight': 'bold', 'font-size': '16px'}
+                            ),
+                            html.Span(' s', style={'font-size': '12px', 'color': '#6c757d', 'margin-left': '2px'})
+                        ], style={
+                            'text-align': 'center',
+                            'padding': '8px',
+                            'background-color': '#f8f9fa',
+                            'border': '1px solid #dee2e6',
+                            'border-radius': '4px',
+                            'color': '#495057',
+                            'margin-top': '5px'
+                        })
                     ], width=4)
                 ])
             ], width=4),
@@ -253,10 +258,14 @@ app.layout = dbc.Container([
                             children=str(config.get_slider_config('minlicks')['value']),
                             style={
                                 'text-align': 'center',
-                                'padding': '5px',
+                                'padding': '8px',
+                                'background-color': '#f8f9fa',
+                                'border': '1px solid #dee2e6',
+                                'border-radius': '4px',
                                 'font-weight': 'bold',
-                                'font-size': '14px',
-                                'color': '#495057'
+                                'font-size': '16px',
+                                'color': '#495057',
+                                'margin-top': '5px'
                             }
                         )
                     ], width=4)
@@ -270,20 +279,45 @@ app.layout = dbc.Container([
                         dcc.Slider(
                             id='longlick-threshold',
                             **config.get_slider_config('longlick'))
-                    ], width=8),
+                    ], width=6),
                     dbc.Col([
-                        html.Div(
-                            id='longlick-display',
-                            children=str(config.get_slider_config('longlick')['value']),
-                            style={
-                                'text-align': 'center',
-                                'padding': '5px',
-                                'font-weight': 'bold',
-                                'font-size': '14px',
-                                'color': '#495057'
-                            }
-                        )
-                    ], width=4)
+                        html.Div([
+                            html.Span(
+                                id='longlick-display',
+                                children=str(config.get_slider_config('longlick')['value']),
+                                style={'font-weight': 'bold', 'font-size': '16px'}
+                            ),
+                            html.Span(' s', style={'font-size': '12px', 'color': '#6c757d', 'margin-left': '2px'})
+                        ], style={
+                            'text-align': 'center',
+                            'padding': '8px',
+                            'background-color': '#f8f9fa',
+                            'border': '1px solid #dee2e6',
+                            'border-radius': '4px',
+                            'color': '#495057',
+                            'margin-top': '5px'
+                        })
+                    ], width=3),
+                    dbc.Col([
+                        html.Div([
+                            dbc.Checklist(
+                                id='remove-longlicks-checkbox',
+                                options=[{'label': 'Remove long licks', 'value': 'remove'}],
+                                value=[],  # Default unchecked
+                                inline=True,
+                                style={'margin-top': '10px', 'font-size': '14px'}
+                            ),
+                            html.Span(" ⓘ", id="remove-longlicks-help", 
+                                    style={"color": "#007bff", "cursor": "help", "margin-left": "5px"}),
+                            dbc.Tooltip(
+                                "Removes licks longer than the threshold from analysis. "
+                                "Requires offset data to calculate lick durations. "
+                                "Only affects long lick duration analysis when offset data is available.",
+                                target="remove-longlicks-help",
+                                placement="top"
+                            )
+                        ])
+                    ], width=3)
                 ])
             ], width=4),
         ], style={'margin-bottom': '20px'}),
@@ -916,14 +950,19 @@ def update_session_length_suggestion(jsonified_df, custom_config):
               Output('intraburst-freq', 'children'),
               Input('lick-data', 'data'),
               Input('interburst-slider', 'value'),
-              Input('minlicks-slider', 'value'))
-def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider):
+              Input('minlicks-slider', 'value'),
+              Input('longlick-threshold', 'value'),
+              Input('remove-longlicks-checkbox', 'value'),
+              State('offset-array', 'value'),
+              State('data-store', 'data'))
+def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
     # Use slider values directly
     ibi = ibi_slider
     minlicks = minlicks_slider
+    longlick_th = longlick_slider
+    remove_long = 'remove' in remove_longlicks
     
-    print(f"DEBUG intraburst callback: using ibi={ibi}, minlicks={minlicks}")
-    print(f"DEBUG intraburst callback: About to call lickcalc with burstThreshold={ibi}, minburstlength={minlicks}")
+    print(f"DEBUG intraburst callback: checkbox={remove_longlicks}, remove_long={remove_long}, offset_key={offset_key}")
     if jsonified_df is None:
         raise PreventUpdate
     else:        
@@ -935,7 +974,29 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider):
             fig.update_layout(title="No data available")
             return fig, "0", "0.00 Hz"
         
-        lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
+        lick_times = df["licks"].to_list()
+        
+        # Check if we have offset data available and checkbox is checked
+        if remove_long and offset_key and offset_key != 'none' and jsonified_dict:
+            try:
+                import json
+                data_array = json.loads(jsonified_dict)
+                if offset_key in data_array:
+                    offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                    offset_times = offset_df["licks"].to_list()
+                    print(f"DEBUG intraburst: Using offset data for remove_longlicks")
+                    lickdata = lickcalc(lick_times, offset=offset_times, burstThreshold=ibi, 
+                                      minburstlength=minlicks, longlickThreshold=longlick_th, remove_longlicks=remove_long)
+                else:
+                    print(f"DEBUG intraburst: Offset key not found, using onset only")
+                    lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+            except Exception as e:
+                print(f"DEBUG intraburst: Error with offset data: {e}, using onset only")
+                lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+        else:
+            print(f"DEBUG intraburst: Using onset only (no offset or checkbox unchecked)")
+            lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+            
         print(f"DEBUG intraburst callback: lickcalc returned {lickdata['total']} total licks, {lickdata['freq']:.2f} Hz")
  
         ilis = lickdata["ilis"]
@@ -969,6 +1030,7 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider):
 )
 def update_display_values(ibi_value, minlicks_value, longlick_value):
     """Update display fields when sliders change"""
+    # Return values - the units are already handled in the HTML structure
     return str(ibi_value), str(minlicks_value), str(longlick_value)
 
 # Helper function for onset/offset validation
@@ -1063,11 +1125,15 @@ def validate_onset_offset_pairs(onset_times, offset_times):
               Output('longlicks-max', 'children'),
               Input('offset-array', 'value'),
               Input('longlick-threshold', 'value'),
+              Input('remove-longlicks-checkbox', 'value'),
               State('data-store', 'data'),
               State('lick-data', 'data'))
-def make_longlicks_graph(offset_key, longlick_slider, jsonified_dict, jsonified_df):
+def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonified_dict, jsonified_df):
     # Use slider value directly
     longlick_th = longlick_slider
+    remove_long = 'remove' in remove_longlicks
+    
+    print(f"DEBUG longlicks callback: remove_longlicks={remove_longlicks}, remove_long={remove_long}")
     if jsonified_df is None:
         raise PreventUpdate
     
@@ -1155,7 +1221,7 @@ def make_longlicks_graph(offset_key, longlick_slider, jsonified_dict, jsonified_
         else:
             logging.info(f"Onset/offset validation: {validation['message']}")
         
-        lickdata = lickcalc(onset, offset=offset, longlickThreshold=longlick_th)
+        lickdata = lickcalc(onset, offset=offset, longlickThreshold=longlick_th, remove_longlicks=remove_long)
         licklength = lickdata["licklength"]
         
         if len(licklength) == 0:
@@ -1202,11 +1268,17 @@ def make_longlicks_graph(offset_key, longlick_slider, jsonified_dict, jsonified_
 @app.callback(Output('bursthist-fig', 'figure'),
               Input('lick-data', 'data'),
               Input('interburst-slider', 'value'),
-              Input('minlicks-slider', 'value'))
-def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider):
+              Input('minlicks-slider', 'value'),
+              Input('longlick-threshold', 'value'),
+              Input('remove-longlicks-checkbox', 'value'),
+              State('offset-array', 'value'),
+              State('data-store', 'data'))
+def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
     # Use slider values directly
     ibi = ibi_slider
     minlicks = minlicks_slider
+    longlick_th = longlick_slider
+    remove_long = 'remove' in remove_longlicks
     if jsonified_df is None:
         raise PreventUpdate
     else:
@@ -1218,7 +1290,22 @@ def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider):
             fig.update_layout(title="No data available")
             return fig
         
-        lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
+        # Check if we have offset data available and checkbox is checked
+        if remove_long and offset_key and offset_key != 'none' and jsonified_dict:
+            try:
+                import json
+                data_array = json.loads(jsonified_dict)
+                if offset_key in data_array:
+                    offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                    offset_times = offset_df["licks"].to_list()
+                    lickdata = lickcalc(df["licks"].to_list(), offset=offset_times, burstThreshold=ibi, 
+                                      minburstlength=minlicks, longlickThreshold=longlick_th, remove_longlicks=remove_long)
+                else:
+                    lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
+            except Exception as e:
+                lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
+        else:
+            lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
     
         bursts=lickdata['bLicks']
         
@@ -1250,11 +1337,17 @@ def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider):
               Output('weibull-rsq', 'children'),
               Input('lick-data', 'data'),
               Input('interburst-slider', 'value'),
-              Input('minlicks-slider', 'value'))
-def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider):
+              Input('minlicks-slider', 'value'),
+              Input('longlick-threshold', 'value'),
+              Input('remove-longlicks-checkbox', 'value'),
+              State('offset-array', 'value'),
+              State('data-store', 'data'))
+def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
     # Use slider values directly
     ibi = ibi_slider
     minlicks = minlicks_slider
+    longlick_th = longlick_slider
+    remove_long = 'remove' in remove_longlicks
     if jsonified_df is None:
         raise PreventUpdate
     else:
@@ -1266,7 +1359,24 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider):
             fig.update_layout(title="No data available")
             return fig, "0", "0.00", "0.00", "0.00", "0.00"
         
-        lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
+        lick_times = df["licks"].to_list()
+        
+        # Check if we have offset data available and checkbox is checked
+        if remove_long and offset_key and offset_key != 'none' and jsonified_dict:
+            try:
+                import json
+                data_array = json.loads(jsonified_dict)
+                if offset_key in data_array:
+                    offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                    offset_times = offset_df["licks"].to_list()
+                    lickdata = lickcalc(lick_times, offset=offset_times, burstThreshold=ibi, 
+                                      minburstlength=minlicks, longlickThreshold=longlick_th, remove_longlicks=remove_long)
+                else:
+                    lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+            except Exception as e:
+                lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+        else:
+            lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
     
         if len(lickdata['burstprob'][0]) == 0:
             fig = go.Figure()
@@ -1302,15 +1412,17 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider):
               Input('interburst-slider', 'value'),
               Input('minlicks-slider', 'value'),
               Input('longlick-threshold', 'value'),
+              Input('remove-longlicks-checkbox', 'value'),
               Input('session-length-input', 'value'),
               State('data-store', 'data'),
               State('offset-array', 'value'))
-def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, longlick_slider, session_length, jsonified_dict, offset_key):
+def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, session_length, jsonified_dict, offset_key):
     """Collect underlying data from all figures for export"""
     # Use slider values directly
     ibi = ibi_slider
     minlicks = minlicks_slider
     longlick_th = longlick_slider
+    remove_long = 'remove' in remove_longlicks
     if jsonified_df is None:
         raise PreventUpdate
     
@@ -1361,7 +1473,7 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, lon
         }
         
         # Intraburst frequency data (ILIs)
-        lickdata = lickcalc(lick_times)
+        lickdata = lickcalc(lick_times, remove_longlicks=remove_long)
         ilis = lickdata["ilis"]
         ili_counts, ili_edges = np.histogram(ilis, bins=50, range=(0, 0.5))
         ili_centers = (ili_edges[:-1] + ili_edges[1:]) / 2
@@ -1375,7 +1487,7 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, lon
         figure_data['lick_lengths'] = None
         
         # Burst data
-        burst_lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+        burst_lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks, remove_longlicks=remove_long)
         bursts = burst_lickdata['bLicks']
         
         # Burst histogram data
@@ -1491,7 +1603,7 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, lon
     return figure_data
 
 # Helper functions for temporal/burst division analysis
-def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th):
+def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th, remove_long=False):
     """Calculate statistics for a segment of licks"""
     if not segment_licks:
         return {
@@ -1507,7 +1619,7 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
         }
     
     # Calculate basic burst statistics
-    burst_lickdata = lickcalc(segment_licks, burstThreshold=ibi, minburstlength=minlicks)
+    burst_lickdata = lickcalc(segment_licks, burstThreshold=ibi, minburstlength=minlicks, remove_longlicks=remove_long)
     
     stats = {
         'total_licks': burst_lickdata['total'],
@@ -1549,13 +1661,13 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
     
     return stats
 
-def get_licks_for_burst_range(lick_times, start_burst, end_burst, ibi, minlicks):
+def get_licks_for_burst_range(lick_times, start_burst, end_burst, ibi, minlicks, remove_long=False):
     """Get lick times that belong to a specific range of bursts"""
     if not lick_times or start_burst >= end_burst:
         return []
     
     # Calculate bursts for the whole session first
-    burst_lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+    burst_lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks, remove_longlicks=remove_long)
     total_bursts = burst_lickdata.get('bNum', 0)
     
     if total_bursts == 0:
@@ -1767,15 +1879,17 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
               State('interburst-slider', 'value'),
               State('minlicks-slider', 'value'),
               State('longlick-threshold', 'value'),
+              State('remove-longlicks-checkbox', 'value'),
               prevent_initial_call=True)
 def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source_filename, 
                         division_number, division_method, session_length, data_store, onset_key, offset_key,
-                        ibi_slider, minlicks_slider, longlick_slider):
+                        ibi_slider, minlicks_slider, longlick_slider, remove_longlicks):
     """Add current analysis results to the results table with optional divisions"""
     # Use slider values directly
     ibi = ibi_slider
     minlicks = minlicks_slider
     longlick_th = longlick_slider
+    remove_long = 'remove' in remove_longlicks
     if n_clicks == 0 or not figure_data or 'summary_stats' not in figure_data:
         raise PreventUpdate
     
