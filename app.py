@@ -18,7 +18,7 @@ from helperfx import parse_medfile, parse_csvfile, parse_ddfile
 from trompy import lickcalc
 
 from tooltips import (get_binsize_tooltip, get_ibi_tooltip, get_minlicks_tooltip, 
-                     get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip, get_session_length_tooltip)
+                     get_longlick_tooltip, get_table_tooltips, get_onset_tooltip, get_offset_tooltip, get_session_length_tooltip, TOOLTIP_TEXTS)
 from config_manager import config
 
 # Configure logging
@@ -220,11 +220,14 @@ app.layout = dbc.Container([
             ], width=2),
             get_session_length_tooltip()[1],
             dbc.Col([
-                get_binsize_tooltip()[0],
-                get_binsize_tooltip()[1],
+                html.Div(id='binsize-label-container', children=[
+                    get_binsize_tooltip()[0],
+                    get_binsize_tooltip()[1],
+                ]),
                 dcc.Slider(
                     id='session-bin-slider',
-                    **config.get_slider_config('session_bin'))
+                    **config.get_slider_config('session_bin')),
+                dcc.Store(id='session-bin-slider-seconds', data=config.get_slider_config('session_bin')['value'])  # Store actual value in seconds
             ], width=6),
             ]),
         
@@ -797,6 +800,97 @@ def convert_display_value_on_unit_change(new_unit, current_seconds):
         return round(new_value)
     else:
         return round(new_value, 2)
+
+# Callback to dynamically adjust bin slider based on session length
+@app.callback(
+    Output('session-bin-slider', 'min'),
+    Output('session-bin-slider', 'max'),
+    Output('session-bin-slider', 'step'),
+    Output('session-bin-slider', 'marks'),
+    Output('session-bin-slider', 'value', allow_duplicate=True),
+    Output('binsize-label-container', 'children'),
+    Input('session-length-seconds', 'data'),
+    State('session-bin-slider-seconds', 'data'),
+    prevent_initial_call=True
+)
+def update_bin_slider_range(session_length_seconds, current_bin_seconds):
+    """Dynamically adjust bin slider based on session length in seconds."""
+    
+    if not session_length_seconds or session_length_seconds <= 0:
+        session_length_seconds = 3600  # Default to 1 hour
+    
+    # Three tiers based on session length
+    if session_length_seconds <= 3600:  # Up to 1 hour: use seconds (5-300s)
+        min_val = 5
+        max_val = 300
+        step = 5
+        unit_label = "Bin size (seconds)"
+        marks = {i: str(i) for i in range(0, 301, 60)}
+        # Keep current value if in range, otherwise use default
+        if current_bin_seconds and min_val <= current_bin_seconds <= max_val:
+            value = current_bin_seconds
+        else:
+            value = 30
+            
+    elif session_length_seconds <= 14400:  # 1-4 hours: use minutes (1-60 min = 60-3600s)
+        min_val = 1
+        max_val = 60
+        step = 1
+        unit_label = "Bin size (minutes)"
+        marks = {i: str(i) for i in range(0, 61, 10)}
+        # Convert current value from seconds to minutes for display
+        if current_bin_seconds:
+            value = max(min_val, min(max_val, round(current_bin_seconds / 60)))
+        else:
+            value = 5  # 5 minutes default
+            
+    else:  # Over 4 hours: use hours (0.5-2 hr = 1800-7200s)
+        min_val = 0.5
+        max_val = 2
+        step = 0.25
+        unit_label = "Bin size (hours)"
+        marks = {0.5: '0.5', 1: '1', 1.5: '1.5', 2: '2'}
+        # Convert current value from seconds to hours for display
+        if current_bin_seconds:
+            value = max(min_val, min(max_val, round(current_bin_seconds / 3600, 2)))
+        else:
+            value = 0.5  # 30 minutes default
+    
+    # Update the label
+    label_children = [
+        html.Div([
+            html.Span(unit_label),
+            html.Span(" ⓘ", id='binsize-help', style={"color": "#007bff", "cursor": "help", "margin-left": "5px"})
+        ]),
+        dbc.Tooltip(
+            TOOLTIP_TEXTS['binsize'],
+            target='binsize-help',
+            placement='top'
+        )
+    ]
+    
+    return min_val, max_val, step, marks, value, label_children
+
+# Callback to convert bin slider value to seconds
+@app.callback(
+    Output('session-bin-slider-seconds', 'data'),
+    Input('session-bin-slider', 'value'),
+    Input('session-length-seconds', 'data')
+)
+def convert_bin_slider_to_seconds(slider_value, session_length_seconds):
+    """Convert bin slider display value to seconds based on current tier."""
+    if not slider_value or not session_length_seconds:
+        return 30  # Default
+    
+    if session_length_seconds <= 3600:
+        # Slider is in seconds
+        return slider_value
+    elif session_length_seconds <= 14400:
+        # Slider is in minutes, convert to seconds
+        return slider_value * 60
+    else:
+        # Slider is in hours, convert to seconds
+        return slider_value * 3600
     
 @app.callback(Output('data-store', 'data'),
               Output('fileloadLbl', 'children'),
@@ -942,9 +1036,9 @@ def get_lick_data(jsonified_dict, df_key):
 @app.callback(Output('session-fig', 'figure'),
               Input('lick-data', 'data'),
               Input('session-fig-type', 'value'),
-              Input('session-bin-slider', 'value'),
+              Input('session-bin-slider-seconds', 'data'),
               Input('session-length-seconds', 'data'))
-def make_session_graph(jsonified_df, figtype, binsize, session_length_seconds):
+def make_session_graph(jsonified_df, figtype, binsize_seconds, session_length_seconds):
     
     if jsonified_df is None:
         raise PreventUpdate
@@ -959,12 +1053,12 @@ def make_session_graph(jsonified_df, figtype, binsize, session_length_seconds):
             fig = px.histogram(df,
                             x="licks",
                             range_x=[0, plot_duration],
-                            nbins=int(plot_duration/binsize) if plot_duration > 0 else 1)
+                            nbins=int(plot_duration/binsize_seconds) if plot_duration > 0 and binsize_seconds > 0 else 1)
         
             fig.update_layout(
                 transition_duration=500,
                 xaxis_title="Time (s)",
-                yaxis_title="Licks per {} s".format(binsize),
+                yaxis_title="Licks per {} s".format(binsize_seconds),
                 showlegend=False)
         else:
             fig = px.line(x=df["licks"], y=range(0, len(df["licks"])))
@@ -1509,7 +1603,7 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
 # Data collection callback to store figure data for export
 @app.callback(Output('figure-data-store', 'data'),
               Input('lick-data', 'data'),
-              Input('session-bin-slider', 'value'),
+              Input('session-bin-slider-seconds', 'data'),
               Input('interburst-slider', 'value'),
               Input('minlicks-slider', 'value'),
               Input('longlick-threshold', 'value'),
@@ -1517,7 +1611,7 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
               Input('session-length-seconds', 'data'),
               State('data-store', 'data'),
               State('offset-array', 'value'))
-def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, session_length_seconds, jsonified_dict, offset_key):
+def collect_figure_data(jsonified_df, bin_size_seconds, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, session_length_seconds, jsonified_dict, offset_key):
     """Collect underlying data from all figures for export"""
     import json
     # Use slider values directly
@@ -1566,12 +1660,12 @@ def collect_figure_data(jsonified_df, bin_size, ibi_slider, minlicks_slider, lon
         
         # Session histogram data (use session_length_seconds for display range if specified)
         max_time = session_length_seconds if session_length_seconds and session_length_seconds > 0 else max(lick_times)
-        hist_counts, hist_edges = np.histogram(lick_times, bins=int(max_time/bin_size) if max_time > 0 else 1, range=(0, max_time))
+        hist_counts, hist_edges = np.histogram(lick_times, bins=int(max_time/bin_size_seconds) if max_time > 0 and bin_size_seconds > 0 else 1, range=(0, max_time))
         hist_centers = (hist_edges[:-1] + hist_edges[1:]) / 2
         figure_data['session_hist'] = {
             'bin_centers': hist_centers.tolist(),
             'counts': hist_counts.tolist(),
-            'bin_size_seconds': bin_size
+            'bin_size_seconds': bin_size_seconds
         }
         
         # Intraburst frequency data (ILIs)
