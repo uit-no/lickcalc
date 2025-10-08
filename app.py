@@ -347,7 +347,7 @@ app.layout = dbc.Container([
                         ], style={'margin-top': '15px', 'display': 'flex', 'align-items': 'center'})
                     ], width=12)
                 ])
-            ], width=4),  # Back to equal 4-4-4 columns
+            ], width=4, id='longlick-controls-column'),  # Add ID for visibility control
         ], style={'margin-bottom': '20px'}),
         
         dbc.Row(children=[
@@ -923,6 +923,19 @@ def toggle_dropdown_visibility(division_number):
         n_bursts_style = {'display': 'none'}
     
     return division_method_style, n_bursts_style
+
+# Callback to control visibility of longlick controls based on offset data availability
+@app.callback(Output('longlick-controls-column', 'style'),
+              Input('offset-array', 'value'),
+              Input('data-store', 'data'))  # Add data-store as input to trigger on file load
+def toggle_longlick_controls_visibility(offset_key, data_store):
+    """Show/hide longlick controls based on whether offset data is selected"""
+    if offset_key is None or offset_key == 'none':
+        # Hide longlick controls when no offset data is available
+        return {'display': 'none'}
+    else:
+        # Show longlick controls when offset data is available
+        return {'display': 'block', 'width': '33.33%'}  # Maintain the 4-column width (width=4 = 33.33%)
     
 @app.callback(Output('data-store', 'data'),
               Output('fileloadLbl', 'children'),
@@ -1328,7 +1341,11 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
                 
                 fig.update_layout(
                     transition_duration=500,
-                    title="Intraburst lick frequency",
+                    title={
+                        'text': "Intraburst lick frequency",
+                        'x': 0.5,  # Center the title horizontally
+                        'xanchor': 'center'
+                    },
                     xaxis_title="Interlick interval (s)",
                     yaxis_title="Frequency",
                     showlegend=False,
@@ -1467,21 +1484,31 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
     
     # Check if offset data is available
     if offset_key is None or offset_key == 'none':
-        # Return empty figure when no offset data is available
+        # Return figure with message similar to Weibull plot style
         fig = go.Figure()
         fig.update_layout(
-            title="Lick Duration Analysis",
-            xaxis_title="Lick length (s)",
-            yaxis_title="Frequency",
+            title={
+                'text': "No lick duration data available",
+                'x': 0.5,  # Center the title horizontally
+                'xanchor': 'center'
+            },
             annotations=[
                 dict(
-                    text="Offset data required for lick duration analysis",
-                    xref="paper", yref="paper",
-                    x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                    x=0.5,
+                    y=0.5,
+                    xref="paper",
+                    yref="paper",
+                    text="No lick duration data available<br>Offsets required",
                     showarrow=False,
-                    font=dict(size=14, color="gray")
+                    font=dict(size=16, color="gray"),
+                    xanchor="center",
+                    yanchor="middle"
                 )
-            ]
+            ],
+            xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+            yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+            height=400,  # Match other plot heights
+            margin=dict(l=40, r=40, t=60, b=40)  # Standard margins
         )
         return fig, "N/A", "N/A"
     
@@ -1708,7 +1735,11 @@ def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
         
         fig.update_layout(
             transition_duration=500,
-            title="Burst frequency histogram",
+            title={
+                'text': "Burst frequency histogram",
+                'x': 0.5,  # Center the title horizontally
+                'xanchor': 'center'
+            },
             xaxis_title="Burst size",
             yaxis_title="Frequency",
             showlegend=False)
@@ -1773,7 +1804,11 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
         if lickdata['weib_alpha'] is None or lickdata['weib_beta'] is None or lickdata['weib_rsq'] is None:
             fig = go.Figure()
             fig.update_layout(
-                title="Too few bursts for Weibull analysis",
+                title={
+                    'text': "Too few bursts for Weibull analysis",
+                    'x': 0.5,  # Center the title horizontally
+                    'xanchor': 'center'
+                },
                 annotations=[
                     dict(
                         x=0.5,
@@ -1788,7 +1823,9 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
                     )
                 ],
                 xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False)
+                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                height=400,  # Match other plot heights
+                margin=dict(l=40, r=40, t=60, b=40)  # Standard margins
             )
             
             bNum = "{}".format(lickdata['bNum'])
