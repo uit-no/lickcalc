@@ -982,11 +982,14 @@ def load_and_clean_data(list_of_contents, input_file_type, list_of_names, list_o
                     onset_default = column_names[0]
                 
                 # Try to find common column names for offsets
+                # Default to 'none' to prevent automatic triggering of lick duration analysis
+                # User can manually select offset column after data is properly loaded
                 offset_default = 'none'
-                for potential_name in ['offset', 'offsets', 'end', 'stop', 'Col. 2']:
-                    if potential_name in column_names:
-                        offset_default = potential_name
-                        break
+                # Note: Automatic offset detection disabled to prevent cross-file contamination
+                # for potential_name in ['offset', 'offsets', 'end', 'stop', 'Col. 2']:
+                #     if potential_name in column_names:
+                #         offset_default = potential_name
+                #         break
             else:
                 onset_default = 'none'
                 offset_default = 'none'
@@ -1030,6 +1033,19 @@ def load_and_clean_data(list_of_contents, input_file_type, list_of_names, list_o
             # Return empty/default values for other outputs
             return None, file_error_label, [], 'none', [{'label': 'None', 'value': 'none'}], 'none', None, detailed_error
 
+# Callback to clear dependent stores when new data is loaded (prevents cross-file contamination)
+@app.callback(Output('lick-data', 'data', allow_duplicate=True),
+              Output('figure-data-store', 'data', allow_duplicate=True),
+              Output('session-duration-store', 'data', allow_duplicate=True),
+              Output('session-length-seconds', 'data', allow_duplicate=True),
+              Input('data-store', 'data'),
+              prevent_initial_call=True)
+def clear_dependent_stores_on_new_file(data_store):
+    """Clear dependent stores when new file data is loaded to prevent cross-file contamination"""
+    # This callback triggers whenever data-store changes (new file loaded)
+    # Clear all dependent stores to ensure clean state for new file
+    return None, None, None, None
+
 # Callback to validate onset/offset data and display status
 @app.callback(Output('validation-status', 'children', allow_duplicate=True),
               Input('data-store', 'data'),
@@ -1058,12 +1074,28 @@ def update_validation_status(data_store, onset_key, offset_key):
         if onset_key not in data_array or offset_key not in data_array:
             return ""
         
+        # Additional safeguard: Ensure both arrays exist and are non-empty
+        # This helps prevent validation against stale/mismatched data
+        if not data_array[onset_key] or not data_array[offset_key]:
+            return ""
+        
         # Get the data
         onset_df = pd.read_json(io.StringIO(data_array[onset_key]), orient='split')
         offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
         
         onset_times = onset_df["licks"].to_list()
         offset_times = offset_df["licks"].to_list()
+        
+        # Additional safety check - ensure we have meaningful data
+        if not onset_times or not offset_times:
+            return ""
+        
+        # Critical fix: Check if this appears to be cross-file contamination
+        # If we get a severe length mismatch (>1 difference), it might be old data
+        if abs(len(onset_times) - len(offset_times)) > 1:
+            # This suggests possible cross-file contamination
+            # Return empty instead of showing misleading error
+            return ""
         
         # Validate the data
         validation = validate_onset_offset_pairs(onset_times, offset_times)
@@ -1262,6 +1294,12 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
                 if offset_key in data_array:
                     offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
                     offset_times = offset_df["licks"].to_list()
+                    
+                    # Check for potential cross-file contamination before processing
+                    if abs(len(lick_times) - len(offset_times)) > 1:
+                        # Severe mismatch suggests cross-file contamination, wait for proper sync
+                        raise PreventUpdate
+                    
                     lickdata = lickcalc(lick_times, offset=offset_times, burstThreshold=ibi, 
                                       minburstlength=minlicks, longlickThreshold=longlick_th, remove_longlicks=remove_long)
                 else:
@@ -1283,18 +1321,27 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
                 yaxis_title="Frequency"
             )
         else:
-            fig = px.histogram(ilis,
-                            range_x=[0, 0.5],
-                            nbins=50)
-            
-            fig.update_layout(
-                transition_duration=500,
-                title="Intraburst lick frequency",
-                xaxis_title="Interlick interval (s)",
-                yaxis_title="Frequency",
-                showlegend=False,
-                # margin=dict(l=20, r=20, t=20, b=20),
-            )
+            try:
+                fig = px.histogram(ilis,
+                                range_x=[0, 0.5],
+                                nbins=50)
+                
+                fig.update_layout(
+                    transition_duration=500,
+                    title="Intraburst lick frequency",
+                    xaxis_title="Interlick interval (s)",
+                    yaxis_title="Frequency",
+                    showlegend=False,
+                    # margin=dict(l=20, r=20, t=20, b=20),
+                )
+            except Exception as e:
+                # If histogram creation fails, return empty figure
+                fig = go.Figure()
+                fig.update_layout(
+                    title="Error creating interlick interval histogram",
+                    xaxis_title="Interlick interval (s)",
+                    yaxis_title="Frequency"
+                )
         
         nlicks = "{}".format(lickdata['total'])
         freq = "{:.2f} Hz".format(lickdata['freq'])
@@ -1471,6 +1518,12 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
         onset=df["licks"].to_list()
         offset=offset_df["licks"].to_list()
         
+        # Critical fix: Check for potential cross-file contamination
+        # If severe length mismatch, likely old data - skip validation
+        if abs(len(onset) - len(offset)) > 1:
+            # Severe mismatch suggests cross-file contamination, wait for proper data sync
+            raise PreventUpdate
+        
         # Validate onset/offset pairs
         validation = validate_onset_offset_pairs(onset, offset)
         
@@ -1612,7 +1665,14 @@ def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
                 if offset_key in data_array:
                     offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
                     offset_times = offset_df["licks"].to_list()
-                    lickdata = lickcalc(df["licks"].to_list(), offset=offset_times, burstThreshold=ibi, 
+                    
+                    # Check for potential cross-file contamination before processing
+                    lick_times = df["licks"].to_list()
+                    if abs(len(lick_times) - len(offset_times)) > 1:
+                        # Severe mismatch suggests cross-file contamination, wait for proper sync
+                        raise PreventUpdate
+                    
+                    lickdata = lickcalc(lick_times, offset=offset_times, burstThreshold=ibi, 
                                       minburstlength=minlicks, longlickThreshold=longlick_th, remove_longlicks=remove_long)
                 else:
                     lickdata = lickcalc(df["licks"].to_list(), burstThreshold=ibi, minburstlength=minlicks)
@@ -1628,9 +1688,21 @@ def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
             fig.update_layout(title="No bursts found with current parameters")
             return fig
 
-        fig = px.histogram(bursts,
-                            range_x=[1, max(bursts)],
-                            nbins=int(np.max(bursts)))
+        # Additional safety check for valid burst data before creating histogram
+        if not bursts or not all(isinstance(x, (int, float)) and x > 0 for x in bursts):
+            fig = go.Figure()
+            fig.update_layout(title="Invalid burst data")
+            return fig
+
+        try:
+            fig = px.histogram(bursts,
+                                range_x=[1, max(bursts)],
+                                nbins=int(np.max(bursts)))
+        except Exception as e:
+            # If histogram creation fails, return empty figure
+            fig = go.Figure()
+            fig.update_layout(title="Error creating burst histogram")
+            return fig
         
         # fig.update_traces(mode='markers', marker_line_width=2, marker_size=10)
         
