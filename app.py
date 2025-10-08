@@ -1092,8 +1092,9 @@ def get_lick_data(jsonified_dict, df_key):
               Input('lick-data', 'data'),
               Input('session-fig-type', 'value'),
               Input('session-bin-slider-seconds', 'data'),
-              Input('session-length-seconds', 'data'))
-def make_session_graph(jsonified_df, figtype, binsize_seconds, session_length_seconds):
+              Input('session-length-seconds', 'data'),
+              Input('session-length-unit', 'value'))
+def make_session_graph(jsonified_df, figtype, binsize_seconds, session_length_seconds, time_unit):
     
     if jsonified_df is None:
         raise PreventUpdate
@@ -1104,26 +1105,47 @@ def make_session_graph(jsonified_df, figtype, binsize_seconds, session_length_se
         # Use custom session length if provided, otherwise use last lick time
         plot_duration = session_length_seconds if session_length_seconds and session_length_seconds > 0 else lastlick
         
+        # Convert data based on time unit for plotting
+        if time_unit == 'min':
+            scale_factor = 60
+            time_label = 'Time (min)'
+            plot_duration_scaled = plot_duration / scale_factor
+            binsize_scaled = binsize_seconds / scale_factor
+            licks_scaled = df["licks"] / scale_factor
+        elif time_unit == 'hr':
+            scale_factor = 3600
+            time_label = 'Time (hr)'
+            plot_duration_scaled = plot_duration / scale_factor
+            binsize_scaled = binsize_seconds / scale_factor
+            licks_scaled = df["licks"] / scale_factor
+        else:  # time_unit == 's'
+            scale_factor = 1
+            time_label = 'Time (s)'
+            plot_duration_scaled = plot_duration
+            binsize_scaled = binsize_seconds
+            licks_scaled = df["licks"]
+        
         if figtype == "hist":
-            fig = px.histogram(df,
-                            x="licks",
-                            range_x=[0, plot_duration],
+            # Create histogram with scaled data
+            fig = px.histogram(df.assign(licks_scaled=licks_scaled),
+                            x="licks_scaled",
+                            range_x=[0, plot_duration_scaled],
                             nbins=int(plot_duration/binsize_seconds) if plot_duration > 0 and binsize_seconds > 0 else 1)
         
             fig.update_layout(
                 transition_duration=500,
-                xaxis_title="Time (s)",
-                yaxis_title="Licks per {} s".format(binsize_seconds),
+                xaxis_title=time_label,
+                yaxis_title="Licks per {:.3g} {}".format(binsize_scaled, time_unit),
                 showlegend=False)
         else:
-            fig = px.line(x=df["licks"], y=range(0, len(df["licks"])))
+            fig = px.line(x=licks_scaled, y=range(0, len(df["licks"])))
             
             fig.update_layout(
                 transition_duration=500,
-                xaxis_title="Time (s)",
+                xaxis_title=time_label,
                 yaxis_title="Cumulative licks",
                 showlegend=False,
-                xaxis=dict(range=[0, plot_duration]))
+                xaxis=dict(range=[0, plot_duration_scaled]))
 
         return fig
 
