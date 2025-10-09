@@ -1074,33 +1074,52 @@ def update_validation_status(data_store, onset_key, offset_key):
     if not onset_key or onset_key == 'none':
         return ""
     
-    if not offset_key or offset_key == 'none':
-        return dbc.Alert(
-            "ℹ️ Onset-only data loaded (no offset column selected). Lick duration analysis will not be available.",
-            color="info",
-            dismissable=True
-        )
-    
     try:
         data_array = json.loads(data_store)
         
-        if onset_key not in data_array or offset_key not in data_array:
+        if onset_key not in data_array:
+            return ""
+        
+        # Get the onset data first to validate ordering
+        onset_df = pd.read_json(io.StringIO(data_array[onset_key]), orient='split')
+        onset_times = onset_df["licks"].to_list()
+        
+        # Additional safety check - ensure we have meaningful data
+        if not onset_times:
+            return ""
+        
+        # First, validate that onset times are monotonically increasing
+        onset_validation = validate_onset_times(onset_times)
+        
+        if not onset_validation['valid']:
+            return dbc.Alert(
+                f"❌ Onset time validation failed: {onset_validation['message']}",
+                color="danger",
+                dismissable=True
+            )
+        
+        # If no offset column selected, show info and return early
+        if not offset_key or offset_key == 'none':
+            return dbc.Alert(
+                "ℹ️ Onset-only data loaded (no offset column selected). Lick duration analysis will not be available.",
+                color="info",
+                dismissable=True
+            )
+        
+        # Continue with offset validation if offset key is selected
+        if offset_key not in data_array:
             return ""
         
         # Additional safeguard: Ensure both arrays exist and are non-empty
         # This helps prevent validation against stale/mismatched data
-        if not data_array[onset_key] or not data_array[offset_key]:
+        if not data_array[offset_key]:
             return ""
         
-        # Get the data
-        onset_df = pd.read_json(io.StringIO(data_array[onset_key]), orient='split')
         offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
-        
-        onset_times = onset_df["licks"].to_list()
         offset_times = offset_df["licks"].to_list()
         
-        # Additional safety check - ensure we have meaningful data
-        if not onset_times or not offset_times:
+        # Additional safety check for offset data
+        if not offset_times:
             return ""
         
         # Critical fix: Check if this appears to be cross-file contamination
@@ -1110,7 +1129,7 @@ def update_validation_status(data_store, onset_key, offset_key):
             # Return empty instead of showing misleading error
             return ""
         
-        # Validate the data
+        # Validate the onset-offset pairs
         validation = validate_onset_offset_pairs(onset_times, offset_times)
         
         if validation['valid']:
@@ -1159,9 +1178,24 @@ def get_lick_data(jsonified_dict, df_key):
     
     jsonified_df = data_array[df_key]
     
-    # Get session duration
+    # Get session duration and validate onset times
     df = pd.read_json(io.StringIO(jsonified_df), orient='split')
-    session_duration = max(df["licks"]) if len(df) > 0 else 3600  # Default to 1 hour if no data
+    
+    if len(df) > 0:
+        onset_times = df["licks"].to_list()
+        
+        # Validate that onset times are monotonically increasing
+        validation = validate_onset_times(onset_times)
+        
+        if not validation['valid']:
+            # Log the error and return None to prevent any data processing
+            logging.error(f"Onset validation failed: {validation['message']}")
+            # Return None for both outputs to completely stop downstream processing
+            return None, None
+        
+        session_duration = max(onset_times)
+    else:
+        session_duration = 3600  # Default to 1 hour if no data
 
     return jsonified_df, session_duration
 
@@ -1380,6 +1414,37 @@ def update_display_values(ibi_value, minlicks_value, longlick_value):
     return str(ibi_value), str(minlicks_value), str(longlick_value)
 
 # Helper function for onset/offset validation
+def validate_onset_times(onset_times):
+    """
+    Validate that onset times are monotonically increasing.
+    
+    Parameters:
+        onset_times (list): List of onset timestamps
+        
+    Returns:
+        dict: Contains 'valid', 'message', 'first_violation_index'
+    """
+    if not onset_times or len(onset_times) <= 1:
+        return {
+            'valid': True,
+            'message': "No or single onset time - no validation needed",
+            'first_violation_index': None
+        }
+    
+    for i in range(1, len(onset_times)):
+        if onset_times[i] <= onset_times[i-1]:
+            return {
+                'valid': False,
+                'message': f"Onset times are not monotonically increasing. At position {i+1}: {onset_times[i]:.3f}s is not greater than previous time {onset_times[i-1]:.3f}s. This suggests the file format doesn't match the selected file type.",
+                'first_violation_index': i
+            }
+    
+    return {
+        'valid': True,
+        'message': f"Onset times are properly ordered ({len(onset_times)} timestamps)",
+        'first_violation_index': None
+    }
+
 def validate_onset_offset_pairs(onset_times, offset_times):
     """
     Validate that onset and offset times form proper lick pairs.
