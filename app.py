@@ -671,9 +671,9 @@ app.index_string = '''
 # Flask route to serve help file
 @app.server.route('/help')
 def serve_help():
-    """Serve the help documentation page"""
-    from flask import send_from_directory
-    return send_from_directory('assets', 'help.html')
+    """Serve the help documentation page using template system"""
+    from flask import render_template
+    return render_template('help.html')
 
 # Config file management callback
 @app.callback(

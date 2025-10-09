@@ -11,35 +11,102 @@
         body {
             background-color: #f8f9fa;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-        .help-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
         }
         .help-header {
             background: linear-gradient(135deg, #007bff, #17a2b8);
             color: white;
-            padding: 40px 0;
-            margin-bottom: 30px;
-            border-radius: 10px;
+            padding: 30px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .help-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2rem;
+        }
+        .help-header p {
+            margin: 0;
+            font-size: 1rem;
+        }
+        .help-layout {
+            display: flex;
+            min-height: calc(100vh - 120px);
+        }
+        .sidebar {
+            position: sticky;
+            top: 120px;
+            width: 280px;
+            height: calc(100vh - 140px);
+            background-color: white;
+            border-right: 1px solid #dee2e6;
+            overflow-y: auto;
+            flex-shrink: 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        }
+        .sidebar-content {
+            padding: 20px;
+        }
+        .sidebar h3 {
+            font-size: 1.1rem;
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #007bff;
+            color: #343a40;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        .sidebar li {
+            margin: 0;
+        }
+        .sidebar a {
+            display: block;
+            text-decoration: none;
+            color: #495057;
+            padding: 8px 12px;
+            border-radius: 5px;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .sidebar a:hover {
+            background-color: #e3f2fd;
+            color: #007bff;
+            padding-left: 16px;
+        }
+        .sidebar a.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .main-content {
+            flex: 1;
+            padding: 30px 40px;
+            max-width: 900px;
+            overflow-y: auto;
         }
         .section-header {
             color: #007bff;
             border-bottom: 2px solid #007bff;
             padding-bottom: 10px;
-            margin-top: 40px;
+            margin-top: 0;
             margin-bottom: 20px;
+            scroll-margin-top: 140px;
         }
         .card {
             margin-bottom: 20px;
             border: none;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
         }
         .card-header {
             background-color: #007bff;
             color: white;
             font-weight: bold;
+            border-radius: 8px 8px 0 0 !important;
         }
         .parameter-box {
             background-color: #e3f2fd;
@@ -48,6 +115,10 @@
             margin: 10px 0;
             border-radius: 5px;
         }
+        .parameter-box h6 {
+            margin-top: 0;
+            color: #1565c0;
+        }
         .code-block {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -55,6 +126,7 @@
             padding: 15px;
             font-family: 'Courier New', monospace;
             margin: 10px 0;
+            overflow-x: auto;
         }
         .warning-box {
             background-color: #fff3cd;
@@ -70,69 +142,86 @@
             margin: 10px 0;
             border-radius: 5px;
         }
-        .toc {
-            background-color: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .footer {
+            background-color: #343a40;
+            color: white;
+            padding: 30px 40px;
+            text-align: center;
         }
-        .toc ul {
-            list-style-type: none;
-            padding-left: 0;
+        .footer p {
+            margin: 5px 0;
         }
-        .toc li {
-            margin: 8px 0;
+        
+        /* Scrollbar styling for sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
         }
-        .toc a {
-            text-decoration: none;
-            color: #007bff;
-            padding: 5px 10px;
-            border-radius: 5px;
-            transition: background-color 0.3s;
+        .sidebar::-webkit-scrollbar-track {
+            background: #f1f1f1;
         }
-        .toc a:hover {
-            background-color: #e3f2fd;
-            color: #0056b3;
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        /* Responsive design for smaller screens */
+        @media (max-width: 768px) {
+            .help-layout {
+                flex-direction: column;
+            }
+            .sidebar {
+                position: relative;
+                top: 0;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid #dee2e6;
+            }
+            .main-content {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="help-container">
-        <!-- Header -->
-        <div class="help-header text-center">
-            <h1 class="display-4">LickCalc GUI Help</h1>
-            <p class="lead">Comprehensive guide for analyzing licking microstructure in rodent behavior experiments</p>
+    <!-- Header -->
+    <div class="help-header">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <h1>📖 LickCalc GUI Help</h1>
+            <p>Comprehensive guide for analyzing licking microstructure in rodent behavior experiments</p>
         </div>
+    </div>
 
-        <!-- Table of Contents -->
-        <div class="toc">
-            <h3 class="text-center mb-3">📋 Table of Contents</h3>
-            <div class="row">
-                <div class="col-md-6">
-                    <ul>
-                        <li><a href="#overview">📖 Overview</a></li>
-                        <li><a href="#getting-started">🚀 Getting Started</a></li>
-                        <li><a href="#file-formats">📁 Supported File Formats</a></li>
-                        <li><a href="#session-analysis">📊 Session Analysis</a></li>
-                        <li><a href="#time-window">⏱️ Time Window Selection</a></li>
-                        <li><a href="#microstructural">🔬 Microstructural Analysis</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-6">
-                    <ul>
-                        <li><a href="#parameters">⚙️ Parameters Explained</a></li>
-                        <li><a href="#data-export">💾 Data Export</a></li>
-                        <li><a href="#results-table">📋 Results Management</a></li>
-                        <li><a href="#troubleshooting">🔧 Troubleshooting</a></li>
-                        <li><a href="#glossary">📚 Glossary</a></li>
-                    </ul>
-                </div>
+    <!-- Main Layout with Sidebar and Content -->
+    <div class="help-layout">
+        <!-- Sticky Sidebar with Table of Contents -->
+        <aside class="sidebar">
+            <div class="sidebar-content">
+                <h3>Table of Contents</h3>
+                <ul>
+                    <li><a href="#overview">📖 Overview</a></li>
+                    <li><a href="#getting-started">🚀 Getting Started</a></li>
+                    <li><a href="#file-formats">📁 File Formats</a></li>
+                    <li><a href="#session-analysis">📊 Session Analysis</a></li>
+                    <li><a href="#time-window">⏱️ Time Window</a></li>
+                    <li><a href="#microstructural">🔬 Microstructure</a></li>
+                    <li><a href="#parameters">⚙️ Parameters</a></li>
+                    <li><a href="#data-export">💾 Data Export</a></li>
+                    <li><a href="#results-table">📋 Results Table</a></li>
+                    <li><a href="#troubleshooting">🔧 Troubleshooting</a></li>
+                    <li><a href="#glossary">📚 Glossary</a></li>
+                </ul>
             </div>
-        </div>
+        </aside>
 
-        <!-- Overview Section -->
-        <section id="overview">
+        <!-- Main Content Area -->
+        <main class="main-content">
+
+            <!-- Overview Section -->
+            <section id="overview">
             <h2 class="section-header">📖 Overview</h2>
             <div class="card">
                 <div class="card-body">
@@ -147,8 +236,8 @@
             </div>
         </section>
 
-        <!-- Getting Started Section -->
-        <section id="getting-started">
+            <!-- Getting Started Section -->
+            <section id="getting-started">
             <h2 class="section-header">🚀 Getting Started</h2>
             <div class="accordion" id="gettingStartedAccordion">
                 <div class="accordion-item">
@@ -184,6 +273,9 @@
                             </ul>
                             <div class="tip-box">
                                 <strong>💡 Tip:</strong> The app will automatically detect columns in your file and populate the onset/offset dropdowns.
+                            </div>
+                            <div class="warning-box">
+                                <strong>⚠️ File Validation:</strong> After upload, watch for validation messages. Green indicates successful parsing, red indicates errors with specific details about what went wrong. If you change the file type dropdown, the file will be re-parsed automatically.
                             </div>
                         </div>
                     </div>
@@ -227,11 +319,33 @@
                         </div>
                     </div>
                 </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step5">
+                            Optional: Upload Custom Config
+                        </button>
+                    </h2>
+                    <div id="step5" class="accordion-collapse collapse" data-bs-parent="#gettingStartedAccordion">
+                        <div class="accordion-body">
+                            <p>Customize default analysis parameters by uploading a configuration file:</p>
+                            <ul>
+                                <li>Create a YAML file with your preferred default values</li>
+                                <li>Use <code>custom_config_example.yaml</code> from the repository as a template</li>
+                                <li>Upload via the configuration section (if available in your interface)</li>
+                                <li>Settings will apply immediately and persist for the session</li>
+                            </ul>
+                            <div class="tip-box">
+                                <strong>💡 Pro Tip:</strong> Create different config files for different experiment types or labs to ensure consistent analysis parameters across your team.
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- File Formats Section -->
-        <section id="file-formats">
+            <!-- File Formats Section -->
+            <section id="file-formats">
             <h2 class="section-header">📁 Supported File Formats</h2>
             <div class="row">
                 <div class="col-md-4">
@@ -274,8 +388,8 @@ time,licks,other<br>
             </div>
         </section>
 
-        <!-- Session Analysis Section -->
-        <section id="session-analysis">
+            <!-- Session Analysis Section -->
+            <section id="session-analysis">
             <h2 class="section-header">📊 Session Analysis</h2>
             <div class="card">
                 <div class="card-body">
@@ -301,50 +415,12 @@ time,licks,other<br>
                     <p>Adjust the time bin size to change the temporal resolution of your analysis. Smaller bins show more detail but may be noisier.</p>
                 </div>
             </div>
-            
-            <div class="card mt-3">
-                <div class="card-header">⏱️ Time Window Selection</div>
-                <div class="card-body">
-                    <h5>Analyze Specific Time Periods</h5>
-                    <p>Use the time window controls to analyze only specific portions of your session:</p>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Manual Input</h6>
-                            <ul>
-                                <li><strong>Start Time:</strong> Enter the beginning of your analysis window (in minutes)</li>
-                                <li><strong>End Time:</strong> Enter the end of your analysis window (in minutes)</li>
-                                <li><strong>Apply Button:</strong> Click to update the analysis with your specified times</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Interactive Slider</h6>
-                            <ul>
-                                <li><strong>Drag Range:</strong> Use the range slider to visually select your time window</li>
-                                <li><strong>Real-time Update:</strong> Analysis updates automatically as you drag</li>
-                                <li><strong>Tooltips:</strong> Hover to see exact time values</li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="tip-box">
-                        <strong>💡 Use Cases:</strong>
-                        <ul>
-                            <li>Analyze only the first hour of a long session</li>
-                            <li>Focus on periods of high activity</li>
-                            <li>Compare early vs. late session behavior</li>
-                            <li>Exclude warm-up or cool-down periods</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="warning-box">
-                        <strong>⚠️ Important:</strong> All downstream analyses (microstructure, bursts, statistics) will use only the data within your selected time window. Results table entries will include the time window information for easy comparison.
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card mt-3">
-                <div class="card-header">⏱️ Time Window Selection</div>
+        </section>
+
+            <!-- Time Window Selection Section -->
+            <section id="time-window">
+            <h2 class="section-header">⏱️ Time Window Selection</h2>
+            <div class="card">
                 <div class="card-body">
                     <h5>Analyze Specific Time Periods</h5>
                     <p>Use the time window controls to analyze only specific portions of your session:</p>
@@ -385,8 +461,8 @@ time,licks,other<br>
             </div>
         </section>
 
-        <!-- Microstructural Analysis Section -->
-        <section id="microstructural">
+            <!-- Microstructural Analysis Section -->
+            <section id="microstructural">
             <h2 class="section-header">🔬 Microstructural Analysis</h2>
             <div class="row">
                 <div class="col-md-6">
@@ -401,6 +477,10 @@ time,licks,other<br>
                                 <li><strong>Mean Licks per Burst:</strong> Average burst size</li>
                                 <li><strong>Weibull Parameters:</strong> α and β parameters from probability distribution fitting</li>
                             </ul>
+                            
+                            <div class="warning-box" style="margin-top: 15px;">
+                                <strong>⚠️ Weibull Analysis Requirements:</strong> Weibull distribution fitting requires a minimum number of bursts (default: 10, configurable in config file). If fewer bursts are detected, Weibull statistics will show "N/A" and the burst probability plot title will indicate insufficient data.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -449,8 +529,8 @@ time,licks,other<br>
             </div>
         </section>
 
-        <!-- Parameters Section -->
-        <section id="parameters">
+            <!-- Parameters Section -->
+            <section id="parameters">
             <h2 class="section-header">⚙️ Parameters Explained</h2>
             <div class="row">
                 <div class="col-md-6">
@@ -475,20 +555,61 @@ time,licks,other<br>
                         <p><strong>Range:</strong> 0.1 - 1.0 seconds</p>
                         <p><strong>Default:</strong> 0.3 seconds</p>
                         <p>Licks longer than this duration are classified as "long licks" and may indicate inefficient contact or spillage events.</p>
+                        <p><strong>Remove Long Licks:</strong> Optional checkbox to exclude long licks from all analyses. When enabled, licks exceeding the threshold are filtered out. Requires offset data.</p>
                     </div>
                     
                     <div class="parameter-box">
-                        <h6>📈 Bin Size</h6>
-                        <p><strong>Range:</strong> 1 - 600 seconds</p>
-                        <p><strong>Default:</strong> 60 seconds</p>
-                        <p>Time window for session histogram analysis. Smaller bins provide higher temporal resolution but may be noisier.</p>
+                        <h6>📈 Bin Size (Dynamic)</h6>
+                        <p><strong>Adapts to Session Length:</strong></p>
+                        <ul style="margin-bottom: 0;">
+                            <li>≤1 hour: 1-600 seconds</li>
+                            <li>1-4 hours: 1-600 minutes</li>
+                            <li>>4 hours: 1-24 hours</li>
+                        </ul>
+                        <p style="margin-top: 10px;"><strong>Default:</strong> 60 seconds (or equivalent in minutes/hours)</p>
+                        <p>The slider automatically adjusts range and units based on your session length for optimal analysis granularity.</p>
+                    </div>
+                    
+                    <div class="parameter-box">
+                        <h6>📏 Session Length</h6>
+                        <p><strong>Units:</strong> seconds (s), minutes (min), or hours (hr)</p>
+                        <p><strong>Default:</strong> 3600 seconds (1 hour)</p>
+                        <p>Define the total duration of your experimental session. The unit dropdown allows you to work in your preferred time scale. All internal calculations use seconds.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">🔧 Configuration Files</div>
+                <div class="card-body">
+                    <h5>Customizing Default Settings</h5>
+                    <p>You can customize default analysis parameters by uploading a custom configuration file:</p>
+                    
+                    <h6>Available Settings:</h6>
+                    <ul>
+                        <li><strong>Microstructure parameters:</strong> IBI, min licks per burst, long lick threshold, min bursts for Weibull analysis</li>
+                        <li><strong>Session settings:</strong> Default length, length unit, figure type, bin size</li>
+                        <li><strong>Output settings:</strong> Default animal ID</li>
+                    </ul>
+                    
+                    <div class="tip-box">
+                        <strong>💡 Creating a Config File:</strong>
+                        <ol style="margin-bottom: 0;">
+                            <li>Use YAML format (key: value pairs)</li>
+                            <li>See <code>custom_config_example.yaml</code> in the repository</li>
+                            <li>Upload via the config upload section in the app</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="warning-box">
+                        <strong>⚠️ Note:</strong> Configuration changes apply immediately after upload and persist for the session. Invalid config files will be rejected with an error message.
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Data Export Section -->
-        <section id="data-export">
+            <!-- Data Export Section -->
+            <section id="data-export">
             <h2 class="section-header">💾 Data Export</h2>
             <div class="card">
                 <div class="card-body">
@@ -504,6 +625,7 @@ time,licks,other<br>
                                 <li><strong>Lick Lengths Data:</strong> Duration histograms (requires offset data)</li>
                                 <li><strong>Burst Histogram Data:</strong> Burst size distributions</li>
                                 <li><strong>Burst Probability Data:</strong> Weibull fitting data</li>
+                                <li><strong>Burst Details Data:</strong> Individual burst information (start/end times, lick counts, etc.)</li>
                             </ul>
                         </div>
                         <div class="col-md-6">
@@ -524,10 +646,53 @@ time,licks,other<br>
             </div>
         </section>
 
-        <!-- Results Table Section -->
-        <section id="results-table">
+            <!-- Results Table Section -->
+            <section id="results-table">
             <h2 class="section-header">📋 Results Management</h2>
+            
             <div class="card">
+                <div class="card-header">🔍 Epoch/Division Analysis</div>
+                <div class="card-body">
+                    <h5>Analyzing Session Subdivisions</h5>
+                    <p>The app supports dividing your session into temporal or burst-based epochs for detailed analysis:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Analysis Epoch Options:</h6>
+                            <ul>
+                                <li><strong>Whole Session:</strong> Analyze entire session (default)</li>
+                                <li><strong>Divide by 2/3/4:</strong> Split session into equal parts</li>
+                                <li><strong>First n Bursts:</strong> Analyze only the first N bursts</li>
+                            </ul>
+                            
+                            <h6 class="mt-3">Division Methods:</h6>
+                            <ul>
+                                <li><strong>By Time:</strong> Split session into equal time intervals</li>
+                                <li><strong>By Burst Number:</strong> Split based on burst count (e.g., first vs. last half of bursts)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Use Cases:</h6>
+                            <ul>
+                                <li>Compare early vs. late session behavior</li>
+                                <li>Track learning or satiation effects over time</li>
+                                <li>Analyze acquisition phase (first N bursts only)</li>
+                                <li>Assess stability of licking patterns</li>
+                            </ul>
+                            
+                            <div class="tip-box" style="margin-top: 10px;">
+                                <strong>💡 Example:</strong> Select "Divide by 2" and "By Time" to compare the first and second halves of your session. Each division will be added as a separate row in the results table.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="warning-box">
+                        <strong>⚠️ Important:</strong> When using divisions, each segment is analyzed independently. Statistics like Weibull parameters require a minimum number of bursts (default: 10) and will show "N/A" if insufficient data exists in a segment.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
                 <div class="card-body">
                     <h5>Results Summary Table</h5>
                     <p>Collect and compare results from multiple analyses in an interactive table:</p>
@@ -540,6 +705,7 @@ time,licks,other<br>
                                 <li><strong>Edit Cells:</strong> Modify Animal IDs and other editable fields</li>
                                 <li><strong>Delete Rows:</strong> Remove unwanted entries</li>
                                 <li><strong>Export Options:</strong> Export individual rows or full table</li>
+                                <li><strong>Clear All:</strong> Remove all entries at once</li>
                             </ul>
                         </div>
                         <div class="col-md-6">
@@ -551,14 +717,18 @@ time,licks,other<br>
                                 <li><strong>N:</strong> Sample size for each measure</li>
                                 <li><strong>SE:</strong> Standard error of the mean</li>
                             </ul>
+                            
+                            <div class="tip-box" style="margin-top: 10px;">
+                                <strong>💡 Workflow:</strong> Load each subject's data file, adjust parameters as needed, select your analysis epoch, then click "Add Current Results to Table". Repeat for all subjects, then export the full table for statistical analysis.
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Troubleshooting Section -->
-        <section id="troubleshooting">
+            <!-- Troubleshooting Section -->
+            <section id="troubleshooting">
             <h2 class="section-header">🔧 Troubleshooting</h2>
             <div class="accordion" id="troubleshootingAccordion">
                 <div class="accordion-item">
@@ -640,11 +810,74 @@ time,licks,other<br>
                         </div>
                     </div>
                 </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue5">
+                            Weibull Statistics Showing "N/A"
+                        </button>
+                    </h2>
+                    <div id="issue5" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Weibull parameters (α, β, r²) display "N/A"<br>
+                            <strong>Cause:</strong> Insufficient number of bursts for statistical fitting<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Check if you have at least 10 bursts (default minimum threshold)</li>
+                                <li>Decrease the interburst interval to identify more bursts</li>
+                                <li>Decrease minimum licks per burst threshold</li>
+                                <li>Ensure your time window captures enough bursting behavior</li>
+                                <li>Adjust the minimum burst threshold in your config file if appropriate for your experiment</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue6">
+                            File Re-upload Not Working
+                        </button>
+                    </h2>
+                    <div id="issue6" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Re-uploading the same file doesn't update the analysis<br>
+                            <strong>Cause:</strong> Browser caching of file uploads<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Change the file type dropdown before re-uploading (this triggers re-parsing)</li>
+                                <li>Upload a different file, then upload the original file again</li>
+                                <li>Refresh the browser page and upload again</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue7">
+                            Config File Upload Errors
+                        </button>
+                    </h2>
+                    <div id="issue7" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Custom configuration file rejected<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Ensure file is valid YAML format (check indentation with spaces, not tabs)</li>
+                                <li>Use the provided <code>custom_config_example.yaml</code> as a template</li>
+                                <li>Verify all parameter values are within valid ranges</li>
+                                <li>Check for typos in parameter names</li>
+                                <li>Ensure numeric values don't have quotes around them</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- Glossary Section -->
-        <section id="glossary">
+            <!-- Glossary Section -->
+            <section id="glossary">
             <h2 class="section-header">📚 Glossary</h2>
             <div class="card">
                 <div class="card-body">
@@ -689,19 +922,21 @@ time,licks,other<br>
                 </div>
             </div>
         </section>
-
-        <!-- Footer -->
-        <footer class="text-center mt-5 py-4" style="background-color: #007bff; color: white; border-radius: 10px;">
-            <p>&copy; 2025 LickCalc GUI - Behavioral Microstructure Analysis Tool</p>
-            <p>For technical support or questions about the analysis methods, consult your research supervisor or the documentation.</p>
-        </footer>
+        </main>
     </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2025 LickCalc GUI - Behavioral Microstructure Analysis Tool</p>
+        <p>For technical support or questions about the analysis methods, consult your research supervisor or the documentation.</p>
+    </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Smooth scrolling for internal links -->
+    <!-- Smooth scrolling and active link highlighting -->
     <script>
+        // Smooth scrolling for internal links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -714,6 +949,34 @@ time,licks,other<br>
                 }
             });
         });
+
+        // Highlight active section in sidebar based on scroll position
+        const sections = document.querySelectorAll('section[id]');
+        const sidebarLinks = document.querySelectorAll('.sidebar a[href^="#"]');
+        
+        function highlightActiveSection() {
+            let current = '';
+            const scrollPosition = window.pageYOffset + 200; // Offset for header
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollPosition >= sectionTop - 50) {
+                    current = section.getAttribute('id');
+                }
+            });
+            
+            sidebarLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        }
+        
+        // Update on scroll and load
+        window.addEventListener('scroll', highlightActiveSection);
+        window.addEventListener('load', highlightActiveSection);
     </script>
 </body>
 </html>
