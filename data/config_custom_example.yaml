@@ -48,9 +48,9 @@ analysis:
   session_bin_step: 10   # Changed from 5 to 10 second steps
   
   # Inter-burst interval slider configuration
-  max_interburst_interval: 5.0  # Changed from 3.0 to 5.0 seconds
-  min_interburst_interval: 0.1  # Changed from 0.0 to 0.1
-  interburst_step: 0.1          # Changed from 0.25 to 0.1 for finer control
+  max_interburst_interval: 600.0  # Changed from 3.0 to 5.0 seconds
+  min_interburst_interval: 30.0  # Changed from 0.0 to 0.1
+  interburst_step: 30.0          # Changed from 0.25 to 0.1 for finer control
   
   # Long lick threshold slider configuration
   max_long_lick_threshold: 2.0  # Changed from 1.0 to 2.0 seconds
