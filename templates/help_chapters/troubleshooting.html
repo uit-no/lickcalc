@@ -1,0 +1,149 @@
+<section id="troubleshooting">
+            <h2 class="section-header">🔧 Troubleshooting</h2>
+            <div class="accordion" id="troubleshootingAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue1">
+                            File Upload Issues
+                        </button>
+                    </h2>
+                    <div id="issue1" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> File won't upload or process<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Check file format matches selected type</li>
+                                <li>Ensure file is not corrupted</li>
+                                <li>Verify file contains numeric timestamp data</li>
+                                <li>Try a smaller test file first</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue2">
+                            No Graphs Showing
+                        </button>
+                    </h2>
+                    <div id="issue2" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Graphs are empty or not updating<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Ensure onset array is selected correctly</li>
+                                <li>Check that your data contains valid timestamps</li>
+                                <li>Try adjusting parameter sliders</li>
+                                <li>Refresh the browser page</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue3">
+                            Lick Duration Analysis Not Working
+                        </button>
+                    </h2>
+                    <div id="issue3" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Long licks showing "N/A" or not calculated<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Ensure you have both onset and offset data</li>
+                                <li>Select proper offset array (not "None")</li>
+                                <li>Check that onset and offset arrays have matching lengths</li>
+                                <li>Verify offset timestamps are after onset timestamps</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue4">
+                            Export Problems
+                        </button>
+                    </h2>
+                    <div id="issue4" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Excel export fails or empty<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Ensure data is loaded and analyzed first</li>
+                                <li>Select at least one data type for export</li>
+                                <li>Enter a valid Animal ID</li>
+                                <li>Check browser download settings</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue5">
+                            Weibull Statistics Showing "N/A"
+                        </button>
+                    </h2>
+                    <div id="issue5" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Weibull parameters (α, β, r²) display "N/A"<br>
+                            <strong>Cause:</strong> Insufficient number of bursts for statistical fitting<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Check if you have at least 10 bursts (default minimum threshold)</li>
+                                <li>Decrease the interburst interval to identify more bursts</li>
+                                <li>Decrease minimum licks per burst threshold</li>
+                                <li>Ensure your time window captures enough bursting behavior</li>
+                                <li>Adjust the minimum burst threshold in your config file if appropriate for your experiment</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue6">
+                            File Re-upload Not Working
+                        </button>
+                    </h2>
+                    <div id="issue6" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Re-uploading the same file doesn't update the analysis<br>
+                            <strong>Cause:</strong> Browser caching of file uploads<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Change the file type dropdown before re-uploading (this triggers re-parsing)</li>
+                                <li>Upload a different file, then upload the original file again</li>
+                                <li>Refresh the browser page and upload again</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#issue7">
+                            Config File Upload Errors
+                        </button>
+                    </h2>
+                    <div id="issue7" class="accordion-collapse collapse" data-bs-parent="#troubleshootingAccordion">
+                        <div class="accordion-body">
+                            <strong>Problem:</strong> Custom configuration file rejected<br>
+                            <strong>Solutions:</strong>
+                            <ul>
+                                <li>Ensure file is valid YAML format (check indentation with spaces, not tabs)</li>
+                                <li>Use the provided <code>custom_config_example.yaml</code> as a template</li>
+                                <li>Verify all parameter values are within valid ranges</li>
+                                <li>Check for typos in parameter names</li>
+                                <li>Ensure numeric values don't have quotes around them</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+            <!-- Glossary Section -->

@@ -1,0 +1,81 @@
+<section id="results-table">
+            <h2 class="section-header">📋 Results Management</h2>
+            
+            <div class="card">
+                <div class="card-header">🔍 Epoch/Division Analysis</div>
+                <div class="card-body">
+                    <h5>Analyzing Session Subdivisions</h5>
+                    <p>The app supports dividing your session into temporal or burst-based epochs for detailed analysis:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Analysis Epoch Options:</h6>
+                            <ul>
+                                <li><strong>Whole Session:</strong> Analyze entire session (default)</li>
+                                <li><strong>Divide by 2/3/4:</strong> Split session into equal parts</li>
+                                <li><strong>First n Bursts:</strong> Analyze only the first N bursts</li>
+                            </ul>
+                            
+                            <h6 class="mt-3">Division Methods:</h6>
+                            <ul>
+                                <li><strong>By Time:</strong> Split session into equal time intervals</li>
+                                <li><strong>By Burst Number:</strong> Split based on burst count (e.g., first vs. last half of bursts)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Use Cases:</h6>
+                            <ul>
+                                <li>Compare early vs. late session behavior</li>
+                                <li>Track learning or satiation effects over time</li>
+                                <li>Analyze acquisition phase (first N bursts only)</li>
+                                <li>Assess stability of licking patterns</li>
+                            </ul>
+                            
+                            <div class="tip-box" style="margin-top: 10px;">
+                                <strong>💡 Example:</strong> Select "Divide by 2" and "By Time" to compare the first and second halves of your session. Each division will be added as a separate row in the results table.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="warning-box">
+                        <strong>⚠️ Important:</strong> When using divisions, each segment is analyzed independently. Statistics like Weibull parameters require a minimum number of bursts (default: 10) and will show "N/A" if insufficient data exists in a segment.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5>Results Summary Table</h5>
+                    <p>Collect and compare results from multiple analyses in an interactive table:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Table Features:</h6>
+                            <ul>
+                                <li><strong>Add Results:</strong> Add current analysis to comparison table</li>
+                                <li><strong>Edit Cells:</strong> Modify Animal IDs and other editable fields</li>
+                                <li><strong>Delete Rows:</strong> Remove unwanted entries</li>
+                                <li><strong>Export Options:</strong> Export individual rows or full table</li>
+                                <li><strong>Clear All:</strong> Remove all entries at once</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Automatic Statistics:</h6>
+                            <p>When you have multiple entries, the table automatically calculates:</p>
+                            <ul>
+                                <li><strong>Mean:</strong> Average values across subjects</li>
+                                <li><strong>SD:</strong> Standard deviation</li>
+                                <li><strong>N:</strong> Sample size for each measure</li>
+                                <li><strong>SE:</strong> Standard error of the mean</li>
+                            </ul>
+                            
+                            <div class="tip-box" style="margin-top: 10px;">
+                                <strong>💡 Workflow:</strong> Load each subject's data file, adjust parameters as needed, select your analysis epoch, then click "Add Current Results to Table". Repeat for all subjects, then export the full table for statistical analysis.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+            <!-- Troubleshooting Section -->

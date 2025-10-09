@@ -1,0 +1,68 @@
+<section id="microstructural">
+            <h2 class="section-header">🔬 Microstructural Analysis</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Burst Analysis</div>
+                        <div class="card-body">
+                            <p><strong>Burst Definition:</strong> A sequence of licks separated by intervals shorter than the interburst interval threshold.</p>
+                            
+                            <h6>Key Metrics:</h6>
+                            <ul>
+                                <li><strong>Number of Bursts:</strong> Total burst count in session</li>
+                                <li><strong>Mean Licks per Burst:</strong> Average burst size</li>
+                                <li><strong>Weibull Parameters:</strong> α and β parameters from probability distribution fitting</li>
+                            </ul>
+                            
+                            <div class="warning-box" style="margin-top: 15px;">
+                                <strong>⚠️ Weibull Analysis Requirements:</strong> Weibull distribution fitting requires a minimum number of bursts (default: 10, configurable in config file). If fewer bursts are detected, Weibull statistics will show "N/A" and the burst probability plot title will indicate insufficient data.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Intraburst Frequency</div>
+                        <div class="card-body">
+                            <p><strong>Definition:</strong> The frequency of licking within bursts, calculated from interlick intervals (ILIs) within bursts.</p>
+                            
+                            <h6>Typical Values:</h6>
+                            <ul>
+                                <li>Normal range: 6-8 Hz</li>
+                                <li>Higher frequency may indicate more efficient licking</li>
+                                <li>Displayed as histogram of ILIs</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">Lick Duration Analysis</div>
+                <div class="card-body">
+                    <p><strong>Requirements:</strong> Both onset and offset data must be available.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Lick Lengths</h6>
+                            <ul>
+                                <li>Histogram of individual lick durations</li>
+                                <li>Typically range from 50-200ms</li>
+                                <li>Longer licks may indicate different tongue contact patterns</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Long Licks</h6>
+                            <ul>
+                                <li>Licks exceeding the long lick threshold</li>
+                                <li>May represent inefficient contact or spillage</li>
+                                <li>Count and maximum duration reported</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+            <!-- Parameters Section -->

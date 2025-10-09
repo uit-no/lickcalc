@@ -1,0 +1,79 @@
+<section id="parameters">
+            <h2 class="section-header">⚙️ Parameters Explained</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="parameter-box">
+                        <h6>🕐 Interburst Interval (IBI)</h6>
+                        <p><strong>Range:</strong> 0.25 - 2.0 seconds</p>
+                        <p><strong>Default:</strong> 0.5 seconds</p>
+                        <p>The minimum gap between licks that defines the end of one burst and the beginning of another. Shorter intervals = more bursts with fewer licks each.</p>
+                    </div>
+                    
+                    <div class="parameter-box">
+                        <h6>📊 Minimum Licks per Burst</h6>
+                        <p><strong>Range:</strong> 1 - 10 licks</p>
+                        <p><strong>Default:</strong> 3 licks</p>
+                        <p>The minimum number of licks required to classify a sequence as a burst. Sequences with fewer licks are excluded from burst analysis.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="parameter-box">
+                        <h6>⏱️ Long Lick Threshold</h6>
+                        <p><strong>Range:</strong> 0.1 - 1.0 seconds</p>
+                        <p><strong>Default:</strong> 0.3 seconds</p>
+                        <p>Licks longer than this duration are classified as "long licks" and may indicate inefficient contact or spillage events.</p>
+                        <p><strong>Remove Long Licks:</strong> Optional checkbox to exclude long licks from all analyses. When enabled, licks exceeding the threshold are filtered out. Requires offset data.</p>
+                    </div>
+                    
+                    <div class="parameter-box">
+                        <h6>📈 Bin Size (Dynamic)</h6>
+                        <p><strong>Adapts to Session Length:</strong></p>
+                        <ul style="margin-bottom: 0;">
+                            <li>≤1 hour: 1-600 seconds</li>
+                            <li>1-4 hours: 1-600 minutes</li>
+                            <li>>4 hours: 1-24 hours</li>
+                        </ul>
+                        <p style="margin-top: 10px;"><strong>Default:</strong> 60 seconds (or equivalent in minutes/hours)</p>
+                        <p>The slider automatically adjusts range and units based on your session length for optimal analysis granularity.</p>
+                    </div>
+                    
+                    <div class="parameter-box">
+                        <h6>📏 Session Length</h6>
+                        <p><strong>Units:</strong> seconds (s), minutes (min), or hours (hr)</p>
+                        <p><strong>Default:</strong> 3600 seconds (1 hour)</p>
+                        <p>Define the total duration of your experimental session. The unit dropdown allows you to work in your preferred time scale. All internal calculations use seconds.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">🔧 Configuration Files</div>
+                <div class="card-body">
+                    <h5>Customizing Default Settings</h5>
+                    <p>You can customize default analysis parameters by uploading a custom configuration file:</p>
+                    
+                    <h6>Available Settings:</h6>
+                    <ul>
+                        <li><strong>Microstructure parameters:</strong> IBI, min licks per burst, long lick threshold, min bursts for Weibull analysis</li>
+                        <li><strong>Session settings:</strong> Default length, length unit, figure type, bin size</li>
+                        <li><strong>Output settings:</strong> Default animal ID</li>
+                    </ul>
+                    
+                    <div class="tip-box">
+                        <strong>💡 Creating a Config File:</strong>
+                        <ol style="margin-bottom: 0;">
+                            <li>Use YAML format (key: value pairs)</li>
+                            <li>See <code>custom_config_example.yaml</code> in the repository</li>
+                            <li>Upload via the config upload section in the app</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="warning-box">
+                        <strong>⚠️ Note:</strong> Configuration changes apply immediately after upload and persist for the session. Invalid config files will be rejected with an error message.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+            <!-- Data Export Section -->
