@@ -51,6 +51,9 @@ output:
 
 # Analysis parameters (advanced)
 analysis:
+  # Minimum number of bursts required for Weibull analysis
+  min_bursts_for_weibull: 10
+  
   # Maximum histogram bins for session analysis
   max_session_bins: 300
   

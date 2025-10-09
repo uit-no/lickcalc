@@ -1800,6 +1800,41 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
             fig.update_layout(title="No bursts found with current parameters")
             return fig, "0", "0.00", "0.00", "0.00", "0.00"
         
+        # Check if we have enough bursts for Weibull analysis
+        min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+        num_bursts = lickdata['bNum']
+        
+        if num_bursts < min_bursts_required:
+            fig = go.Figure()
+            fig.update_layout(
+                title={
+                    'text': f"Too few bursts for Weibull analysis ({num_bursts} < {min_bursts_required})",
+                    'x': 0.5,  # Center the title horizontally
+                    'xanchor': 'center'
+                },
+                annotations=[
+                    dict(
+                        x=0.5,
+                        y=0.5,
+                        xref="paper",
+                        yref="paper",
+                        text=f"Too few bursts ({num_bursts})<br>Weibull analysis requires ≥{min_bursts_required} bursts",
+                        showarrow=False,
+                        font=dict(size=16, color="gray"),
+                        xanchor="center",
+                        yanchor="middle"
+                    )
+                ],
+                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                height=400,  # Match other plot heights
+                margin=dict(l=40, r=40, t=60, b=40)  # Standard margins
+            )
+            
+            bNum = "{}".format(lickdata['bNum'])
+            bMean = "{:.2f}".format(lickdata['bMean'])
+            return fig, bNum, bMean, "N/A", "N/A", "N/A"
+        
         # Check if Weibull parameters are None (too few bursts for Weibull analysis)
         if lickdata['weib_alpha'] is None or lickdata['weib_beta'] is None or lickdata['weib_rsq'] is None:
             fig = go.Figure()
@@ -1991,15 +2026,18 @@ def collect_figure_data(jsonified_df, bin_size_seconds, ibi_slider, minlicks_sli
         else:
             figure_data['burst_details'] = None
         
-        # Summary statistics
+        # Summary statistics - check minimum burst threshold for Weibull parameters
+        min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+        num_bursts = burst_lickdata['bNum']
+        
         figure_data['summary_stats'] = {
             'total_licks': burst_lickdata['total'],
             'intraburst_freq': burst_lickdata['freq'],
             'n_bursts': burst_lickdata['bNum'],
             'mean_licks_per_burst': burst_lickdata['bMean'],
-            'weibull_alpha': burst_lickdata['weib_alpha'],
-            'weibull_beta': burst_lickdata['weib_beta'],
-            'weibull_rsq': burst_lickdata['weib_rsq'],
+            'weibull_alpha': burst_lickdata['weib_alpha'] if (burst_lickdata['weib_alpha'] is not None and num_bursts >= min_bursts_required) else None,
+            'weibull_beta': burst_lickdata['weib_beta'] if (burst_lickdata['weib_beta'] is not None and num_bursts >= min_bursts_required) else None,
+            'weibull_rsq': burst_lickdata['weib_rsq'] if (burst_lickdata['weib_rsq'] is not None and num_bursts >= min_bursts_required) else None,
             'n_long_licks': 'N/A (requires offset data)',
             'max_lick_duration': 'N/A (requires offset data)'
         }
@@ -2088,14 +2126,18 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
     # Calculate basic burst statistics
     burst_lickdata = lickcalc(segment_licks, burstThreshold=ibi, minburstlength=minlicks, remove_longlicks=remove_long)
     
+    # Check minimum burst threshold for Weibull parameters
+    min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+    num_bursts = burst_lickdata['bNum']
+    
     stats = {
         'total_licks': burst_lickdata['total'],
         'intraburst_freq': burst_lickdata['freq'],
         'n_bursts': burst_lickdata['bNum'],
         'mean_licks_per_burst': burst_lickdata['bMean'],
-        'weibull_alpha': burst_lickdata['weib_alpha'],
-        'weibull_beta': burst_lickdata['weib_beta'],
-        'weibull_rsq': burst_lickdata['weib_rsq'],
+        'weibull_alpha': burst_lickdata['weib_alpha'] if (burst_lickdata['weib_alpha'] is not None and num_bursts >= min_bursts_required) else np.nan,
+        'weibull_beta': burst_lickdata['weib_beta'] if (burst_lickdata['weib_beta'] is not None and num_bursts >= min_bursts_required) else np.nan,
+        'weibull_rsq': burst_lickdata['weib_rsq'] if (burst_lickdata['weib_rsq'] is not None and num_bursts >= min_bursts_required) else np.nan,
         'n_long_licks': np.nan,
         'max_lick_duration': np.nan
     }
@@ -2237,6 +2279,16 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
             # Main summary sheet
             if 'summary_stats' in figure_data:
                 stats = figure_data['summary_stats']
+                
+                # Check minimum burst threshold for Weibull analysis in export
+                min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+                export_n_bursts = stats.get('n_bursts', 0)
+                
+                # Format Weibull parameters based on burst threshold
+                weibull_alpha_text = 'N/A (insufficient bursts)' if export_n_bursts < min_bursts_required else (f"{stats.get('weibull_alpha', 'N/A'):.3f}" if stats.get('weibull_alpha') else 'N/A')
+                weibull_beta_text = 'N/A (insufficient bursts)' if export_n_bursts < min_bursts_required else (f"{stats.get('weibull_beta', 'N/A'):.3f}" if stats.get('weibull_beta') else 'N/A')
+                weibull_rsq_text = 'N/A (insufficient bursts)' if export_n_bursts < min_bursts_required else (f"{stats.get('weibull_rsq', 'N/A'):.3f}" if stats.get('weibull_rsq') else 'N/A')
+                
                 summary_df = pd.DataFrame([
                     ['Animal ID', animal_id],
                     ['Source Filename', source_filename if source_filename else 'N/A'],
@@ -2245,9 +2297,9 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
                     ['Intraburst Frequency (Hz)', f"{stats.get('intraburst_freq', 'N/A'):.3f}" if stats.get('intraburst_freq') else 'N/A'],
                     ['Number of Bursts', stats.get('n_bursts', 'N/A')],
                     ['Mean Licks per Burst', f"{stats.get('mean_licks_per_burst', 'N/A'):.2f}" if stats.get('mean_licks_per_burst') else 'N/A'],
-                    ['Weibull Alpha', f"{stats.get('weibull_alpha', 'N/A'):.3f}" if stats.get('weibull_alpha') else 'N/A'],
-                    ['Weibull Beta', f"{stats.get('weibull_beta', 'N/A'):.3f}" if stats.get('weibull_beta') else 'N/A'],
-                    ['Weibull R-squared', f"{stats.get('weibull_rsq', 'N/A'):.3f}" if stats.get('weibull_rsq') else 'N/A'],
+                    ['Weibull Alpha', weibull_alpha_text],
+                    ['Weibull Beta', weibull_beta_text],
+                    ['Weibull R-squared', weibull_rsq_text],
                     ['Number of Long Licks', stats.get('n_long_licks', 'N/A')],
                     ['Maximum Lick Duration (s)', f"{stats.get('max_lick_duration', 'N/A'):.4f}" if isinstance(stats.get('max_lick_duration'), (int, float)) else stats.get('max_lick_duration', 'N/A')]
                 ], columns=['Property', 'Value'])
@@ -2399,6 +2451,10 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 )
                 
                 # Create new row with recalculated stats
+                # Check minimum burst threshold for Weibull analysis
+                min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+                num_bursts = enhanced_results.get('bNum', 0)
+                
                 new_row = {
                     'id': animal_id or 'Unknown',
                     'source_filename': source_filename if source_filename else 'N/A',
@@ -2412,9 +2468,9 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'intraburst_freq': enhanced_results.get('freq', np.nan),
                     'n_bursts': enhanced_results.get('bNum', np.nan),
                     'mean_licks_per_burst': enhanced_results.get('bMean', np.nan),
-                    'weibull_alpha': enhanced_results.get('weib_alpha', np.nan) if enhanced_results.get('weib_alpha') is not None else np.nan,
-                    'weibull_beta': enhanced_results.get('weib_beta', np.nan) if enhanced_results.get('weib_beta') is not None else np.nan,
-                    'weibull_rsq': enhanced_results.get('weib_rsq', np.nan) if enhanced_results.get('weib_rsq') is not None else np.nan,
+                    'weibull_alpha': enhanced_results.get('weib_alpha', np.nan) if (enhanced_results.get('weib_alpha') is not None and num_bursts >= min_bursts_required) else np.nan,
+                    'weibull_beta': enhanced_results.get('weib_beta', np.nan) if (enhanced_results.get('weib_beta') is not None and num_bursts >= min_bursts_required) else np.nan,
+                    'weibull_rsq': enhanced_results.get('weib_rsq', np.nan) if (enhanced_results.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
                     'n_long_licks': len(enhanced_results.get('longlicks', [])) if offset_times else np.nan,
                     'max_lick_duration': np.max(enhanced_results.get('licklength', [])) if offset_times and enhanced_results.get('licklength') is not None and len(enhanced_results.get('licklength', [])) > 0 else np.nan,
                     'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
@@ -2446,6 +2502,10 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 if max_lick_duration is np.nan and isinstance(stats.get('max_lick_duration'), (int, float)):
                     max_lick_duration = stats.get('max_lick_duration')
                 
+                # Check minimum burst threshold for Weibull analysis in fallback case too
+                min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+                fallback_n_bursts = stats.get('n_bursts', 0)
+                
                 new_row = {
                     'id': animal_id or 'Unknown',
                     'source_filename': source_filename if source_filename else 'N/A',
@@ -2459,9 +2519,9 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'intraburst_freq': stats.get('intraburst_freq', np.nan),
                     'n_bursts': stats.get('n_bursts', np.nan),
                     'mean_licks_per_burst': stats.get('mean_licks_per_burst', np.nan),
-                    'weibull_alpha': stats.get('weibull_alpha', np.nan) if stats.get('weibull_alpha') is not None else np.nan,
-                    'weibull_beta': stats.get('weibull_beta', np.nan) if stats.get('weibull_beta') is not None else np.nan,
-                    'weibull_rsq': stats.get('weibull_rsq', np.nan) if stats.get('weibull_rsq') is not None else np.nan,
+                    'weibull_alpha': stats.get('weibull_alpha', np.nan) if (stats.get('weibull_alpha') is not None and fallback_n_bursts >= min_bursts_required) else np.nan,
+                    'weibull_beta': stats.get('weibull_beta', np.nan) if (stats.get('weibull_beta') is not None and fallback_n_bursts >= min_bursts_required) else np.nan,
+                    'weibull_rsq': stats.get('weibull_rsq', np.nan) if (stats.get('weibull_rsq') is not None and fallback_n_bursts >= min_bursts_required) else np.nan,
                     'n_long_licks': n_long_licks,
                     'max_lick_duration': max_lick_duration,
                     'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
@@ -2599,6 +2659,10 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                         division_start = i * division_duration
                         division_end = (i + 1) * division_duration
                         
+                        # Check minimum burst threshold for Weibull analysis
+                        min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+                        div_n_bursts = div['n_bursts']
+                        
                         division_rows.append({
                             'id': f"{animal_id}_T{div['division_number']}" if animal_id else f"T{div['division_number']}",
                             'source_filename': f"{source_filename} (Time {div['division_number']}/{division_number}: {division_start:.0f}-{division_end:.0f}s)" if source_filename else f"Time {div['division_number']}/{division_number} ({division_start:.0f}-{division_end:.0f}s)",
@@ -2612,9 +2676,9 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                             'intraburst_freq': div['intraburst_freq'],
                             'n_bursts': div['n_bursts'],
                             'mean_licks_per_burst': div['mean_licks_per_burst'],
-                            'weibull_alpha': div['weibull_alpha'] if div['weibull_alpha'] is not None else np.nan,
-                            'weibull_beta': div['weibull_beta'] if div['weibull_beta'] is not None else np.nan,
-                            'weibull_rsq': div['weibull_rsq'] if div['weibull_rsq'] is not None else np.nan,
+                            'weibull_alpha': div['weibull_alpha'] if (div['weibull_alpha'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
+                            'weibull_beta': div['weibull_beta'] if (div['weibull_beta'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
+                            'weibull_rsq': div['weibull_rsq'] if (div['weibull_rsq'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                             'n_long_licks': div['n_long_licks'],
                             'max_lick_duration': div['max_lick_duration'],
                             'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
@@ -2636,6 +2700,11 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     if 'burst_divisions' in enhanced_results:
                         for div in enhanced_results['burst_divisions']:
                             bursts_in_segment = div['end_burst'] - div['start_burst']
+                            
+                            # Check minimum burst threshold for Weibull analysis
+                            min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+                            div_n_bursts = div['n_bursts']
+                            
                             division_rows.append({
                                 'id': f"{animal_id}_B{div['division_number']}" if animal_id else f"B{div['division_number']}",
                                 'source_filename': f"{source_filename} (Bursts {div['start_burst']+1}-{div['end_burst']}, {bursts_in_segment} bursts)" if source_filename else f"Bursts {div['start_burst']+1}-{div['end_burst']} ({bursts_in_segment} bursts)",
@@ -2649,9 +2718,9 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                                 'intraburst_freq': div['intraburst_freq'],
                                 'n_bursts': div['n_bursts'],
                                 'mean_licks_per_burst': div['mean_licks_per_burst'],
-                                'weibull_alpha': div['weibull_alpha'] if div['weibull_alpha'] is not None else np.nan,
-                                'weibull_beta': div['weibull_beta'] if div['weibull_beta'] is not None else np.nan,
-                                'weibull_rsq': div['weibull_rsq'] if div['weibull_rsq'] is not None else np.nan,
+                                'weibull_alpha': div['weibull_alpha'] if (div['weibull_alpha'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
+                                'weibull_beta': div['weibull_beta'] if (div['weibull_beta'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
+                                'weibull_rsq': div['weibull_rsq'] if (div['weibull_rsq'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                                 'n_long_licks': div['n_long_licks'],
                                 'max_lick_duration': div['max_lick_duration'],
                                 'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
