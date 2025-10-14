@@ -243,7 +243,7 @@ app.layout = dbc.Container([
                 dbc.Row([
                     dbc.Col([
                         dcc.Slider(id='interburst-slider',
-                            included=False,
+                            tooltip={"placement": "bottom", "always_visible": False},
                             **config.get_slider_config('interburst'))
                     ], width=9),
                     dbc.Col([
@@ -273,7 +273,7 @@ app.layout = dbc.Container([
                 dbc.Row([
                     dbc.Col([
                         dcc.Slider(id='minlicks-slider',
-                                  included=False,
+                                  tooltip={"placement": "bottom", "always_visible": False},
                                   **config.get_slider_config('minlicks'))
                     ], width=9),
                     dbc.Col([
@@ -303,7 +303,7 @@ app.layout = dbc.Container([
                     dbc.Col([
                         dcc.Slider(
                             id='longlick-threshold',
-                            included=False,
+                            tooltip={"placement": "bottom", "always_visible": False},
                             **config.get_slider_config('longlick'))
                     ], width=9),
                     dbc.Col([

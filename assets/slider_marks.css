@@ -1,31 +1,138 @@
-/* Ensure Dash slider marks are visible */
-.rc-slider-mark {
-    font-size: 12px;
-    color: #666;
-}
+/* Ensure Dash slider marks are visible - comprehensive styling */
 
-.rc-slider-mark-text {
-    color: #666 !important;
+/* Main marks container */
+.rc-slider-mark,
+._dash-slider-mark,
+.slider-mark {
+    position: absolute !important;
+    top: 18px !important;
+    left: 0 !important;
+    width: 100% !important;
     font-size: 12px !important;
     display: block !important;
     visibility: visible !important;
 }
 
-/* Ensure marks have proper positioning */
-.rc-slider-with-marks {
-    margin-bottom: 28px;
-}
-
-/* Make sure the marks container is visible */
-.rc-slider .rc-slider-mark {
-    position: absolute;
-    top: 18px;
-    left: 0;
-    width: 100%;
-    font-size: 12px;
-}
-
-/* Individual mark styling */
-.rc-slider-mark-text-active {
+/* Individual mark text labels */
+.rc-slider-mark-text,
+._dash-slider-mark-text,
+.slider-mark-text {
+    position: absolute !important;
+    display: inline-block !important;
+    visibility: visible !important;
+    cursor: pointer !important;
     color: #666 !important;
+    font-size: 11px !important;
+    vertical-align: middle !important;
+    text-align: center !important;
+    transform: translateX(-50%) !important;
+    white-space: nowrap !important;
+    opacity: 1 !important;
+}
+
+/* Active marks */
+.rc-slider-mark-text-active,
+._dash-slider-mark-text-active {
+    color: #333 !important;
+    font-weight: 600 !important;
+}
+
+/* Container with marks needs extra bottom margin */
+.rc-slider-with-marks,
+._dash-slider-with-marks {
+    margin-bottom: 32px !important;
+}
+
+/* The actual slider container */
+.rc-slider,
+._dash-slider {
+    position: relative !important;
+    height: 14px !important;
+    padding: 5px 0 !important;
+    width: 100% !important;
+    border-radius: 6px !important;
+    touch-action: none !important;
+    box-sizing: border-box !important;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+}
+
+/* Ensure parent containers don't hide overflow */
+.rc-slider-with-marks,
+._dash-slider-with-marks,
+#interburst-slider,
+#minlicks-slider,
+#longlick-threshold,
+#session-bin-slider {
+    overflow: visible !important;
+    margin-bottom: 35px !important;
+    padding-bottom: 20px !important;
+}
+
+/* Force visibility on all mark-related elements */
+[class*="slider-mark"],
+[class*="rc-slider-mark"] {
+    visibility: visible !important;
+    display: block !important;
+    opacity: 1 !important;
+}
+
+/* Specific styling for slider parent divs to ensure marks have space */
+#interburst-slider > div,
+#minlicks-slider > div,
+#longlick-threshold > div,
+#session-bin-slider > div {
+    overflow: visible !important;
+    position: relative !important;
+}
+
+/* Mark text positioning - ensure they appear below the slider */
+#interburst-slider .rc-slider-mark-text,
+#minlicks-slider .rc-slider-mark-text,
+#longlick-threshold .rc-slider-mark-text,
+#session-bin-slider .rc-slider-mark-text {
+    top: 8px !important;
+    font-size: 12px !important;
+    color: #666 !important;
+    font-weight: 400 !important;
+    z-index: 100 !important;
+    pointer-events: auto !important;
+    line-height: 1.2 !important;
+}
+
+/* Ensure marks container is also visible */
+#interburst-slider .rc-slider-mark,
+#minlicks-slider .rc-slider-mark,
+#longlick-threshold .rc-slider-mark,
+#session-bin-slider .rc-slider-mark {
+    display: block !important;
+    visibility: visible !important;
+    z-index: 99 !important;
+    height: 30px !important;
+}
+
+/* Force all text nodes within marks to be visible */
+#interburst-slider .rc-slider-mark-text *,
+#minlicks-slider .rc-slider-mark-text *,
+#longlick-threshold .rc-slider-mark-text *,
+#session-bin-slider .rc-slider-mark-text * {
+    visibility: visible !important;
+    display: inline !important;
+    color: #333 !important;
+}
+
+/* Additional safeguards for text rendering */
+.rc-slider-mark-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Ensure text content is not empty or hidden */
+#interburst-slider .rc-slider-mark-text:empty::after,
+#minlicks-slider .rc-slider-mark-text:empty::after,
+#longlick-threshold .rc-slider-mark-text:empty::after,
+#session-bin-slider .rc-slider-mark-text:empty::after {
+    content: "?" !important;
+    color: red !important;
+    font-weight: bold !important;
 }

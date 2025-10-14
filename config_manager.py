@@ -150,11 +150,21 @@ class ConfigManager:
             # Round to appropriate decimal places based on magnitude
             if mark_step >= 1:
                 val = round(val, 0)
+                # Convert to int if it's a whole number for cleaner display
+                if val == int(val):
+                    val = int(val)
             elif mark_step >= 0.1:
                 val = round(val, 1)
             else:
                 val = round(val, 2)
-            marks[val] = str(val)
+            
+            # Format the label string nicely
+            if isinstance(val, int):
+                marks[val] = str(val)
+            elif val == int(val):
+                marks[int(val)] = str(int(val))
+            else:
+                marks[val] = str(val)
         
         return marks
     
@@ -179,7 +189,7 @@ class ConfigManager:
                 'max': max_val,
                 'step': self.get('analysis.session_bin_step', 5),
                 'value': self.get('session.bin_size', 30),
-                'marks': self._generate_slider_marks(min_val, max_val, num_marks=6)
+                'marks': {5: '5', 30: '30', 60: '60', 120: '120', 300: '300'}
             }
         elif slider_name == 'interburst':
             min_val = self.get('analysis.min_interburst_interval', 0)

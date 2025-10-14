@@ -31,7 +31,7 @@ microstructure:
 # File processing defaults
 files:
   # Default file type for dropdown ('med', 'csv', 'dd')
-  default_file_type: 'dd'
+  default_file_type: 'med'
 
 # UI Configuration
 ui:
@@ -64,13 +64,13 @@ analysis:
   session_bin_step: 5
   
   # Maximum inter-burst interval (seconds)
-  max_interburst_interval: 300.0
+  max_interburst_interval: 3.0
   
   # Minimum inter-burst interval (seconds)
   min_interburst_interval: 0.0
   
   # Inter-burst interval step size
-  interburst_step: 10.0
+  interburst_step: 0.25
   
   # Maximum long lick threshold (seconds)
   max_long_lick_threshold: 1.0
