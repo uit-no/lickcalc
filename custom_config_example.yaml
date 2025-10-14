@@ -23,9 +23,9 @@ analysis:
   max_session_bins: 300
   min_session_bins: 5
   session_bin_step: 5
-  max_interburst_interval: 3.0
+  max_interburst_interval: 300.0
   min_interburst_interval: 0.0
-  interburst_step: 0.25
+  interburst_step: 10.0
   max_long_lick_threshold: 1.0
   min_long_lick_threshold: 0.1
   long_lick_step: 0.1

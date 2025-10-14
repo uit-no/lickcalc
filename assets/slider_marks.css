@@ -1,0 +1,31 @@
+/* Ensure Dash slider marks are visible */
+.rc-slider-mark {
+    font-size: 12px;
+    color: #666;
+}
+
+.rc-slider-mark-text {
+    color: #666 !important;
+    font-size: 12px !important;
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Ensure marks have proper positioning */
+.rc-slider-with-marks {
+    margin-bottom: 28px;
+}
+
+/* Make sure the marks container is visible */
+.rc-slider .rc-slider-mark {
+    position: absolute;
+    top: 18px;
+    left: 0;
+    width: 100%;
+    font-size: 12px;
+}
+
+/* Individual mark styling */
+.rc-slider-mark-text-active {
+    color: #666 !important;
+}

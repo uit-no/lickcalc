@@ -120,6 +120,44 @@ class ConfigManager:
             'long_lick_threshold': self.get('microstructure.long_lick_threshold', 0.3)
         }
     
+    def _generate_slider_marks(self, min_val: float, max_val: float, num_marks: int = 5) -> Dict[float, str]:
+        """
+        Generate evenly spaced marks for a slider.
+        
+        Parameters:
+        -----------
+        min_val : float
+            Minimum value of the slider
+        max_val : float
+            Maximum value of the slider
+        num_marks : int
+            Number of marks to generate
+            
+        Returns:
+        --------
+        Dict[float, str] : Dictionary of marks {value: label}
+        """
+        if max_val <= min_val:
+            return {min_val: str(min_val)}
+        
+        # Calculate step for marks (not the same as slider step)
+        mark_range = max_val - min_val
+        mark_step = mark_range / (num_marks - 1)
+        
+        marks = {}
+        for i in range(num_marks):
+            val = min_val + (i * mark_step)
+            # Round to appropriate decimal places based on magnitude
+            if mark_step >= 1:
+                val = round(val, 0)
+            elif mark_step >= 0.1:
+                val = round(val, 1)
+            else:
+                val = round(val, 2)
+            marks[val] = str(val)
+        
+        return marks
+    
     def get_slider_config(self, slider_name: str) -> Dict[str, Any]:
         """
         Get complete slider configuration including min, max, step, and default value.
@@ -134,36 +172,44 @@ class ConfigManager:
         Dict[str, Any] : Slider configuration dictionary
         """
         if slider_name == 'session_bin':
+            min_val = self.get('analysis.min_session_bins', 5)
+            max_val = self.get('analysis.max_session_bins', 300)
             return {
-                'min': self.get('analysis.min_session_bins', 5),
-                'max': self.get('analysis.max_session_bins', 300),
+                'min': min_val,
+                'max': max_val,
                 'step': self.get('analysis.session_bin_step', 5),
                 'value': self.get('session.bin_size', 30),
-                'marks': {i: str(i) for i in [10, 30, 60, 120, 300]}
+                'marks': self._generate_slider_marks(min_val, max_val, num_marks=6)
             }
         elif slider_name == 'interburst':
+            min_val = self.get('analysis.min_interburst_interval', 0)
+            max_val = self.get('analysis.max_interburst_interval', 3)
             return {
-                'min': self.get('analysis.min_interburst_interval', 0),
-                'max': self.get('analysis.max_interburst_interval', 3),
+                'min': min_val,
+                'max': max_val,
                 'step': self.get('analysis.interburst_step', 0.25),
                 'value': self.get('microstructure.interburst_interval', 0.5),
-                'marks': {i: str(i) for i in [0.5, 1, 1.5, 2, 2.5, 3]}
+                'marks': self._generate_slider_marks(min_val, max_val, num_marks=6)
             }
         elif slider_name == 'minlicks':
+            min_val = 1
+            max_val = 5
             return {
-                'min': 1,
-                'max': 5,
+                'min': min_val,
+                'max': max_val,
                 'step': 1,
                 'value': self.get('microstructure.min_licks_per_burst', 1),
-                'marks': {i: str(i) for i in [1, 2, 3, 4, 5]}
+                'marks': {i: str(i) for i in range(int(min_val), int(max_val) + 1)}
             }
         elif slider_name == 'longlick':
+            min_val = self.get('analysis.min_long_lick_threshold', 0.1)
+            max_val = self.get('analysis.max_long_lick_threshold', 1.0)
             return {
-                'min': self.get('analysis.min_long_lick_threshold', 0.1),
-                'max': self.get('analysis.max_long_lick_threshold', 1.0),
+                'min': min_val,
+                'max': max_val,
                 'step': self.get('analysis.long_lick_step', 0.1),
                 'value': self.get('microstructure.long_lick_threshold', 0.3),
-                'marks': {i: str(i) for i in [0.2, 0.4, 0.6, 0.8, 1.0]}
+                'marks': self._generate_slider_marks(min_val, max_val, num_marks=5)
             }
         else:
             raise ValueError(f"Unknown slider name: {slider_name}")

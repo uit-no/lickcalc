@@ -242,7 +242,8 @@ app.layout = dbc.Container([
                 get_ibi_tooltip()[1],
                 dbc.Row([
                     dbc.Col([
-                        dcc.Slider(id='interburst-slider',              
+                        dcc.Slider(id='interburst-slider',
+                            included=False,
                             **config.get_slider_config('interburst'))
                     ], width=9),
                     dbc.Col([
@@ -272,6 +273,7 @@ app.layout = dbc.Container([
                 dbc.Row([
                     dbc.Col([
                         dcc.Slider(id='minlicks-slider',
+                                  included=False,
                                   **config.get_slider_config('minlicks'))
                     ], width=9),
                     dbc.Col([
@@ -301,6 +303,7 @@ app.layout = dbc.Container([
                     dbc.Col([
                         dcc.Slider(
                             id='longlick-threshold',
+                            included=False,
                             **config.get_slider_config('longlick'))
                     ], width=9),
                     dbc.Col([
@@ -680,8 +683,20 @@ def serve_help():
     Output('custom-config-store', 'data'),
     Output('session-bin-slider', 'value'),
     Output('session-bin-slider-seconds', 'data', allow_duplicate=True),
+    Output('interburst-slider', 'min'),
+    Output('interburst-slider', 'max'),
+    Output('interburst-slider', 'step'),
+    Output('interburst-slider', 'marks'),
     Output('interburst-slider', 'value'),
+    Output('minlicks-slider', 'min'),
+    Output('minlicks-slider', 'max'),
+    Output('minlicks-slider', 'step'),
+    Output('minlicks-slider', 'marks'),
     Output('minlicks-slider', 'value'),
+    Output('longlick-threshold', 'min'),
+    Output('longlick-threshold', 'max'),
+    Output('longlick-threshold', 'step'),
+    Output('longlick-threshold', 'marks'),
     Output('longlick-threshold', 'value'),
     Output('session-fig-type', 'value'),
     Output('session-length-input', 'value', allow_duplicate=True),
@@ -718,6 +733,51 @@ def load_config(config_contents, config_filename, current_session_length):
         session_length_unit = custom_config.get('session', {}).get('length_unit', config.get('session.length_unit', 's'))
         file_type = custom_config.get('files', {}).get('default_file_type', config.get('files.default_file_type', 'med'))
         
+        # Helper function to generate reasonable slider marks
+        def generate_slider_marks(min_val, max_val, num_marks=5):
+            """Generate evenly spaced marks for a slider"""
+            if max_val <= min_val:
+                return {min_val: str(min_val)}
+            
+            # Calculate step for marks (not the same as slider step)
+            mark_range = max_val - min_val
+            mark_step = mark_range / (num_marks - 1)
+            
+            marks = {}
+            for i in range(num_marks):
+                val = min_val + (i * mark_step)
+                # Round to appropriate decimal places based on magnitude
+                if mark_step >= 1:
+                    val = round(val, 0)
+                elif mark_step >= 0.1:
+                    val = round(val, 1)
+                else:
+                    val = round(val, 2)
+                marks[val] = str(val)
+            
+            return marks
+        
+        # Extract slider range configurations with fallbacks to defaults
+        analysis_config = custom_config.get('analysis', {})
+        
+        # Interburst slider config
+        ibi_min = analysis_config.get('min_interburst_interval', config.get('analysis.min_interburst_interval', 0))
+        ibi_max = analysis_config.get('max_interburst_interval', config.get('analysis.max_interburst_interval', 3))
+        ibi_step = analysis_config.get('interburst_step', config.get('analysis.interburst_step', 0.25))
+        ibi_marks = generate_slider_marks(ibi_min, ibi_max, num_marks=6)
+        
+        # Minlicks slider config (typically fixed but allow override)
+        minlicks_min = analysis_config.get('min_licks_per_burst_range', 1)
+        minlicks_max = analysis_config.get('max_licks_per_burst_range', 5)
+        minlicks_step = 1
+        minlicks_marks = {i: str(i) for i in range(int(minlicks_min), int(minlicks_max) + 1)}
+        
+        # Longlick slider config
+        longlick_min = analysis_config.get('min_long_lick_threshold', config.get('analysis.min_long_lick_threshold', 0.1))
+        longlick_max = analysis_config.get('max_long_lick_threshold', config.get('analysis.max_long_lick_threshold', 1.0))
+        longlick_step = analysis_config.get('long_lick_step', config.get('analysis.long_lick_step', 0.1))
+        longlick_marks = generate_slider_marks(longlick_min, longlick_max, num_marks=5)
+        
         # Handle 'auto' value for session length
         # If config says 'auto', keep the current value (don't override existing auto-detected value)
         if session_length_config == 'auto':
@@ -730,8 +790,20 @@ def load_config(config_contents, config_filename, current_session_length):
             custom_config,  # Store the full custom config
             session_bin,
             session_bin,  # Also update the seconds store with the same value (it's already in seconds)
+            ibi_min,
+            ibi_max,
+            ibi_step,
+            ibi_marks,
             ibi,
+            minlicks_min,
+            minlicks_max,
+            minlicks_step,
+            minlicks_marks,
             minlicks,
+            longlick_min,
+            longlick_max,
+            longlick_step,
+            longlick_marks,
             longlick,
             figtype,
             session_length,
@@ -744,16 +816,28 @@ def load_config(config_contents, config_filename, current_session_length):
     except yaml.YAMLError as e:
         # Return current values on error
         return (
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
+            dash.no_update,  # custom-config-store
+            dash.no_update,  # session-bin-slider value
+            dash.no_update,  # session-bin-slider-seconds
+            dash.no_update,  # interburst-slider min
+            dash.no_update,  # interburst-slider max
+            dash.no_update,  # interburst-slider step
+            dash.no_update,  # interburst-slider marks
+            dash.no_update,  # interburst-slider value
+            dash.no_update,  # minlicks-slider min
+            dash.no_update,  # minlicks-slider max
+            dash.no_update,  # minlicks-slider step
+            dash.no_update,  # minlicks-slider marks
+            dash.no_update,  # minlicks-slider value
+            dash.no_update,  # longlick-threshold min
+            dash.no_update,  # longlick-threshold max
+            dash.no_update,  # longlick-threshold step
+            dash.no_update,  # longlick-threshold marks
+            dash.no_update,  # longlick-threshold value
+            dash.no_update,  # session-fig-type
+            dash.no_update,  # session-length-input
+            dash.no_update,  # session-length-unit
+            dash.no_update,  # input-file-type
             "❌ YAML Error",
             "btn btn-danger btn-sm"
         )
@@ -761,16 +845,28 @@ def load_config(config_contents, config_filename, current_session_length):
     except Exception as e:
         # Return current values on error
         return (
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
-            dash.no_update,
+            dash.no_update,  # custom-config-store
+            dash.no_update,  # session-bin-slider value
+            dash.no_update,  # session-bin-slider-seconds
+            dash.no_update,  # interburst-slider min
+            dash.no_update,  # interburst-slider max
+            dash.no_update,  # interburst-slider step
+            dash.no_update,  # interburst-slider marks
+            dash.no_update,  # interburst-slider value
+            dash.no_update,  # minlicks-slider min
+            dash.no_update,  # minlicks-slider max
+            dash.no_update,  # minlicks-slider step
+            dash.no_update,  # minlicks-slider marks
+            dash.no_update,  # minlicks-slider value
+            dash.no_update,  # longlick-threshold min
+            dash.no_update,  # longlick-threshold max
+            dash.no_update,  # longlick-threshold step
+            dash.no_update,  # longlick-threshold marks
+            dash.no_update,  # longlick-threshold value
+            dash.no_update,  # session-fig-type
+            dash.no_update,  # session-length-input
+            dash.no_update,  # session-length-unit
+            dash.no_update,  # input-file-type
             "❌ Load Error",
             "btn btn-danger btn-sm"
         )
