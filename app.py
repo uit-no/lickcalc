@@ -679,12 +679,14 @@ def serve_help():
 @app.callback(
     Output('custom-config-store', 'data'),
     Output('session-bin-slider', 'value'),
+    Output('session-bin-slider-seconds', 'data', allow_duplicate=True),
     Output('interburst-slider', 'value'),
     Output('minlicks-slider', 'value'),
     Output('longlick-threshold', 'value'),
     Output('session-fig-type', 'value'),
     Output('session-length-input', 'value', allow_duplicate=True),
     Output('session-length-unit', 'value'),
+    Output('input-file-type', 'value'),
     Output('config-button-content', 'children'),
     Output('config-button-content', 'className'),
     Input('upload-config', 'contents'),
@@ -714,6 +716,7 @@ def load_config(config_contents, config_filename, current_session_length):
         figtype = custom_config.get('session', {}).get('fig_type', config.get('session.fig_type', 'hist'))
         session_length_config = custom_config.get('session', {}).get('length', 3600)
         session_length_unit = custom_config.get('session', {}).get('length_unit', config.get('session.length_unit', 's'))
+        file_type = custom_config.get('files', {}).get('default_file_type', config.get('files.default_file_type', 'med'))
         
         # Handle 'auto' value for session length
         # If config says 'auto', keep the current value (don't override existing auto-detected value)
@@ -726,12 +729,14 @@ def load_config(config_contents, config_filename, current_session_length):
         return (
             custom_config,  # Store the full custom config
             session_bin,
+            session_bin,  # Also update the seconds store with the same value (it's already in seconds)
             ibi,
             minlicks,
             longlick,
             figtype,
             session_length,
             session_length_unit,
+            file_type,
             "✅ Custom Config Loaded",  # Change button text
             "btn btn-success btn-sm"  # Change to green button
         )
@@ -747,7 +752,9 @@ def load_config(config_contents, config_filename, current_session_length):
             dash.no_update,
             dash.no_update,
             dash.no_update,
-            f"❌ YAML Error",
+            dash.no_update,
+            dash.no_update,
+            "❌ YAML Error",
             "btn btn-danger btn-sm"
         )
         
@@ -762,7 +769,9 @@ def load_config(config_contents, config_filename, current_session_length):
             dash.no_update,
             dash.no_update,
             dash.no_update,
-            f"❌ Load Error",
+            dash.no_update,
+            dash.no_update,
+            "❌ Load Error",
             "btn btn-danger btn-sm"
         )
 
@@ -829,6 +838,9 @@ def update_bin_slider_range(session_length_seconds, current_bin_seconds):
     if not session_length_seconds or session_length_seconds <= 0:
         session_length_seconds = 3600  # Default to 1 hour
     
+    # Get config default bin size in seconds
+    config_bin_size = config.get('session.bin_size', 30)
+    
     # Three tiers based on session length
     if session_length_seconds <= 3600:  # Up to 1 hour: use seconds (5-300s)
         min_val = 5
@@ -836,11 +848,12 @@ def update_bin_slider_range(session_length_seconds, current_bin_seconds):
         step = 5
         unit_label = "Bin size (seconds)"
         marks = {i: str(i) for i in range(0, 301, 60)}
-        # Keep current value if in range, otherwise use default
+        # Keep current value if in range, otherwise use config default
         if current_bin_seconds and min_val <= current_bin_seconds <= max_val:
             value = current_bin_seconds
         else:
-            value = 30
+            # Use config default, constrained to valid range
+            value = max(min_val, min(max_val, config_bin_size))
             
     elif session_length_seconds <= 14400:  # 1-4 hours: use minutes (1-60 min = 60-3600s)
         min_val = 1
@@ -852,7 +865,8 @@ def update_bin_slider_range(session_length_seconds, current_bin_seconds):
         if current_bin_seconds:
             value = max(min_val, min(max_val, round(current_bin_seconds / 60)))
         else:
-            value = 5  # 5 minutes default
+            # Use config default converted to minutes, constrained to valid range
+            value = max(min_val, min(max_val, round(config_bin_size / 60)))
             
     else:  # Over 4 hours: use hours (0.5-2 hr = 1800-7200s)
         min_val = 0.5
@@ -864,7 +878,8 @@ def update_bin_slider_range(session_length_seconds, current_bin_seconds):
         if current_bin_seconds:
             value = max(min_val, min(max_val, round(current_bin_seconds / 3600, 2)))
         else:
-            value = 0.5  # 30 minutes default
+            # Use config default converted to hours, constrained to valid range
+            value = max(min_val, min(max_val, round(config_bin_size / 3600, 2)))
     
     # Update the label
     label_children = [

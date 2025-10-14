@@ -3,7 +3,7 @@
 # Upload it using the "Load Config File" button in the app
 
 session:
-  bin_size: 30          # Default bin size for session histogram (seconds)
+  bin_size: 300          # Default bin size for session histogram (seconds)
   fig_type: 'hist'      # Default figure type: 'hist' or 'cumul'
   length: 3600          # Default session length value (use 'auto' for automatic)
   length_unit: 's'      # Unit for session length: 's' (seconds), 'min' (minutes), or 'hr' (hours)
@@ -14,7 +14,7 @@ microstructure:
   long_lick_threshold: 0.3      # Long lick threshold (seconds)
 
 files:
-  default_file_type: 'med'      # Default file type: 'med', 'csv', or 'dd'
+  default_file_type: 'dd'      # Default file type: 'med', 'csv', or 'dd'
 
 # Note: The analysis section below defines slider ranges and is optional
 # Only include these if you want to change the min/max ranges for sliders
