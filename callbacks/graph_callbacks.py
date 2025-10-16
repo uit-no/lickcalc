@@ -1,11 +1,13 @@
 """
 Graph generation callbacks for lickcalc webapp.
 """
-
+import io
+import json
 import dash
 from dash import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
+import plotly.express as px
 import pandas as pd
 import numpy as np
 import logging

@@ -144,13 +144,15 @@ def parse_kmfile(f, header=9):
                     names=["row", "timestamp", "input", "eventcode", "event", "empty1", "empty2"]
                     )
     
-    vars = {}
+    loaded_vars = {}
 
     for event in df.event.unique():
         tmp = df.query("event == @event").timestamp.values
-        vars[event] = tmp
+        loaded_vars[event] = tmp
         
-    return vars
+    data_array = vars2dict(loaded_vars)
+    
+    return data_array
 
 def vars2dict(loaded_vars):
          

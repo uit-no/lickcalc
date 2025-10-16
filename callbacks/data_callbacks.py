@@ -2,8 +2,9 @@
 Data loading and validation callbacks for lickcalc webapp.
 """
 
+import io
 import dash
-from dash import Input, Output, State
+from dash import html, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import base64
@@ -12,7 +13,7 @@ import pandas as pd
 import logging
 
 from app_instance import app
-from utils import validate_onset_times, parse_medfile, parse_csvfile, parse_ddfile
+from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfile, parse_csvfile, parse_ddfile, parse_kmfile
 
 # Callback to show/hide dropdowns based on analysis epoch selection
 @app.callback(
@@ -49,7 +50,6 @@ def toggle_longlick_controls_visibility(offset_key, data_store):
         # Show longlick controls when offset data is available
         return {'display': 'block', 'width': '33.33%'}  # Maintain the 4-column width (width=4 = 33.33%)
     
- 
 @app.callback(Output('data-store', 'data'),
               Output('fileloadLbl', 'children'),
               Output('onset-array', 'options'),
@@ -80,6 +80,8 @@ def load_and_clean_data(list_of_contents, input_file_type, list_of_names, list_o
                 data_array = parse_csvfile(f)
             elif input_file_type == 'dd':
                 data_array = parse_ddfile(f)
+            elif input_file_type == 'km':
+                data_array = parse_kmfile(f)
             else:
                 raise ValueError(f"Unknown file type: {input_file_type}")
             

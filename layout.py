@@ -102,7 +102,8 @@ dcc.Store(id='lick-data'),
                               options=[
                                   {'label': 'Med Associates', 'value': 'med'},
                                   {'label': 'CSV/TXT', 'value': 'csv'},
-                                  {'label': 'DD Lab', 'value': 'dd'}],
+                                  {'label': 'DD Lab', 'value': 'dd'},
+                                  {'label': 'KM Lab', 'value': 'km'}],
                               value=config.get('files.default_file_type', 'med')),
             ], width=2),
             dbc.Col([
