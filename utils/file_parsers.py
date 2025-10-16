@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Jul  6 20:18:49 2021
-
-@author: jmc010
+File parsing utilities for lickcalc webapp.
+Functions to parse different lick data file formats (MED, CSV, DD).
 """
 import numpy as np
 import string
@@ -134,6 +132,24 @@ def parse_ddfile(f):
     t0=ts[0]
     loaded_vars = {'t': [(t - t0).total_seconds() for t in ts]}
     
+    data_array = vars2dict(loaded_vars)
+    
+    return data_array
+
+def parse_kmfile(f, header=9):
+
+    df = pd.read_csv(f,
+                    skiprows=header,
+                    header=None,
+                    names=["row", "timestamp", "input", "eventcode", "event", "empty1", "empty2"]
+                    )
+    
+    loaded_vars = {}
+
+    for event in df.event.unique():
+        tmp = df.query("event == @event").timestamp.values
+        loaded_vars[event] = tmp
+        
     data_array = vars2dict(loaded_vars)
     
     return data_array
