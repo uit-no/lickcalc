@@ -12,8 +12,7 @@ import pandas as pd
 import logging
 
 from app_instance import app
-from helperfx import parse_medfile, parse_csvfile, parse_ddfile
-from utils import validate_onset_times
+from utils import validate_onset_times, parse_medfile, parse_csvfile, parse_ddfile
 
 # Callback to show/hide dropdowns based on analysis epoch selection
 @app.callback(
