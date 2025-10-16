@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """
-Created on Tue Jul  6 20:18:49 2021
-
-@author: jmc010
+File parsing utilities for lickcalc webapp.
+Functions to parse different lick data file formats (MED, CSV, DD).
 """
 import numpy as np
 import string

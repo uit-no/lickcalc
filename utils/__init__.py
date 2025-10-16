@@ -9,6 +9,11 @@ from .validation import (
     validate_onset_times,
     validate_onset_offset_pairs
 )
+from .file_parsers import (
+    parse_medfile,
+    parse_csvfile,
+    parse_ddfile
+)
 
 __all__ = [
     'calculate_segment_stats',
@@ -16,4 +21,7 @@ __all__ = [
     'get_offsets_for_licks',
     'validate_onset_times',
     'validate_onset_offset_pairs',
+    'parse_medfile',
+    'parse_csvfile',
+    'parse_ddfile',
 ]
