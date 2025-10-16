@@ -136,6 +136,22 @@ def parse_ddfile(f):
     
     return data_array
 
+def parse_kmfile(f, header=9):
+
+    df = pd.read_csv(f,
+                    skiprows=header,
+                    header=None,
+                    names=["row", "timestamp", "input", "eventcode", "event", "empty1", "empty2"]
+                    )
+    
+    vars = {}
+
+    for event in df.event.unique():
+        tmp = df.query("event == @event").timestamp.values
+        vars[event] = tmp
+        
+    return vars
+
 def vars2dict(loaded_vars):
          
     data_array = {}

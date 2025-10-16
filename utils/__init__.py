@@ -12,7 +12,8 @@ from .validation import (
 from .file_parsers import (
     parse_medfile,
     parse_csvfile,
-    parse_ddfile
+    parse_ddfile,
+    parse_kmfile
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     'parse_medfile',
     'parse_csvfile',
     'parse_ddfile',
+    'parse_kmfile',
 ]
