@@ -100,7 +100,8 @@ dcc.Store(id='lick-data'),
             dbc.Col([
                 dcc.Dropdown(id='input-file-type',
                               options=[
-                                  {'label': 'Med Associates', 'value': 'med'},
+                                  {'label': 'Med (column-based)', 'value': 'med'},
+                                  {'label': 'Med (array-based)', 'value': 'med_array'},
                                   {'label': 'CSV/TXT', 'value': 'csv'},
                                   {'label': 'DD Lab', 'value': 'dd'},
                                   {'label': 'KM Lab', 'value': 'km'}],

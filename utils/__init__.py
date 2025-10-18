@@ -11,6 +11,7 @@ from .validation import (
 )
 from .file_parsers import (
     parse_medfile,
+    parse_med_arraystyle,
     parse_csvfile,
     parse_ddfile,
     parse_kmfile
@@ -23,6 +24,7 @@ __all__ = [
     'validate_onset_times',
     'validate_onset_offset_pairs',
     'parse_medfile',
+    'parse_med_arraystyle',
     'parse_csvfile',
     'parse_ddfile',
     'parse_kmfile',

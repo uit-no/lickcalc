@@ -4,6 +4,7 @@ Functions to parse different lick data file formats (MED, CSV, DD).
 """
 import numpy as np
 import string
+import re
 import pandas as pd
 import csv
 import datetime
@@ -36,6 +37,43 @@ def parse_medfile(f):
 
     data_array = vars2dict(loaded_vars)
                 
+    return data_array
+
+def parse_med_arraystyle(f):
+    """Parser for Med-PC format arrays, i.e. not column-based.
+    
+    Args:
+        f: File-like object (e.g., StringIO) or file path string
+    """
+    # Handle both file paths and file-like objects
+    if isinstance(f, str):
+        with open(f, 'r') as file:
+            lines = file.readlines()
+    else:
+        # f is already a file-like object (StringIO)
+        f.seek(0)  # Reset to beginning
+        lines = f.readlines()
+    
+    arrays = {}
+    current_array = None
+    
+    for line in lines:
+        # Check for array label (e.g., "L:" or "R:")
+        if re.match(r'^[A-Z]:$', line.strip()):
+            current_array = line.strip()[0]  # Get just the letter
+            arrays[current_array] = []
+        # Check for data lines (start with spaces and numbers)
+        elif current_array and re.match(r'^\s+\d+:', line):
+            # Extract all decimal numbers from the line
+            numbers = re.findall(r'\d+\.\d+', line)
+            arrays[current_array].extend([float(n) for n in numbers])
+    
+    # Remove trailing zeros
+    for key in arrays:
+        while arrays[key] and arrays[key][-1] == 0.0:
+            arrays[key].pop()
+    
+    data_array = vars2dict(arrays)
     return data_array
 
 def isnumeric(s):
