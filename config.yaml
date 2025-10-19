@@ -23,7 +23,7 @@ microstructure:
   interburst_interval: 0.5
   
   # Minimum licks per burst (integer)
-  min_licks_per_burst: 1
+  min_licks_per_burst: 3
   
   # Long lick threshold (seconds)
   long_lick_threshold: 0.3
