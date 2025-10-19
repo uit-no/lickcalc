@@ -3,15 +3,18 @@ Export and results table callbacks for lickcalc webapp.
 """
 
 import dash
-from dash import Input, Output, State
+from dash import dcc, Input, Output, State
 from dash.exceptions import PreventUpdate
+import dash_bootstrap_components as dbc
 import pandas as pd
 import numpy as np
 import io
+import logging
 from datetime import datetime
 
 from app_instance import app
 from config_manager import config
+from trompy import lickcalc
 
 # Excel export callback
 @app.callback(Output("download-excel", "data"),
