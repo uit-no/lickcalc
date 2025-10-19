@@ -29,7 +29,7 @@ class ConfigManager:
             if self.config_path.exists():
                 with open(self.config_path, 'r', encoding='utf-8') as file:
                     self._config = yaml.safe_load(file)
-                print(f"Configuration loaded from {self.config_path}")
+                print(f"Configuration loaded from {self.config_path}")                
             else:
                 print(f"Configuration file {self.config_path} not found. Using defaults.")
                 self._config = self._get_default_config()
