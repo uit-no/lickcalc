@@ -17,21 +17,34 @@ class ConfigManager:
         Parameters:
         -----------
         config_path : str
-            Path to the configuration YAML file
+            Path to the configuration YAML file (relative or absolute)
         """
-        self.config_path = Path(config_path)
+        # If path is relative, make it relative to this file's directory
+        config_path_obj = Path(config_path)
+        if not config_path_obj.is_absolute():
+            # Get the directory where this config_manager.py file is located
+            this_file_dir = Path(__file__).parent.resolve()
+            self.config_path = this_file_dir / config_path_obj
+        else:
+            self.config_path = config_path_obj
+        
         self._config = None
         self.load_config()
     
     def load_config(self) -> None:
         """Load configuration from YAML file with error handling."""
         try:
+            print(f"DEBUG: Looking for config file at: {self.config_path.resolve()}")
+            print(f"DEBUG: File exists: {self.config_path.exists()}")
+            
             if self.config_path.exists():
                 with open(self.config_path, 'r', encoding='utf-8') as file:
                     self._config = yaml.safe_load(file)
-                print(f"Configuration loaded from {self.config_path}")                
+                print(f"✅ Configuration loaded successfully from {self.config_path}")
+                print(f"DEBUG: min_licks_per_burst from file: {self._config.get('microstructure', {}).get('min_licks_per_burst', 'NOT FOUND')}")
             else:
-                print(f"Configuration file {self.config_path} not found. Using defaults.")
+                print(f"⚠️ Configuration file {self.config_path} not found. Using defaults.")
+                print(f"DEBUG: Current working directory: {Path.cwd()}")
                 self._config = self._get_default_config()
         except yaml.YAMLError as e:
             print(f"Error parsing YAML configuration: {e}")
