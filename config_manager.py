@@ -34,17 +34,12 @@ class ConfigManager:
     def load_config(self) -> None:
         """Load configuration from YAML file with error handling."""
         try:
-            print(f"DEBUG: Looking for config file at: {self.config_path.resolve()}")
-            print(f"DEBUG: File exists: {self.config_path.exists()}")
-            
             if self.config_path.exists():
                 with open(self.config_path, 'r', encoding='utf-8') as file:
                     self._config = yaml.safe_load(file)
                 print(f"✅ Configuration loaded successfully from {self.config_path}")
-                print(f"DEBUG: min_licks_per_burst from file: {self._config.get('microstructure', {}).get('min_licks_per_burst', 'NOT FOUND')}")
             else:
                 print(f"⚠️ Configuration file {self.config_path} not found. Using defaults.")
-                print(f"DEBUG: Current working directory: {Path.cwd()}")
                 self._config = self._get_default_config()
         except yaml.YAMLError as e:
             print(f"Error parsing YAML configuration: {e}")

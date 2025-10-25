@@ -3,12 +3,14 @@
             <div class="row">
                 <div class="col-md-4">
                     <div class="card">
-                        <div class="card-header">Med Associates</div>
+                        <div class="card-header">Med Associates - column</div>
                         <div class="card-body">
-                            <p>Text files from Med-PC systems with array format:</p>
+                            <p>Text files from Med-PC systems with column format:</p>
                             <div class="code-block">
-A: 0.123 1.456 2.789<br>
-B: 0.145 1.478 2.801<br>
+0.123<br>
+0.456<br>
+0.655<br>
+0.870<br>
 ...
                             </div>
                         </div>
@@ -17,13 +19,30 @@ B: 0.145 1.478 2.801<br>
                 
                 <div class="col-md-4">
                     <div class="card">
+                        <div class="card-header">Med Associates - array</div>
+                        <div class="card-body">
+                            <p>Text files from Med-PC systems with array format:</p>
+                            <div class="code-block">
+A:<br>
+0 0.123 0.456 0.655 0.870 1.013<br>
+5 1.195 1.378 1.801 9.211 9.502<br>
+...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
                         <div class="card-header">CSV/TXT</div>
                         <div class="card-body">
                             <p>Comma or tab-separated files with columns:</p>
                             <div class="code-block">
-time,licks,other<br>
-0.123,1,data<br>
-1.456,1,data<br>
+onset,offset,other<br>
+0.123,0.199,data<br>
+0.456,0.540,data<br>
+0.655,0.722,data<br>
+0.870,0.956,data<br>
 ...
                             </div>
                         </div>
@@ -34,11 +53,22 @@ time,licks,other<br>
                     <div class="card">
                         <div class="card-header">DD Lab</div>
                         <div class="card-body">
-                            <p>Custom DD Lab format with specific parsing rules for behavioral data.</p>
+                            <p>Custom DD Lab format with specific parsing rules.</p>
                         </div>
                     </div>
                 </div>
+
+                                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">KM Lab</div>
+                        <div class="card-body">
+                            <p>Custom KM Lab format with specific parsing rules.</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
+            <p>Examples of each file format can be viewed and downloaded in the <a href=https://github.com/jaimemcc/lickcalc_webapp/data target="_blank">Github repository</a>. If you need a custom format for your data please contact j.mccutcheon@uit.no.</p>
         </section>
 
             <!-- Session Analysis Section -->

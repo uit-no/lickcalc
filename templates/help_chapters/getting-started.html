@@ -11,9 +11,10 @@
                         <div class="accordion-body">
                             <p>Choose your data file format from the dropdown:</p>
                             <ul>
-                                <li><strong>Med Associates:</strong> For .txt files from Med-PC systems</li>
+                                <li><strong>Med Associates:</strong> For .txt files from Med-PC systems. Options for column and array based</li>
                                 <li><strong>CSV/TXT:</strong> For comma-separated or tab-separated files</li>
                                 <li><strong>DD Lab:</strong> For DD Lab specific format files</li>
+                                <li><strong>KM Lab:</strong> For KM Lab specific format files</li>
                             </ul>
                         </div>
                     </div>
@@ -33,7 +34,7 @@
                                 <li>Clicking "Select Files" to browse for your file</li>
                             </ul>
                             <div class="tip-box">
-                                <strong>💡 Tip:</strong> The app will automatically detect columns in your file and populate the onset/offset dropdowns.
+                                <strong>💡 Tip:</strong> The app will automatically detect columns in your file and populate the onset dropdown.
                             </div>
                             <div class="warning-box">
                                 <strong>⚠️ File Validation:</strong> After upload, watch for validation messages. Green indicates successful parsing, red indicates errors with specific details about what went wrong. If you change the file type dropdown, the file will be re-parsed automatically.
@@ -70,12 +71,12 @@
                     </h2>
                     <div id="step4" class="accordion-collapse collapse" data-bs-parent="#gettingStartedAccordion">
                         <div class="accordion-body">
-                            <p>Once your data is loaded:</p>
+                            <p>Once your data are loaded:</p>
                             <ul>
                                 <li>Adjust analysis parameters using the sliders</li>
                                 <li>View real-time updates in the graphs and statistics</li>
                                 <li>Export data to Excel for further analysis</li>
-                                <li>Add results to the comparison table</li>
+                                <li>Add results to the results table</li>
                             </ul>
                         </div>
                     </div>
@@ -92,12 +93,12 @@
                             <p>Customize default analysis parameters by uploading a configuration file:</p>
                             <ul>
                                 <li>Create a YAML file with your preferred default values</li>
-                                <li>Use <code>custom_config_example.yaml</code> from the repository as a template</li>
-                                <li>Upload via the configuration section (if available in your interface)</li>
-                                <li>Settings will apply immediately and persist for the session</li>
+                                <li>Download <code>custom_config_example.yaml</code> to use as a template</li>
+                                <li>Upload via the configuration section (top right)</li>
+                                <li>Settings will apply immediately and persist until app is reloaded/refreshed</li>
                             </ul>
                             <div class="tip-box">
-                                <strong>💡 Pro Tip:</strong> Create different config files for different experiment types or labs to ensure consistent analysis parameters across your team.
+                                <strong>💡 Pro Tip:</strong> Create different config files for different experiment types or for your lab to ensure consistent analysis parameters across your team.
                             </div>
                         </div>
                     </div>

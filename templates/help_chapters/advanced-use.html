@@ -1,0 +1,71 @@
+<!-- Installing Locally Section -->
+<section id="advanced-use">
+    <h2 class="section-header">📄 Advanced Use</h2>
+    <div class="card">
+        <div class="card-body">
+            <h5>Installing locally</h5>
+            <p>Reasons to install locally are to avoid having to be online, in case there are server outages, and to modify and customise the
+                Instructions to do this using anaconda follow
+                 steps can do this
+
+                Clone the repository using git
+<code>git clone xxx</code>
+                Create an environment
+<code>conda create -n lickcalc python=3.11</code>
+                Activate the environment
+<code>conda activate lickcalc</code>
+                Install requirements
+<code>conda install pandas dash</code>
+<code>pip install trompy</code>
+                Navigate to cloned repository
+<code>cd lickcalc</code>      
+                Run the app
+<code>python app.py</code>
+                Open a browser and go to the page <code>localhost:8050</code>
+            </p>
+            
+            <div class="tip-box">
+                <strong>💡 Tip:</strong> Use this box for helpful tips.
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ Note:</strong> Use this box for important warnings.
+            </div>
+        </div>
+
+        <div class="card-body">
+            <h5>Using underpinning functions</h5>
+            <p>The application is based on a utility included in the package <code>trompy</code>. <code>trompy</code> can be installed via pip and is hosted on Github at https://www.github.com/mccutcheonlab/trompy.
+
+            The function <code>lickcalc</code> calls a class, <code>Lickcalc</code>, and is documented fully in the parent package, <code>trompy</code>. <code>trompy</code> also includes the file parsers and some helper functions
+            Some example code using the function follows:</p>   
+<code>
+from pathlib import Path<br>
+import trompy<br>
+<br>
+DATAFOLDER = Path("..\data")<br>
+get list of files from DATA<br>
+<br>
+results_dict = {}<br>
+for file in list_of_files:<br>
+    results_dict[file] = {}<br>
+    onset, offset = trompy.medfilereader(file, varstoextract=[])<br>
+    lickdata = trompy.lickcalc(onset, offset=offset,<br>
+                                some variables)<br>
+    results_dict[file]["total_licks"] = lickdata["total"]<br>
+    results_dict[file]["burst_number"] = lickdata["bNum"]<br>
+    results_dict[file]["licks_per_burst"] = lickdata["bMean"]<br>
+</code>            
+
+            </p>
+            
+            <div class="tip-box">
+                <strong>💡 Tip:</strong> Use this box for helpful tips.
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ Note:</strong> Use this box for important warnings.
+            </div>
+        </div>
+    </div>
+</section>

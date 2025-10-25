@@ -202,3 +202,55 @@ body {
         padding: 20px;
     }
 }
+
+/* References styling */
+.citation {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.citation:hover {
+    text-decoration: underline;
+}
+
+.references {
+    list-style: none;
+    counter-reset: ref-counter;
+    padding-left: 2em;
+}
+
+.references li {
+    counter-increment: ref-counter;
+    margin-bottom: 1em;
+    position: relative;
+}
+
+.references li::before {
+    content: "[" counter(ref-counter) "]";
+    position: absolute;
+    left: -2em;
+    font-weight: bold;
+    color: #666;
+}
+
+.back-ref {
+    margin-left: 0.5em;
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+
+.back-ref:hover {
+    color: #007bff;
+}
+
+sup a {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: 500;
+}
+
+sup a:hover {
+    text-decoration: underline;
+}
