@@ -67,30 +67,6 @@ A microstructural analysis is, in essense, a division of individual licks into g
 To save these data, the user has two options. The first is to export an excel file for the given data file. The user sets the animal ID and chooses which data should be exported in addition to the summary of the microstructural analysis. Data for "session histogram," "intraburst frequency," "lick length," "burst histogram," "burst probability," and "burst details" are available. These allow the user to recreate the plots displayed in LickCalc. The second option for saving the data is to add the microstructural data to "results summary" table in the app. The results in this table remain even as new data files are loaded, so the data from many sessions (and/or individual animals) can be exported into a single Excel file. In addition to the data from the whole session, the user can choose to divide the session by 2, 3, or 4 to see if there are differences between different epochs of the session, or to examine only the first n bursts. Each of these analysis epochs can be added to the results summary table. The table contains the data as well as the parameters (e.g. minimum burst size) used to generate them.
 
 
-
-# Citations
-
-Citations to entries in paper.bib should be in
-[rMarkdown](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
-
-If you want to cite a software repository URL (e.g. something on GitHub without a preferred
-citation) then you can do it with the example BibTeX entry below for @fidgit.
-
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
-
-# Figures
-
-Figures can be included like this:
-![Caption for example figure.\label{fig:example}](figure.png)
-and referenced from text using \autoref{fig:example}.
-
-Figure sizes can be customized by adding an optional second parameter:
-![Caption for example figure.](figure.png){ width=20% }
-
 # Acknowledgements
 
 We acknowledge contributions from colleagues in the field of ingestive behaviour who have thought deeply about the meaning of patterns of licking. In particular, the following have either contributed data for us to test or have advised on the design of the program an analysis: (in alphabetical order) Derek Daniels, Samantha Fortin, Kevin Myers, Jess Santollo, Alan Spector.

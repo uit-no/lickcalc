@@ -20,6 +20,8 @@ uploads/*
 .ipynb_checkpoints/*
 
 trompy/*
+paper/paper.crossref
+
 
 
 
