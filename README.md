@@ -1,5 +1,5 @@
 
-# lick-calc-app
+# lickcalc
 
 A simple app for performing analysis of lick microstructure in experiments of rodent ingestive behaviour.
 
