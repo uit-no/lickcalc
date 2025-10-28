@@ -82,7 +82,7 @@ dcc.Store(id='lick-data'),
         dbc.Row(
             dbc.Col(html.Div(
                 '''
-                    This app lets you load in timestamps of licks from behavioral
+                    This app lets you load in timestamps of licks from behavioural
                     experiments in rodents and performs microstructure analysis
                     on it.
                 '''
