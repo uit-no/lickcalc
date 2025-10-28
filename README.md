@@ -4,6 +4,8 @@
 
 A simple app for performing analysis of lick microstructure in experiments of rodent ingestive behaviour.
 
+Earlier versions of this application can be found [here](https://github.com/jaimemcc/lickcalc_webapp) and [here](https://github.com/mccutcheonlab/Lick-Calc-GUI).
+
 ---
 
 ## Table of Contents
