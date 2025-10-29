@@ -213,7 +213,10 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
                 )
         
         nlicks = "{}".format(lickdata['total'])
-        freq = "{:.2f} Hz".format(lickdata['freq'])
+        if lickdata['freq'] is not None:
+            freq = "{:.2f} Hz".format(lickdata['freq'])
+        else:
+            freq = "N/A"
         
         return fig, nlicks, freq
 
@@ -560,7 +563,7 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
         else:
             lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
     
-        if len(lickdata['burstprob'][0]) == 0:
+        if lickdata['burstprob'] is None or len(lickdata['burstprob'][0]) == 0:
             fig = go.Figure()
             fig.update_layout(title="No bursts found with current parameters")
             return fig, "0", "0.00", "0.00", "0.00", "0.00"

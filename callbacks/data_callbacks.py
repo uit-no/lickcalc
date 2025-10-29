@@ -13,7 +13,7 @@ import pandas as pd
 import logging
 
 from app_instance import app
-from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfile, parse_med_arraystyle, parse_csvfile, parse_ddfile, parse_kmfile
+from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfile, parse_med_arraystyle, parse_csvfile, parse_ddfile, parse_kmfile, parse_ohrbets
 
 # Callback to show/hide dropdowns based on analysis epoch selection
 @app.callback(
@@ -84,6 +84,8 @@ def load_and_clean_data(list_of_contents, input_file_type, list_of_names, list_o
                 data_array = parse_ddfile(f)
             elif input_file_type == 'km':
                 data_array = parse_kmfile(f)
+            elif input_file_type == 'ohrbets':
+                data_array = parse_ohrbets(f)
             else:
                 raise ValueError(f"Unknown file type: {input_file_type}")
             
