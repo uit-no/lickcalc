@@ -2,6 +2,7 @@
 File parsing utilities for lickcalc webapp.
 Functions to parse different lick data file formats (MED, CSV, DD).
 """
+import os
 import numpy as np
 import string
 import re
@@ -190,6 +191,37 @@ def parse_kmfile(f, header=9):
         
     data_array = vars2dict(loaded_vars)
     
+    return data_array
+
+def parse_ohrbets(f):
+    codes, ts = [], []
+
+    # Handle both file paths and file-like objects
+    if isinstance(f, (str, bytes, os.PathLike)):
+        with open(f, newline='') as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                if len(row) > 0:
+                    row = row[0].split(" ")
+                    codes.append(int(row[0]))
+                    ts.append(int(row[1]) / 1000)
+    else:
+        f.seek(0)
+        reader = csv.reader(f)
+        for row in reader:
+            if len(row) > 0:
+                row = row[0].split(" ")
+                codes.append(row[0])
+                ts.append(int(row[1]) / 1000)
+
+    df = pd.DataFrame({"code": codes, "ts": ts})
+
+    code_dict = {}
+    for code in df.code.unique():
+        code_dict[code] = df.query("code == @code").ts.values
+
+    data_array = vars2dict(code_dict)
+
     return data_array
 
 def vars2dict(loaded_vars):
