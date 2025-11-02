@@ -4,25 +4,37 @@
     <div class="card">
         <div class="card-body">
             <h5>Installing locally</h5>
-            <p>Reasons to install locally are to avoid having to be online, in case there are server outages, and to modify and customise the
-                Instructions to do this using anaconda follow
-                 steps can do this
+            <p>
+  Reasons to install locally include working offline, avoiding server outages, and enabling modification or customization.
+  Follow these steps to install using Anaconda or Mamba:
+</p>
+<ol>
+  <li>Clone the repository using git:</li>
+</ol>
+<pre><code>git clone https://github.com/uit-no/lickcalc.git
+cd lickcalc
+</code></pre>
+<ol start="2">
+  <li>Create and activate the environment:</li>
+</ol>
+<pre><code>conda create -n lickcalc python=3.11
+conda activate lickcalc
+</code></pre>
+<ol start="3">
+  <li>Install requirements:</li>
+</ol>
+<pre><code>conda install pandas dash
+pip install trompy
+</code></pre>
+<ol start="4">
+  <li>Run the app:</li>
+</ol>
+<pre><code>python app.py
+</code></pre>
+<ol start="5">
+  <li>Open a browser and go to <code>localhost:8050</code></li>
+</ol>
 
-                Clone the repository using git
-<code>git clone xxx</code>
-                Create an environment
-<code>conda create -n lickcalc python=3.11</code>
-                Activate the environment
-<code>conda activate lickcalc</code>
-                Install requirements
-<code>conda install pandas dash</code>
-<code>pip install trompy</code>
-                Navigate to cloned repository
-<code>cd lickcalc</code>      
-                Run the app
-<code>python app.py</code>
-                Open a browser and go to the page <code>localhost:8050</code>
-            </p>
             
             <div class="tip-box">
                 <strong>💡 Tip:</strong> Use this box for helpful tips.

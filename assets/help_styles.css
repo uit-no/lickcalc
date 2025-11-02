@@ -138,6 +138,9 @@ body {
     font-family: 'Courier New', monospace;
     margin: 10px 0;
     overflow-x: auto;
+    white-space: pre;
+    word-break: normal;
+    max-width: 100%;
 }
 
 .warning-box {
@@ -253,4 +256,11 @@ sup a {
 
 sup a:hover {
     text-decoration: underline;
+}
+
+pre, code, {
+  white-space: pre;
+  overflow-x: auto;
+  word-break: normal;
+  max-width: 100%;
 }
