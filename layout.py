@@ -44,13 +44,14 @@ dcc.Store(id='lick-data'),
                 "📖 Help", 
                 href="/help", 
                 target="_blank",
-                className="btn btn-info btn-sm",
+                className="btn btn-outline-primary btn-sm",
                 style={
                     "position": "fixed", 
                     "top": "10px", 
                     "right": "10px",
                     "z-index": "9999",
-                    "text-decoration": "none"
+                    "text-decoration": "none",
+                    "width": "120px"
                 }
             ),
             # Config upload button
@@ -71,10 +72,71 @@ dcc.Store(id='lick-data'),
                     "position": "fixed",
                     "top": "45px",
                     "right": "10px",
-                    "z-index": "9999"
+                    "z-index": "9999",
+                    "width": "120px"
+                }
+            ),
+            # About button
+            html.Button(
+                "ℹ️ About",
+                id="about-button",
+                className="btn btn-outline-primary btn-sm",
+                style={
+                    "position": "fixed",
+                    "top": "80px",
+                    "right": "10px",
+                    "z-index": "9999",
+                    "width": "120px"
                 }
             ),
         ]),
+        # About modal
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("About lickcalc")),
+            dbc.ModalBody([
+                html.H5("Version", className="mt-3"),
+                html.P(id="about-version", style={"font-family": "monospace", "font-size": "1.1em"}),
+                
+                html.H5("Citation", className="mt-4"),
+                html.P([
+                    "If you use lickcalc in your research, please cite:",
+                ]),
+                html.Div([
+                    html.P([
+                        html.Strong("Volcko KL & McCutcheon JE (2025). "),
+                        "lickcalc: Easy analysis of lick microstructure in experiments of rodent ingestive behaviour. ",
+                        html.Em("Journal of Open Source Software"),
+                        ", xxxxx. ",
+                        html.A(
+                            "https://doi.org/10.21105/joss.xxxxx",
+                            href="https://doi.org/10.21105/joss.xxxxx",
+                            target="_blank"
+                        )
+                    ], style={"padding": "10px", "background-color": "#f8f9fa", "border-radius": "5px"}),
+                ]),
+                
+                html.H5("GitHub Repository", className="mt-4"),
+                html.P([
+                    "Source code, documentation, and issue tracker:",
+                ]),
+                html.A(
+                    "https://github.com/uit-no/lickcalc",
+                    href="https://github.com/uit-no/lickcalc",
+                    target="_blank",
+                    className="btn btn-outline-primary btn-sm"
+                ),
+                
+                html.H5("License", className="mt-4"),
+                html.P("lickcalc is open source software licensed under the GPL-3.0 License."),
+            ]),
+            dbc.ModalFooter(
+                dbc.Button("Close", id="about-close", className="ml-auto")
+            ),
+        ],
+        id="about-modal",
+        size="lg",
+        is_open=False,
+        ),
         
         dbc.Row(children=[
             dbc.Col(html.H1("lickcalc"), width=12),

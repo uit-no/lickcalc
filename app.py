@@ -14,6 +14,8 @@ app.layout = app_layout
 # Import all callbacks (this registers them with the app)
 import callbacks
 
+from _version import __version__
+
 # Run the app
 if __name__ == '__main__':
     from config_manager import config
