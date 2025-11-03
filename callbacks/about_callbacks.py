@@ -37,4 +37,4 @@ def download_example_files(n_clicks):
     if not n_clicks:
         raise PreventUpdate
     
-    return dcc.send_file("data/example-files.zip")
+    return dcc.send_file("assets/examples/example-files.zip")

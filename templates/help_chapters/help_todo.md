@@ -11,6 +11,8 @@ check all links in help file
 add interburst intervals to export
 Add Excel
 
+Add citing details to the overview section on the help page
+
 
 
 
