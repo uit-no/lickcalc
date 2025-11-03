@@ -126,6 +126,17 @@ dcc.Store(id='lick-data'),
                     className="btn btn-outline-primary btn-sm"
                 ),
                 
+                html.H5("Example Data Files", className="mt-4"),
+                html.P([
+                    "Download example data files to try out lickcalc:",
+                ]),
+                html.Button(
+                    "📥 Download Example Files",
+                    id="download-examples-button",
+                    className="btn btn-outline-success btn-sm"
+                ),
+                dcc.Download(id="download-examples"),
+                
                 html.H5("License", className="mt-4"),
                 html.P("lickcalc is open source software licensed under the GPL-3.0 License."),
             ]),

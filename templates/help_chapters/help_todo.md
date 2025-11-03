@@ -1,10 +1,7 @@
 Add link and new section for using lickcalc
-Add example for each filetype
-Add OHRBETS
+
 
 Check file format link works
-Try to make code lines not wrap
-table of contents correct order
 add extra detail to long lick explaining bottle position, include med file
 
 check code in installing locally etc
