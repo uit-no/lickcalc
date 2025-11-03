@@ -1,0 +1,30 @@
+<!-- Theoretical and Practical Considerations Section -->
+<section id="theoretical-practical">
+    <h2 class="section-header">📄 Theoretical and Practical Considerations</h2>
+    <div class="card">
+        <div class="card-body">
+            <h5>Historical background</h5>
+            <p>Microstructural analysis was first described in <a href="https://pubmed.ncbi.nlm.nih.gov/1554433/" target="_blank">Davis and Smith (1992)</a> and has since then been used understand diverse phenomena. In-depth reviews on many of these, and microstructural parameters used to study them, are available (<a href="https://pubmed.ncbi.nlm.nih.gov/28684308/" target="_blank">Johnson, 2018</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/31682949/" target="_blank">Naneix et al., 2020</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/11161348/" target="_blank">Smith, 2001</a>). Briefly, although much of the foundational work on drinking microstruture was on licking for nutritive solutions (e.g., sucrose solutions), microstructural analysis can also be used to study intake of water (<a href="https://pubmed.ncbi.nlm.nih.gov/23957745/" target="_blank">McKay & Daniels, 2013</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/34020111/" target="_blank">Santollo et al., 2021</a>), ethanol (<a href="https://pubmed.ncbi.nlm.nih.gov/34648771/" target="_blank">Patwell et al., 2021</a>), and other tastants such as non-caloric artificial sweeteners, sodium, and quinine (<a href="https://pubmed.ncbi.nlm.nih.gov/22484563/" target="_blank">Lin et al., 2012</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/9608024/" target="_blank">Spector & St. John, 1998</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/30705296/" target="_blank">Verharen et al., 2019</a>). Lick microstructure has been used to shed light on, for example, how licking is affected by neuropeptides (<a href="https://pubmed.ncbi.nlm.nih.gov/23957745/" target="_blank">McKay & Daniels, 2013</a>), enzymes in the mouth (<a href="https://pubmed.ncbi.nlm.nih.gov/35870707/" target="_blank">Chometton et al., 2022</a>), ovarian hormones (<a href="https://pubmed.ncbi.nlm.nih.gov/34020111/" target="_blank">Santollo et al., 2021</a>), nutrient restriction (<a href="https://pubmed.ncbi.nlm.nih.gov/31682949/" target="_blank">Naneix et al., 2020</a>), response to alcohol (<a href="https://pubmed.ncbi.nlm.nih.gov/34648771/" target="_blank">Patwell et al., 2021</a>), and diet (<a href="https://pubmed.ncbi.nlm.nih.gov/21983046/" target="_blank">Johnson, 2012</a>). The number of lick bouts over a session are thought to reflect postingestive feedback from the consumed fluid, wheras the number of licks in a bout are thought to reflect palatability of the solution.</p></div>
+
+        <div class="card-body">
+            <h5>Interpreting microstructure data</h5>
+
+            <p>Lick microstructure can provide a great deal of interesting information about why an animal is drinking. Often, changes in microstructure are accompanied by changes in total intake, but this is not always the case: sometimes, equal intake will be achieved by quite different licking patterns that indicate changes in orosensory and postingestive feedback (<a href="https://pubmed.ncbi.nlm.nih.gov/20006663/" target="_blank">Johnson et al., 2010</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/32006660/" target="_blank">Volcko et al., 2020</a>). Analyzing lick microstructure is therefore highly valuable in understanding how a manipulation affects appetite; if <i>X</i> causes an animal to feel more satiated after drinking, that may lead to a different interpretation than if <i>X</i> were to reduce the palatability of the solution.</p></div>
+
+        <div class="card-body">
+            <h5>Hardware considerations</h5>
+            <p>Traditionally, researchers have used contact lickometers to detect individual licks. These generally pass a small amount of current through the animal and contacts with a (metal) spout cause completion of the circuit and lick detection. Recently, capacitive touch is more commonly used or deflections of a piezo or optic fibre. Several open-source lickometer designs are now available (e.g., <a href="https://www.nature.com/articles/s44277-024-00002-z" target="_blank">Frie & Khokhar, 2024</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/39053773/" target="_blank">Monfared et al., 2024</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/39317464/" target="_blank">Petersen et al., 2024</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/30505996/" target="_blank">Raymond et al., 2018</a>; <a href="https://pubmed.ncbi.nlm.nih.gov/39025674/" target="_blank">Silva et al., 2024</a>).</p></div>
+
+        <div class="card-body">
+            <h5>Practical considerations: extended contacts</h5>
+            <p>One problem that can arise are extended contacts with the spout, generally due to a fluid bridge forming between the animal's tongue and the spout. This can lead to very long "licks" that are in fact not individual licks but rather extended contacts. These can be prevented by ensuring that the sipper is recessed some distance from the wall of the chamber. To be sure that extended contacts do not affect the analysis, we recommend recording the offset time of each lick in addition to the onset time. In <code>lickcalc</code>, it is then possible to check for extended contacts and either adjust the behavioural setup (e.g., by moving the bottle back) or filter out extended contacts.</p></div>
+
+        <div class="card-body">
+            <h5>Setting up hardware to capture offsets</h5>
+            <p>The instructions below refer to Med Associates hardware but the general principles can likely be transferred to other systems. First, in Med it is critical to adjust the jumper on the card so that the inputs from the lickometers are set to 'Level' mode rather than 'Toggle'. We then use state sets to track whether the tongue is in contact or not with the spout at all times but only write changes to this value to our data arrays. Example code can be downloaded from <a href="../../data/cas12 RL sippers_level.MPC" download>here</a> and adapted as needed.</p></div>
+
+
+            
+
+    
+</section>

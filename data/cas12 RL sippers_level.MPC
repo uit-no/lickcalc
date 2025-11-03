@@ -1,0 +1,118 @@
+\Retractable sipper saccharin training
+\20 trials, sipper presentation 175 s, ITI 5 s
+\Both sippers presented simultaneously
+\This should be used for test days
+\Edited 28/02/17 to have toggles and level to give onset and offset for all licks
+
+\Inputs
+^RLicks = 7
+^LLicks = 8
+
+\Outputs
+^HLight = 7
+^WNoise = 8
+^LTone = 3
+^RTone = 5
+^LRetractor = 11
+^RRetractor = 14
+^LLight = 2
+^RLight = 12
+^TTL_Session = 17
+^TTL_Rlick = 18
+^TTL_Llick = 19
+^TTL_Sipper = 20
+
+\Variables
+\A = Total Left licks
+\B = Left Lick onset array
+\C = Left lick offset array
+\D = Total Right licks
+\E = Right lick onset array
+\F = Right lick offset array
+\G = Left toggle
+\H = Right toggle
+\I = light
+\J = light array
+\S = Session length
+\T = Time
+
+\Array
+DIM B = 10000
+DIM C = 10000
+DIM E = 10000
+DIM F = 10000
+DIM J = 10000
+
+LIST P = 5
+\LIST O = 1,1,2,2,1,1,2,2,1,2
+\LIST O = 1
+\LIST O = 2
+
+
+S.S.1 \Initialize program and timer
+    S1,
+        0.001": Set B(0) = -1, B(1) = -987.987, C(0) = -2, C(1) = -987.987, E(0) = -3, E(1) = -987.987, F(0) = -4, F(1) = -987.987, J(0) = -5, J(1) = -987.987, S = 3600; ---> S2
+    S2,
+        #START: On ^TTL_Session, ^HLight; ---> S3
+    S3,
+        0.001": If T > S [@END, @CONT]
+                @END: ---> S3
+                @CONT: Set T = T + 0.001; ---> S3
+    S4,
+        0.1": Off ^HLight, ^TTL_Session; ---> STOPABORTFLUSH
+
+S.S.2 \ Determine ITI & control sipper placement
+    S1,
+        #START: ---> S2
+    S2,
+        1": RANDD X = P; SET X = X * 1";  ---> S3
+    S3,
+        X#T: On ^LLight, ^RLight; ADD I; Set J(I) = T, J(I+1) = -987.987; --->  S4
+    S4,
+        3": On ^LRetractor, ^RRetractor, ^TTL_Sipper; ---> S5
+    S5,
+        175": Off ^LLight, ^RLight, ^LRetractor, ^RRetractor, ^TTL_Sipper; ---> S2
+
+S.S.3 \Display module
+    S1,
+        #START: ---> S2
+    S2,
+        0.001": Show 1, Time elapsed, T; Show 2, Left licks, A; Show 3, Right licks, D; Show 4, Trials, I; ---> Sx
+
+S.S.4 \Left lick toggle
+    S1,
+        #START: ---> S2
+    S2,
+        #R^LLicks: Set G = 1; ---> S2
+        0.001": Set G = 0; ---> S2
+
+S.S.5 \Right lick toggle
+    S1,
+        #START: ---> S2
+    S2,
+        #R^RLicks: Set H = 1; ---> S2
+        0.001": Set H = 0; ---> S2
+
+S.S.6 \Left Lick detector
+    S1,
+        #START: ---> S2
+    S2,
+        0.001": If G = 1 [@LLickOn, @NoLick]
+                @LLickOn: Add A; Set B(A) = T, B(A+1) = -987.987; On ^TTL_LLick; ---> S3
+                @NoLick: ---> S2
+    S3,
+        0.001": If G = 0 [@LLickOff, @Cont]
+                @LLickOff: Set C(A) = T, C(A+1) = -987.987; Off ^TTL_LLick; ---> S2
+                @Cont: ---> S3
+
+S.S.7 \Right Lick detector
+    S1,
+        #START: ---> S2
+    S2,
+        0.001": If H = 1 [@LLickOn, @NoLick]
+                @LLickOn: Add D; Set E(D) = T, E(D+1) = -987.987; On ^TTL_RLick; ---> S3
+                @NoLick: ---> S2
+    S3,
+        0.001": If H = 0 [@LLickOff, @Cont]
+                @LLickOff: Set F(D) = T, F(D+1) = -987.987; Off ^TTL_RLick; ---> S2
+                @Cont: ---> S3

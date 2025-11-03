@@ -17,67 +17,53 @@ cd lickcalc
 <ol start="2">
   <li>Create and activate the environment:</li>
 </ol>
-<pre><code>conda create -n lickcalc python=3.11
+<pre><code>conda env create -f environment.yml
 conda activate lickcalc
 </code></pre>
 <ol start="3">
-  <li>Install requirements:</li>
-</ol>
-<pre><code>conda install pandas dash
-pip install trompy
-</code></pre>
-<ol start="4">
   <li>Run the app:</li>
 </ol>
 <pre><code>python app.py
 </code></pre>
-<ol start="5">
+<ol start="4">
   <li>Open a browser and go to <code>localhost:8050</code></li>
 </ol>
 
-            
-            <div class="tip-box">
-                <strong>💡 Tip:</strong> Use this box for helpful tips.
-            </div>
-            
-            <div class="warning-box">
-                <strong>⚠️ Note:</strong> Use this box for important warnings.
-            </div>
+          
         </div>
 
         <div class="card-body">
             <h5>Using underpinning functions</h5>
-            <p>The application is based on a utility included in the package <code>trompy</code>. <code>trompy</code> can be installed via pip and is hosted on Github at https://www.github.com/mccutcheonlab/trompy.
+            <p>The application is based on a utility included in the package <code>trompy</code>. It can be installed via <code>pip</code> and is hosted on Github at <a href="https://www.github.com/mccutcheonlab/trompy" target="_blank">https://www.github.com/mccutcheonlab/trompy</a>.
 
-            The function <code>lickcalc</code> calls a class, <code>Lickcalc</code>, and is documented fully in the parent package, <code>trompy</code>. <code>trompy</code> also includes the file parsers and some helper functions
+            The function <code>lickcalc</code> calls a class, <code>Lickcalc</code>, and is documented fully in the parent package. <code>trompy</code> also includes the file parsers and some helper functions
             Some example code using the function follows:</p>   
-<code>
-from pathlib import Path<br>
-import trompy<br>
-<br>
-DATAFOLDER = Path("..\data")<br>
-get list of files from DATA<br>
-<br>
-results_dict = {}<br>
-for file in list_of_files:<br>
-    results_dict[file] = {}<br>
-    onset, offset = trompy.medfilereader(file, varstoextract=[])<br>
-    lickdata = trompy.lickcalc(onset, offset=offset,<br>
-                                some variables)<br>
-    results_dict[file]["total_licks"] = lickdata["total"]<br>
-    results_dict[file]["burst_number"] = lickdata["bNum"]<br>
-    results_dict[file]["licks_per_burst"] = lickdata["bMean"]<br>
-</code>            
+            <div class="code-block">
+from pathlib import Path
+import trompy
 
-            </p>
-            
-            <div class="tip-box">
-                <strong>💡 Tip:</strong> Use this box for helpful tips.
-            </div>
-            
-            <div class="warning-box">
-                <strong>⚠️ Note:</strong> Use this box for important warnings.
-            </div>
+DATAFOLDER = Path("../data")
+list_of_files = [
+    "med_test2.med",
+    "med_test3.med"
+]
+
+results_dict = {}
+for file in list_of_files:
+    results_dict[file] = {}
+    onset, offset = trompy.medfilereader(DATAFOLDER / file,
+                                         varsToExtract=["b", "c"],
+                                         remove_var_header=True
+                                         )
+
+    lickdata = trompy.lickcalc(onset, offset=offset,
+                                #some variables
+                                )
+    results_dict[file]["total_licks"] = lickdata["total"]
+    results_dict[file]["burst_number"] = lickdata["bNum"]
+    results_dict[file]["licks_per_burst"] = lickdata["bMean"]
+  </div>
+
         </div>
     </div>
 </section>
