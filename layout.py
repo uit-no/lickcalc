@@ -642,6 +642,13 @@ dcc.Store(id='lick-data'),
                     switch=True,
                     style={'marginTop': '10px'}
                 ),
+                dbc.Checklist(
+                    id='batch-include-all-sheets',
+                    options=[{'label': ' Export all sheets (ignore selections above)', 'value': 'all'}],
+                    value=['all'],
+                    switch=True,
+                    style={'marginTop': '6px'}
+                ),
                 dbc.Spinner(
                     children=html.Div(id='batch-status'),
                     size='sm',

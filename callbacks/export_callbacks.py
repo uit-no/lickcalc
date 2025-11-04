@@ -24,6 +24,7 @@ from utils.file_parsers import (
     parse_kmfile,
     parse_ohrbets,
 )
+from utils import validate_onset_offset_pairs
 import base64
 
 # Batch process placeholder callback
@@ -95,10 +96,16 @@ def show_batch_file_list(filenames):
     State('division-method', 'value'),
     State('n-bursts-number', 'value'),
     State('session-length-seconds', 'data'),
+    # Export preferences to mirror single-file export
+    State('export-data-checklist', 'value'),
+    State('animal-id-input', 'value'),
+    State('session-bin-slider-seconds', 'data'),
+    State('batch-include-all-sheets', 'value'),
     prevent_initial_call=True
 )
 def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, minlicks, longlick_th, remove_long_vals, input_file_type, existing_data,
-                        division_number=None, division_method='time', n_bursts_number=3, session_length_seconds=None):
+                        division_number=None, division_method='time', n_bursts_number=3, session_length_seconds=None,
+                        selected_export=None, animal_id_base=None, bin_size_seconds=None, include_all_vals=None):
     if not n_clicks:
         raise PreventUpdate
     if not contents_list or not filenames:
@@ -414,12 +421,133 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                 added_rows += len(rows_for_file)
                 processed += 1
 
-                # If export per file requested, create an Excel with all rows for this file
+                # If export per file requested, create a full Excel per file (same as single-file export)
                 if export_opts and 'export' in export_opts:
                     try:
+                        # Build figure data analogous to collect_figure_data for this file (whole session)
+                        file_licks = lick_times
+                        file_offsets = offset_times if offset_times else []
+
+                        # Histogram (session)
+                        max_time = session_length_seconds if session_length_seconds and session_length_seconds > 0 else (max(file_licks) if file_licks else 0)
+                        if not bin_size_seconds or bin_size_seconds <= 0:
+                            # Sensible fallback bin size: 1s
+                            bin_size_seconds = 1
+                        hist_counts, hist_edges = np.histogram(file_licks, bins=int(max_time/bin_size_seconds) if max_time > 0 else 1, range=(0, max_time))
+                        hist_centers = (hist_edges[:-1] + hist_edges[1:]) / 2
+
+                        # Main lickcalc for bursts and ILIs (respect remove_long only if offsets available)
+                        if ('remove' in (remove_long_vals or [])) and file_offsets:
+                            main_lc = lickcalc(file_licks, offset=file_offsets, burstThreshold=ibi, minburstlength=minlicks, longlickThreshold=longlick_th, remove_longlicks=True)
+                        else:
+                            main_lc = lickcalc(file_licks, burstThreshold=ibi, minburstlength=minlicks)
+
+                        # Intraburst frequency histogram
+                        ilis = main_lc.get('ilis', []) if main_lc else []
+                        ili_counts, ili_edges = np.histogram(ilis, bins=50, range=(0, 0.5)) if isinstance(ilis, (list, np.ndarray)) and len(ilis) > 0 else (np.array([]), np.array([0, 0.5]))
+                        ili_centers = (ili_edges[:-1] + ili_edges[1:]) / 2 if len(ili_edges) > 1 else np.array([])
+
+                        # Burst-related
+                        bursts = main_lc.get('bLicks', []) if main_lc else []
+                        if isinstance(bursts, (list, np.ndarray)) and len(bursts) > 0 and np.max(bursts) >= 1:
+                            burst_counts, burst_edges = np.histogram(bursts, bins=int(np.max(bursts)), range=(1, max(bursts)))
+                            burst_centers = (burst_edges[:-1] + burst_edges[1:]) / 2
+                        else:
+                            burst_counts, burst_centers = np.array([]), np.array([])
+
+                        burstprob = main_lc.get('burstprob', ([], [])) if main_lc else ([], [])
+                        b_starts = main_lc.get('bStart', []) if main_lc else []
+                        b_ends = main_lc.get('bEnd', []) if main_lc else []
+                        b_nums = main_lc.get('bNum', 0) if main_lc else 0
+                        b_mean = main_lc.get('bMean', np.nan) if main_lc else np.nan
+
+                        # Weibull guard
+                        min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+                        weib_alpha = main_lc.get('weib_alpha') if (main_lc and b_nums >= min_bursts_required) else None
+                        weib_beta = main_lc.get('weib_beta') if (main_lc and b_nums >= min_bursts_required) else None
+                        weib_rsq = main_lc.get('weib_rsq') if (main_lc and b_nums >= min_bursts_required) else None
+
+                        # Lick lengths if offsets available and valid
+                        lick_lengths_centers = np.array([])
+                        lick_lengths_counts = np.array([])
+                        n_long_licks = 'N/A (requires offset data)'
+                        max_lick_duration = 'N/A (requires offset data)'
+                        if file_offsets:
+                            try:
+                                validation = validate_onset_offset_pairs(file_licks, file_offsets)
+                                if validation['valid']:
+                                    v_on = validation['corrected_onset']
+                                    v_off = validation['corrected_offset']
+                                    lc_off = lickcalc(v_on, offset=v_off, longlickThreshold=longlick_th)
+                                    licklength = lc_off.get('licklength', [])
+                                    if isinstance(licklength, (list, np.ndarray)) and len(licklength) > 0:
+                                        ll_counts, ll_edges = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
+                                        lick_lengths_counts = ll_counts
+                                        lick_lengths_centers = (ll_edges[:-1] + ll_edges[1:]) / 2
+                                        longlicks_array = lc_off.get('longlicks')
+                                        n_long_licks = len(longlicks_array) if longlicks_array is not None else 0
+                                        max_lick_duration = np.max(licklength)
+                            except Exception:
+                                pass
+
+                        # Prepare Excel
                         xls_buf = io.BytesIO()
                         with pd.ExcelWriter(xls_buf, engine='openpyxl') as writer:
-                            pd.DataFrame(rows_for_file).to_excel(writer, sheet_name='Results', index=False)
+                            # Summary
+                            animal_id_for_file = (animal_id_base + '_' if animal_id_base else '') + str(name)
+                            from datetime import datetime as _dt
+                            summary_df = pd.DataFrame([
+                                ['Animal ID', animal_id_for_file],
+                                ['Source Filename', name],
+                                ['Export Date', _dt.now().strftime('%Y-%m-%d %H:%M:%S')],
+                                ['Total Licks', main_lc.get('total', 'N/A') if main_lc else 'N/A'],
+                                ['Intraburst Frequency (Hz)', f"{main_lc.get('freq', 0):.3f}" if main_lc and main_lc.get('freq') else 'N/A'],
+                                ['Number of Bursts', main_lc.get('bNum', 'N/A') if main_lc else 'N/A'],
+                                ['Mean Licks per Burst', f"{b_mean:.2f}" if pd.notna(b_mean) else 'N/A'],
+                                ['Weibull Alpha', 'N/A (insufficient bursts)' if weib_alpha is None else f"{weib_alpha:.3f}"],
+                                ['Weibull Beta', 'N/A (insufficient bursts)' if weib_beta is None else f"{weib_beta:.3f}"],
+                                ['Weibull R-squared', 'N/A (insufficient bursts)' if weib_rsq is None else f"{weib_rsq:.3f}"],
+                                ['Number of Long Licks', n_long_licks],
+                                ['Maximum Lick Duration (s)', f"{max_lick_duration:.4f}" if isinstance(max_lick_duration, (int, float)) else max_lick_duration]
+                            ], columns=['Property', 'Value'])
+                            summary_df.to_excel(writer, sheet_name='Summary', index=False)
+
+                            include_all = include_all_vals is not None and 'all' in include_all_vals
+                            # Session Histogram
+                            if include_all or (selected_export and 'session_hist' in selected_export):
+                                if len(hist_centers) > 0:
+                                    pd.DataFrame({'Time_Bin_Center_s': hist_centers, 'Lick_Count': hist_counts}).to_excel(writer, sheet_name='Session_Histogram', index=False)
+
+                            # Intraburst Frequency
+                            if include_all or (selected_export and 'intraburst_freq' in selected_export):
+                                if len(ili_centers) > 0:
+                                    pd.DataFrame({'ILI_Bin_Center_s': ili_centers, 'Frequency': ili_counts}).to_excel(writer, sheet_name='Intraburst_Frequency', index=False)
+
+                            # Lick Lengths
+                            if (include_all or (selected_export and 'lick_lengths' in selected_export)) and len(lick_lengths_centers) > 0:
+                                pd.DataFrame({'Duration_Bin_Center_s': lick_lengths_centers, 'Frequency': lick_lengths_counts}).to_excel(writer, sheet_name='Lick_Lengths', index=False)
+
+                            # Burst Histogram
+                            if include_all or (selected_export and 'burst_hist' in selected_export):
+                                if len(burst_centers) > 0:
+                                    pd.DataFrame({'Burst_Size': burst_centers, 'Frequency': burst_counts}).to_excel(writer, sheet_name='Burst_Histogram', index=False)
+
+                            # Burst Probability
+                            if include_all or (selected_export and 'burst_prob' in selected_export):
+                                if burstprob and isinstance(burstprob, (list, tuple)) and len(burstprob) == 2 and len(burstprob[0]) > 0:
+                                    pd.DataFrame({'Burst_Size': burstprob[0], 'Probability': burstprob[1]}).to_excel(writer, sheet_name='Burst_Probability', index=False)
+
+                            # Burst Details
+                            if include_all or (selected_export and 'burst_details' in selected_export):
+                                if len(b_starts) > 0:
+                                    pd.DataFrame({
+                                        'Burst_Number': list(range(1, len(b_starts) + 1)),
+                                        'N_Licks': bursts,
+                                        'Start_Time_s': b_starts,
+                                        'End_Time_s': b_ends,
+                                        'Duration_s': [end - start for start, end in zip(b_starts, b_ends)]
+                                    }).to_excel(writer, sheet_name='Burst_Details', index=False)
+
                         xls_buf.seek(0)
                         ts = datetime.now().strftime('%Y%m%d_%H%M%S')
                         safe_name = str(name).replace('/', '_').replace('\\', '_')
