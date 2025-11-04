@@ -157,7 +157,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
 
             offset_key = None
             for cand in ['offset', 'offsets', 'end', 'stop', 'Col. 2']:
-                if cand in cols:
+                if cand in cols and cand != onset_key:
                     offset_key = cand
                     break
 
@@ -166,6 +166,42 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
             lick_times = df_on['licks'].to_list()
             if not lick_times:
                 raise ValueError("Empty onset array")
+
+            # Attempt robust auto-detection of offset in batch mode
+            def _is_valid_offset_candidate(col_key: str) -> bool:
+                if col_key == onset_key:
+                    return False
+                try:
+                    df_off_c = pd.read_json(io.StringIO(data_array[col_key]), orient='split')
+                    off_times = df_off_c['licks'].to_list()
+                    # Accept equal or off-by-one length
+                    if abs(len(lick_times) - len(off_times)) > 1:
+                        return False
+                    # For each pair, require: off[i] >= onset[i] and if onset[i+1] exists then off[i] <= onset[i+1]
+                    n = min(len(lick_times), len(off_times))
+                    for i in range(n):
+                        if off_times[i] < lick_times[i]:
+                            return False
+                        if i + 1 < len(lick_times) and off_times[i] > lick_times[i + 1]:
+                            return False
+                    return True
+                except Exception:
+                    return False
+
+            # If name-based match failed, scan other columns
+            if not offset_key:
+                # Prefer name-like candidates that pass validation
+                preferred = [c for c in ['offset', 'offsets', 'end', 'stop', 'Col. 2'] if c in cols and c != onset_key]
+                for cand in preferred:
+                    if _is_valid_offset_candidate(cand):
+                        offset_key = cand
+                        break
+                # Else any other column that passes validation
+                if not offset_key:
+                    for col in cols:
+                        if _is_valid_offset_candidate(col):
+                            offset_key = col
+                            break
 
             offset_times = []
             if offset_key:
