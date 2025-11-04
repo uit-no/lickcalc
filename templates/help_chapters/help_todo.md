@@ -13,6 +13,14 @@ Add Excel
 
 Add citing details to the overview section on the help page
 
+Add offset column
+Add batch to help files
+
+Add start stop
+Add ability to analyse trials
+
+
+
 
 
 

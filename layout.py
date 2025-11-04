@@ -600,10 +600,63 @@ dcc.Store(id='lick-data'),
                     n_clicks=0,
                     className='btn btn-primary'
                 ),
+                html.Button(
+                    'Batch Process',
+                    id='batch-process-btn',
+                    n_clicks=0,
+                    className='btn btn-outline-secondary',
+                    style={'margin-left': '10px'}
+                ),
                 dcc.Download(id="download-table"),
                 html.Div(id='table-status', style={'margin-top': '10px'})
             ], width=12)
         ], style={'margin-bottom': '20px'}),
+
+        # Batch processing modal
+        dbc.Modal([
+            dbc.ModalHeader(dbc.ModalTitle("Batch Process Files")),
+            dbc.ModalBody([
+                html.P("Select a folder or multiple files to process with the current settings."),
+                dcc.Upload(
+                    id='batch-upload',
+                    children=html.Div([
+                        'Drag and drop or ', html.A('Select multiple files')
+                    ]),
+                    multiple=True,
+                    style={
+                        'width': '100%',
+                        'height': '80px',
+                        'lineHeight': '80px',
+                        'borderWidth': '1px',
+                        'borderStyle': 'dashed',
+                        'borderRadius': '5px',
+                        'textAlign': 'center',
+                        'margin': '10px 0'
+                    }
+                ),
+                html.Div(id='batch-file-list', style={'maxHeight': '150px', 'overflowY': 'auto', 'border': '1px solid #eee', 'padding': '8px', 'borderRadius': '4px'}),
+                dbc.Checklist(
+                    id='batch-export-excel',
+                    options=[{'label': ' Also export an Excel per file', 'value': 'export'}],
+                    value=[],
+                    switch=True,
+                    style={'marginTop': '10px'}
+                ),
+                dbc.Spinner(
+                    children=html.Div(id='batch-status'),
+                    size='sm',
+                    color='primary',
+                    delay_show=250,
+                    fullscreen=False,
+                    spinner_style={'marginTop': '10px'}
+                )
+            ]),
+            dbc.ModalFooter([
+                dbc.Button("Start Processing", id="batch-start-btn", color="primary", className="me-2"),
+                dbc.Button("Close", id="batch-close-btn", color="secondary")
+            ]),
+        ], id='batch-modal', is_open=False),
+        dcc.Download(id='download-batch-zip'),
         
         # Results table
         dbc.Row(dbc.Col([
