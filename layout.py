@@ -538,7 +538,8 @@ dcc.Store(id='lick-data'),
                         {'label': 'Divide by 3', 'value': 3},
                         {'label': 'Divide by 4', 'value': 4},
                         {'label': 'First n bursts', 'value': 'first_n_bursts'},
-                        {'label': 'Between times', 'value': 'between'}
+                        {'label': 'Between times', 'value': 'between'},
+                        {'label': 'Trial-based', 'value': 'trial_based'}
                     ],
                     value='whole_session',
                     style={'margin-top': '5px'}
@@ -601,6 +602,49 @@ dcc.Store(id='lick-data'),
                     style={'margin-top': '5px'}
                 )
             ], width=1, id='between-unit-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("Trial Detection:", style={'font-weight': 'bold'}),
+                dcc.Dropdown(
+                    id='trial-detection-method',
+                    options=[
+                        {'label': 'Auto-detect', 'value': 'auto'},
+                        {'label': 'Load trial times', 'value': 'load'}
+                    ],
+                    value='auto',
+                    style={'margin-top': '5px'}
+                )
+            ], width=2, id='trial-detection-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("Minimum ITI (s):", style={'font-weight': 'bold'}),
+                dbc.Input(
+                    id='trial-min-iti',
+                    type='number',
+                    value=60,
+                    min=0,
+                    step=1,
+                    style={'margin-top': '5px'}
+                )
+            ], width=2, id='trial-min-iti-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("Exclude last burst:", style={'font-weight': 'bold'}),
+                dbc.Checklist(
+                    id='trial-exclude-last-burst',
+                    options=[{'label': '', 'value': 'exclude'}],
+                    value=[],
+                    inline=True,
+                    style={'margin-top': '12px'}
+                )
+            ], width=2, id='trial-exclude-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("\u00A0", style={'font-weight': 'bold'}),  # Non-breaking space for alignment
+                html.Button(
+                    'Load Trial Types',
+                    id='load-trial-types-btn',
+                    n_clicks=0,
+                    className='btn btn-secondary btn-sm',
+                    style={'margin-top': '5px', 'width': '100%'}
+                )
+            ], width=2, id='trial-load-col', style={'display': 'none'}),
         ], style={'margin-bottom': '20px'}),
         
         dbc.Row(children=[

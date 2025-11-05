@@ -22,10 +22,14 @@ from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfi
     Output('between-start-col', 'style'),
     Output('between-stop-col', 'style'),
     Output('between-unit-col', 'style'),
+    Output('trial-detection-col', 'style'),
+    Output('trial-min-iti-col', 'style'),
+    Output('trial-exclude-col', 'style'),
+    Output('trial-load-col', 'style'),
     Input('division-number', 'value')
 )
 def toggle_dropdown_visibility(division_number):
-    """Show division method dropdown only for 'divide by n' options, n-bursts dropdown only for 'first n bursts', and between-times inputs only for 'between'."""
+    """Show division method dropdown only for 'divide by n' options, n-bursts dropdown only for 'first n bursts', between-times inputs only for 'between', and trial controls only for 'trial_based'."""
     # Show division method dropdown for numeric division values (2, 3, 4)
     if isinstance(division_number, int) and division_number > 1:
         division_method_style = {'display': 'block'}
@@ -48,7 +52,21 @@ def toggle_dropdown_visibility(division_number):
         between_stop_style = {'display': 'none'}
         between_unit_style = {'display': 'none'}
     
-    return division_method_style, n_bursts_style, between_start_style, between_stop_style, between_unit_style
+    # Show trial-based controls only for 'trial_based' analysis
+    if division_number == 'trial_based':
+        trial_detection_style = {'display': 'block'}
+        trial_min_iti_style = {'display': 'block'}
+        trial_exclude_style = {'display': 'block'}
+        trial_load_style = {'display': 'block'}
+    else:
+        trial_detection_style = {'display': 'none'}
+        trial_min_iti_style = {'display': 'none'}
+        trial_exclude_style = {'display': 'none'}
+        trial_load_style = {'display': 'none'}
+    
+    return (division_method_style, n_bursts_style, between_start_style, between_stop_style, 
+            between_unit_style, trial_detection_style, trial_min_iti_style, 
+            trial_exclude_style, trial_load_style)
 
 # Callback to control visibility of longlick controls based on offset data availability
 @app.callback(Output('longlick-controls-column', 'style'),
