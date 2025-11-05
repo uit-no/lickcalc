@@ -13,7 +13,7 @@ session:
   #   number - Fixed duration value (interpreted according to length_unit)
   # When set to a number, this value will be used for all loaded files
   # When set to 'auto', the duration will be calculated from each file's data
-  length: 3600
+  length: 'auto'
   # Unit for session length: 's' (seconds), 'min' (minutes), or 'hr' (hours)
   length_unit: 's'
 

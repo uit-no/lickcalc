@@ -615,7 +615,37 @@ dcc.Store(id='lick-data'),
                 )
             ], width=2, id='trial-detection-col', style={'display': 'none'}),
             dbc.Col([
-                html.Label("Minimum ITI (s):", style={'font-weight': 'bold'}),
+                html.Label("Trials Detected:", style={'font-weight': 'bold'}),
+                html.Div(
+                    id='trials-detected-display',
+                    children='No trials detected',
+                    style={
+                        'margin-top': '5px',
+                        'padding': '6px 12px',
+                        'background-color': '#f8f9fa',
+                        'border': '1px solid #dee2e6',
+                        'border-radius': '4px',
+                        'text-align': 'center',
+                        'font-size': '14px',
+                        'color': '#6c757d',
+                        'min-height': '38px',
+                        'display': 'flex',
+                        'align-items': 'center',
+                        'justify-content': 'center'
+                    }
+                )
+            ], width=2, id='trials-detected-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Div([
+                    html.Label("ITI (s)", style={'font-weight': 'bold', 'display': 'inline-block'}),
+                    html.Span(" ⓘ", id="trial-iti-help", 
+                             style={"color": "#007bff", "cursor": "help", "margin-left": "5px"}),
+                    dbc.Tooltip(
+                        "This should be the minimum ITI expected in the data.",
+                        target="trial-iti-help",
+                        placement="top"
+                    )
+                ]),
                 dbc.Input(
                     id='trial-min-iti',
                     type='number',
@@ -626,13 +656,22 @@ dcc.Store(id='lick-data'),
                 )
             ], width=2, id='trial-min-iti-col', style={'display': 'none'}),
             dbc.Col([
-                html.Label("Exclude last burst:", style={'font-weight': 'bold'}),
+                html.Div([
+                    html.Label("Crop trials", style={'font-weight': 'bold', 'display': 'inline-block'}),
+                    html.Span(" ⓘ", id="crop-trials-help", 
+                             style={"color": "#007bff", "cursor": "help", "margin-left": "5px"}),
+                    dbc.Tooltip(
+                        "Excludes the last burst from each trial if there is more than 1 burst.",
+                        target="crop-trials-help",
+                        placement="top"
+                    )
+                ]),
                 dbc.Checklist(
                     id='trial-exclude-last-burst',
                     options=[{'label': '', 'value': 'exclude'}],
                     value=[],
                     inline=True,
-                    style={'margin-top': '12px'}
+                    style={'margin-top': '5px'}
                 )
             ], width=2, id='trial-exclude-col', style={'display': 'none'}),
             dbc.Col([

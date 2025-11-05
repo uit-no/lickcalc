@@ -15,7 +15,11 @@ from datetime import datetime
 
 from app_instance import app
 from config_manager import config
-from trompy import lickcalc
+try:
+    from trompy import lickcalc  # type: ignore[import]
+except Exception:
+    def lickcalc(*args, **kwargs):  # type: ignore
+        raise ImportError("The 'trompy' package is required for lick calculations. Please install it (see requirements.txt).")
 from utils.file_parsers import (
     parse_medfile,
     parse_med_arraystyle,
@@ -457,7 +461,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                 if session_length_seconds and session_length_seconds > 0:
                     end_time = session_length_seconds
                 else:
-                    end_time = max(lick_times) if lick_times else 0
+                    end_time = max(lick_times) if (lick_times is not None and len(lick_times) > 0) else 0
                 min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
                 num_bursts = results.get('bNum', 0)
                 rows_for_file.append({
@@ -495,7 +499,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                         file_offsets = offset_times if offset_times else []
 
                         # Histogram (session)
-                        max_time = session_length_seconds if session_length_seconds and session_length_seconds > 0 else (max(file_licks) if file_licks else 0)
+                        max_time = session_length_seconds if session_length_seconds and session_length_seconds > 0 else (max(file_licks) if (file_licks is not None and len(file_licks) > 0) else 0)
                         if not bin_size_seconds or bin_size_seconds <= 0:
                             # Sensible fallback bin size: 1s
                             bin_size_seconds = 1
@@ -805,10 +809,14 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
               State('remove-longlicks-checkbox', 'value'),
               State('between-start-seconds', 'data'),
               State('between-stop-seconds', 'data'),
+              State('trial-detection-method', 'value'),
+              State('trial-min-iti', 'value'),
+              State('trial-exclude-last-burst', 'value'),
               prevent_initial_call=True)
 def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source_filename, 
                         division_number, division_method, n_bursts_number, session_length_seconds, data_store, onset_key, offset_key,
-                        ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, between_start, between_stop):
+                        ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, between_start, between_stop,
+                        trial_detection_method, trial_min_iti, trial_crop_last_burst):
     """Add current analysis results to the results table with optional divisions"""
     # Use slider values directly
     ibi = ibi_slider
@@ -1038,11 +1046,73 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                 })
             
+            # Handle "Trial-based" analysis
+            elif division_number == 'trial_based':
+                from utils.calculations import detect_trials, analyze_trial
+                
+                # Get trial parameters
+                min_iti = trial_min_iti if trial_min_iti and trial_min_iti > 0 else 60
+                crop_last_burst = trial_crop_last_burst if trial_crop_last_burst else []
+                detection_method = trial_detection_method or 'auto'
+                
+                # Detect trials (auto) or handle loaded trials (future)
+                if detection_method == 'auto':
+                    trial_info = detect_trials(lick_times, min_iti)
+                else:
+                    # For now, we don't support loading custom trial times here
+                    raise Exception("'Load trial times' not implemented yet")
+                
+                if trial_info['n_trials'] == 0:
+                    # Graceful fallback: treat the whole session as one trial
+                    trial_info = {
+                        'n_trials': 1,
+                        'trial_boundaries': [(0, len(lick_times))],
+                        'trial_start_times': [float(lick_times[0]) if lick_times else 0.0],
+                        'trial_end_times': [float(lick_times[-1]) if lick_times else 0.0]
+                    }
+                
+                # Analyze each trial
+                for i, (start_idx, end_idx) in enumerate(trial_info['trial_boundaries']):
+                    trial_stats = analyze_trial(
+                        lick_times=np.array(lick_times),
+                        lick_offsets=np.array(offset_times) if offset_times else None,
+                        trial_idx=i,
+                        start_idx=start_idx,
+                        end_idx=end_idx,
+                        ibi=ibi,
+                        minlicks=minlicks,
+                        longlick_th=longlick_th,
+                        remove_long=remove_long if offset_times else False,
+                        crop_last_burst='exclude' in crop_last_burst if isinstance(crop_last_burst, list) else False
+                    )
+                    
+                    # Add to division rows
+                    division_rows.append({
+                        'id': f"{animal_id}_Trial{trial_stats['trial_number']}" if animal_id else f"Trial{trial_stats['trial_number']}",
+                        'source_filename': f"{source_filename} (Trial {trial_stats['trial_number']}/{trial_info['n_trials']})" if source_filename else f"Trial {trial_stats['trial_number']}/{trial_info['n_trials']}",
+                        'start_time': trial_stats['start_time'],
+                        'end_time': trial_stats['end_time'],
+                        'duration': trial_stats['duration'],
+                        'interburst_interval': ibi,
+                        'min_burst_size': minlicks,
+                        'longlick_threshold': longlick_th,
+                        'total_licks': trial_stats['total_licks'],
+                        'intraburst_freq': trial_stats['intraburst_freq'],
+                        'n_bursts': trial_stats['n_bursts'],
+                        'mean_licks_per_burst': trial_stats['mean_licks_per_burst'],
+                        'weibull_alpha': trial_stats['weibull_alpha'],
+                        'weibull_beta': trial_stats['weibull_beta'],
+                        'weibull_rsq': trial_stats['weibull_rsq'],
+                        'n_long_licks': trial_stats['n_long_licks'],
+                        'max_lick_duration': trial_stats['max_lick_duration'],
+                        'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
+                    })
+            
             # Handle "Between times" analysis
             elif division_number == 'between':
                 # Get start and stop times, with validation
                 start_time = between_start if between_start is not None else 0
-                stop_time = between_stop if between_stop is not None else (session_length_seconds if session_length_seconds else max(lick_times) if lick_times else 0)
+                stop_time = between_stop if between_stop is not None else (session_length_seconds if session_length_seconds else (max(lick_times) if (lick_times is not None and len(lick_times) > 0) else 0))
                 
                 # Ensure stop is after start
                 if stop_time < start_time:
