@@ -35,6 +35,9 @@ dcc.Store(id='lick-data'),
     dcc.Store(id='session-duration-store'),  # Store for total session duration
     dcc.Store(id='custom-config-store'),  # Store for custom config values
     dcc.Store(id='session-length-seconds'),  # Store for session length in seconds (latent variable)
+    dcc.Store(id='between-start-seconds'),  # Store for between start time in seconds
+    dcc.Store(id='between-stop-seconds'),  # Store for between stop time in seconds
+    # 'between' refers to 'between times analysis' or 'time range filtering' for session/epoch selection
     html.Div(
     [
         # Floating buttons at top right - vertically arranged
@@ -534,7 +537,8 @@ dcc.Store(id='lick-data'),
                         {'label': 'Divide by 2', 'value': 2},
                         {'label': 'Divide by 3', 'value': 3},
                         {'label': 'Divide by 4', 'value': 4},
-                        {'label': 'First n bursts', 'value': 'first_n_bursts'}
+                        {'label': 'First n bursts', 'value': 'first_n_bursts'},
+                        {'label': 'Between times', 'value': 'between'}
                     ],
                     value='whole_session',
                     style={'margin-top': '5px'}
@@ -561,6 +565,42 @@ dcc.Store(id='lick-data'),
                     style={'margin-top': '5px'}
                 )
             ], width=2, id='n-bursts-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("Start:", style={'font-weight': 'bold'}),
+                dbc.Input(
+                    id='between-start-time',
+                    type='number',
+                    value=0,
+                    min=0,
+                    step=1,
+                    style={'margin-top': '5px'}
+                )
+            ], width=2, id='between-start-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("Stop:", style={'font-weight': 'bold'}),
+                dbc.Input(
+                    id='between-stop-time',
+                    type='number',
+                    value=3600,
+                    min=0,
+                    step=1,
+                    style={'margin-top': '5px'}
+                )
+            ], width=2, id='between-stop-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("Unit:", style={'font-weight': 'bold'}),
+                dcc.Dropdown(
+                    id='between-time-unit',
+                    options=[
+                        {'label': 's', 'value': 's'},
+                        {'label': 'min', 'value': 'min'},
+                        {'label': 'hr', 'value': 'hr'}
+                    ],
+                    value='s',
+                    clearable=False,
+                    style={'margin-top': '5px'}
+                )
+            ], width=1, id='between-unit-col', style={'display': 'none'}),
         ], style={'margin-bottom': '20px'}),
         
         dbc.Row(children=[

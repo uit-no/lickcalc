@@ -14,6 +14,7 @@
                                 <li><strong>Whole Session:</strong> Analyze entire session (default)</li>
                                 <li><strong>Divide by 2/3/4:</strong> Split session into equal parts</li>
                                 <li><strong>First n Bursts:</strong> Analyze only the first N bursts</li>
+                                <li><strong>Between times:</strong> Analyze a specific time window (see below)</li>
                             </ul>
                             
                             <h6 class="mt-3">Division Methods:</h6>
@@ -40,6 +41,56 @@
                     <div class="warning-box">
                         <strong>⚠️ Important:</strong> When using divisions, each segment is analyzed independently. Statistics like Weibull parameters require a minimum number of bursts (default: 10) and will show "N/A" if insufficient data exists in a segment.
                     </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">⏱️ Between Times Analysis</div>
+                <div class="card-body">
+                    <h5>Analyzing Specific Time Windows</h5>
+                    <p>The "Between times" option allows you to analyze licking behavior within a custom time range, providing flexibility for targeted analyses:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>How to Use:</h6>
+                            <ol>
+                                <li>Select <strong>"Between times"</strong> from the Analysis Epoch dropdown</li>
+                                <li>Enter your desired <strong>Start</strong> time (when to begin analysis)</li>
+                                <li>Enter your desired <strong>Stop</strong> time (when to end analysis)</li>
+                                <li>Select the time <strong>Unit</strong> (seconds, minutes, or hours)</li>
+                                <li>Click "Add Current Results to Table"</li>
+                            </ol>
+                            
+                            <div class="tip-box" style="margin-top: 10px;">
+                                <strong>💡 Unit Conversion:</strong> You can switch between seconds (s), minutes (min), and hours (hr) at any time. The values will automatically convert to maintain the same time duration.
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Common Use Cases:</h6>
+                            <ul>
+                                <li><strong>Baseline Period:</strong> Analyze initial behavior (e.g., 0-300s)</li>
+                                <li><strong>Post-Treatment:</strong> Focus on a specific window after intervention</li>
+                                <li><strong>Steady State:</strong> Skip initial adaptation period (e.g., 300-3600s)</li>
+                                <li><strong>Comparison Windows:</strong> Analyze multiple specific periods separately</li>
+                                <li><strong>Exclude Artifacts:</strong> Remove problematic time segments from analysis</li>
+                            </ul>
+                            
+                            <div class="warning-box" style="margin-top: 10px;">
+                                <strong>⚠️ Note:</strong> Only licks occurring within the specified time window are included in the analysis. The Stop time must be greater than the Start time.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-3">Example Workflow:</h6>
+                    <p>To compare early vs. late session behavior using specific time windows:</p>
+                    <ol>
+                        <li>Load your data file</li>
+                        <li>Select "Between times" and enter 0 to 5 minutes for early session</li>
+                        <li>Click "Add Current Results to Table"</li>
+                        <li>Change times to 25 to 30 minutes for late session</li>
+                        <li>Click "Add Current Results to Table" again</li>
+                        <li>Both analyses will appear as separate rows for comparison</li>
+                    </ol>
                 </div>
             </div>
             
@@ -75,6 +126,91 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">📦 Batch Processing</div>
+                <div class="card-body">
+                    <h5>Processing Multiple Files at Once</h5>
+                    <p>The batch processing feature allows you to analyze multiple data files simultaneously using the same parameters, dramatically speeding up your workflow for large datasets.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>How to Use Batch Processing:</h6>
+                            <ol>
+                                <li><strong>Set Parameters:</strong> Configure all analysis parameters (interburst interval, min burst size, etc.) in the main interface</li>
+                                <li><strong>Choose Analysis Epoch:</strong> Select your desired epoch (whole session, divisions, first n bursts, or between times)</li>
+                                <li><strong>Open Batch Modal:</strong> Click the "Batch Process Files" button at the top of the interface</li>
+                                <li><strong>Upload Files:</strong> Drag and drop or click to select multiple data files (any supported format)</li>
+                                <li><strong>Configure Export:</strong>
+                                    <ul>
+                                        <li>Check "Export per-file Excel" to get individual Excel files for each data file</li>
+                                        <li>Check "Include all sheets" to force export of all data sheets (histograms, bursts, etc.)</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Start Processing:</strong> Click "Start Batch Processing"</li>
+                                <li><strong>Monitor Progress:</strong> Watch the progress indicator and status messages</li>
+                                <li><strong>Download Results:</strong> When complete, download the ZIP file containing all results</li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Key Features:</h6>
+                            <ul>
+                                <li><strong>Unified Parameters:</strong> All files processed with the same settings</li>
+                                <li><strong>Epoch Awareness:</strong> Respects your chosen analysis epoch (divisions, between times, etc.)</li>
+                                <li><strong>Auto Offset Detection:</strong> Automatically identifies offset columns when available</li>
+                                <li><strong>Progress Tracking:</strong> Visual feedback during processing</li>
+                                <li><strong>Results Table:</strong> All results automatically added to the comparison table</li>
+                                <li><strong>ZIP Export:</strong> Optional individual Excel files packaged in a convenient ZIP</li>
+                                <li><strong>Full Data Sheets:</strong> Per-file Excel exports include all data sheets (same as single-file export)</li>
+                            </ul>
+                            
+                            <div class="tip-box" style="margin-top: 10px;">
+                                <strong>💡 Best Practice:</strong> Test your analysis on a single representative file first. Once you're satisfied with the parameters, use batch processing for the remaining files.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-3">Export Options Explained:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="parameter-box">
+                                <strong>Standard Batch Processing</strong><br>
+                                Results are added to the comparison table only. No individual files created. Use this for quick data collection when you plan to export the full table later.
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="parameter-box">
+                                <strong>With Per-File Excel Export</strong><br>
+                                Each data file gets its own Excel workbook (matching single-file export format) plus results in the comparison table. All Excel files are packaged in a ZIP. Use this when you need both individual detailed exports and a combined summary.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="warning-box mt-3">
+                        <strong>⚠️ Important Notes:</strong>
+                        <ul>
+                            <li>Batch processing uses automatic offset detection. The app will search for appropriate offset columns based on naming patterns and validation rules.</li>
+                            <li>If a file cannot be processed (e.g., invalid format, missing data), an error will be reported but processing will continue for remaining files.</li>
+                            <li>When using "Between times" with batch processing, the same time window is applied to all files.</li>
+                            <li>Large batch jobs may take several minutes depending on file size and number of files.</li>
+                        </ul>
+                    </div>
+                    
+                    <h6 class="mt-3">Example Workflow:</h6>
+                    <p><strong>Processing 20 experimental sessions with time-based divisions:</strong></p>
+                    <ol>
+                        <li>Load one representative file and optimize your parameters</li>
+                        <li>Select "Divide by 4" and "By Time" to split each session into quarters</li>
+                        <li>Open the Batch Processing modal</li>
+                        <li>Upload all 20 data files</li>
+                        <li>Check "Export per-file Excel" for detailed per-subject records</li>
+                        <li>Click "Start Batch Processing"</li>
+                        <li>Wait for completion (progress bar will show X/20 files processed)</li>
+                        <li>Download the ZIP file containing 20 Excel workbooks</li>
+                        <li>Export the complete results table for statistical analysis (now containing 80 rows: 4 divisions × 20 subjects)</li>
+                    </ol>
                 </div>
             </div>
         </section>
