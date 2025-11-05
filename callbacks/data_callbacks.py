@@ -19,10 +19,12 @@ from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfi
 @app.callback(
     Output('division-method-col', 'style'),
     Output('n-bursts-col', 'style'),
+    Output('between-start-col', 'style'),
+    Output('between-stop-col', 'style'),
     Input('division-number', 'value')
 )
 def toggle_dropdown_visibility(division_number):
-    """Show division method dropdown only for 'divide by n' options, and n-bursts dropdown only for 'first n bursts'."""
+    """Show division method dropdown only for 'divide by n' options, n-bursts dropdown only for 'first n bursts', and between-times inputs only for 'between'."""
     # Show division method dropdown for numeric division values (2, 3, 4)
     if isinstance(division_number, int) and division_number > 1:
         division_method_style = {'display': 'block'}
@@ -35,7 +37,15 @@ def toggle_dropdown_visibility(division_number):
     else:
         n_bursts_style = {'display': 'none'}
     
-    return division_method_style, n_bursts_style
+    # Show between-times inputs only for 'between'
+    if division_number == 'between':
+        between_start_style = {'display': 'block'}
+        between_stop_style = {'display': 'block'}
+    else:
+        between_start_style = {'display': 'none'}
+        between_stop_style = {'display': 'none'}
+    
+    return division_method_style, n_bursts_style, between_start_style, between_stop_style
 
 # Callback to control visibility of longlick controls based on offset data availability
 @app.callback(Output('longlick-controls-column', 'style'),

@@ -96,6 +96,8 @@ def show_batch_file_list(filenames):
     State('division-method', 'value'),
     State('n-bursts-number', 'value'),
     State('session-length-seconds', 'data'),
+    State('between-start-time', 'value'),
+    State('between-stop-time', 'value'),
     # Export preferences to mirror single-file export
     State('export-data-checklist', 'value'),
     State('animal-id-input', 'value'),
@@ -105,6 +107,7 @@ def show_batch_file_list(filenames):
 )
 def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, minlicks, longlick_th, remove_long_vals, input_file_type, existing_data,
                         division_number=None, division_method='time', n_bursts_number=3, session_length_seconds=None,
+                        between_start=None, between_stop=None,
                         selected_export=None, animal_id_base=None, bin_size_seconds=None, include_all_vals=None):
     if not n_clicks:
         raise PreventUpdate
@@ -379,6 +382,65 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                                 'max_lick_duration': 0,
                                 'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                             })
+            
+            elif division_number == 'between':
+                # Between times analysis
+                start_time = between_start if between_start is not None else 0
+                stop_time = between_stop if between_stop is not None else (session_length_seconds if session_length_seconds else (max(lick_times) if lick_times else 0))
+                
+                # Validate times
+                if stop_time <= start_time:
+                    errors.append(f"{name}: Stop time ({stop_time}) must be greater than start time ({start_time})")
+                    continue
+                
+                # Filter lick times to the specified range
+                filtered_lick_times = [t for t in lick_times if start_time <= t < stop_time]
+                
+                # Filter offset times to match (if applicable)
+                filtered_offset_times = None
+                if offset_times:
+                    valid_indices = [i for i, t in enumerate(lick_times) if start_time <= t < stop_time]
+                    filtered_offset_times = [offset_times[i] for i in valid_indices if i < len(offset_times)]
+                    
+                    # Adjust if filtered arrays are mismatched by 1
+                    if len(filtered_lick_times) - len(filtered_offset_times) == 1:
+                        filtered_lick_times = filtered_lick_times[:-1]
+                    elif len(filtered_lick_times) != len(filtered_offset_times):
+                        filtered_lick_times = filtered_lick_times[:len(filtered_offset_times)]
+                
+                # Calculate analysis for filtered time range
+                enhanced = lickcalc(
+                    licks=filtered_lick_times,
+                    offset=filtered_offset_times if filtered_offset_times else [],
+                    burstThreshold=ibi,
+                    minburstlength=minlicks,
+                    longlickThreshold=longlick_th,
+                    remove_longlicks=remove_long if filtered_offset_times else False
+                )
+                
+                min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+                num_bursts = enhanced.get('bNum', 0)
+                
+                rows_for_file.append({
+                    'id': f"{name}_BT",
+                    'source_filename': f"{name} (Between {start_time:.0f}-{stop_time:.0f}s)",
+                    'start_time': start_time,
+                    'end_time': stop_time,
+                    'duration': stop_time - start_time,
+                    'interburst_interval': ibi,
+                    'min_burst_size': minlicks,
+                    'longlick_threshold': longlick_th,
+                    'total_licks': enhanced.get('total', 0),
+                    'intraburst_freq': enhanced.get('freq', 0),
+                    'n_bursts': enhanced.get('bNum', 0),
+                    'mean_licks_per_burst': enhanced.get('bMean', 0),
+                    'weibull_alpha': enhanced.get('weib_alpha', np.nan) if (enhanced.get('weib_alpha') is not None and num_bursts >= min_bursts_required) else np.nan,
+                    'weibull_beta': enhanced.get('weib_beta', np.nan) if (enhanced.get('weib_beta') is not None and num_bursts >= min_bursts_required) else np.nan,
+                    'weibull_rsq': enhanced.get('weib_rsq', np.nan) if (enhanced.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
+                    'n_long_licks': len(enhanced.get('longlicks', [])) if filtered_offset_times and enhanced.get('longlicks') is not None else 0,
+                    'max_lick_duration': np.max(enhanced.get('licklength', [])) if filtered_offset_times and enhanced.get('licklength') is not None and len(enhanced.get('licklength', [])) > 0 else np.nan,
+                    'long_licks_removed': 'Yes' if (remove_long and filtered_offset_times) else 'No'
+                })
 
             else:
                 # Whole session
@@ -737,10 +799,12 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
               State('minlicks-slider', 'value'),
               State('longlick-threshold', 'value'),
               State('remove-longlicks-checkbox', 'value'),
+              State('between-start-time', 'value'),
+              State('between-stop-time', 'value'),
               prevent_initial_call=True)
 def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source_filename, 
                         division_number, division_method, n_bursts_number, session_length_seconds, data_store, onset_key, offset_key,
-                        ibi_slider, minlicks_slider, longlick_slider, remove_longlicks):
+                        ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, between_start, between_stop):
     """Add current analysis results to the results table with optional divisions"""
     # Use slider values directly
     ibi = ibi_slider
@@ -968,6 +1032,68 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'n_long_licks': len(enhanced_results.get('longlicks', [])) if offset_times and enhanced_results.get('longlicks') is not None else 0,
                     'max_lick_duration': np.max(enhanced_results.get('licklength', [])) if offset_times and enhanced_results.get('licklength') is not None and len(enhanced_results.get('licklength', [])) > 0 else np.nan,
                     'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
+                })
+            
+            # Handle "Between times" analysis
+            elif division_number == 'between':
+                # Get start and stop times, with validation
+                start_time = between_start if between_start is not None else 0
+                stop_time = between_stop if between_stop is not None else (session_length_seconds if session_length_seconds else max(lick_times) if lick_times else 0)
+                
+                # Ensure stop is after start
+                if stop_time <= start_time:
+                    raise Exception(f"Stop time ({stop_time}) must be greater than start time ({start_time})")
+                
+                # Filter lick times to the specified range
+                filtered_lick_times = [t for t in lick_times if start_time <= t < stop_time]
+                
+                # Filter offset times to match (if applicable)
+                filtered_offset_times = None
+                if offset_times:
+                    # Create list of valid indices where lick time is within range
+                    valid_indices = [i for i, t in enumerate(lick_times) if start_time <= t < stop_time]
+                    filtered_offset_times = [offset_times[i] for i in valid_indices if i < len(offset_times)]
+                    
+                    # Adjust if filtered arrays are mismatched by 1
+                    if len(filtered_lick_times) - len(filtered_offset_times) == 1:
+                        filtered_lick_times = filtered_lick_times[:-1]
+                    elif len(filtered_lick_times) != len(filtered_offset_times):
+                        filtered_lick_times = filtered_lick_times[:len(filtered_offset_times)]
+                
+                # Calculate analysis for filtered time range
+                enhanced_results = lickcalc(
+                    licks=filtered_lick_times,
+                    offset=filtered_offset_times if filtered_offset_times else [],
+                    burstThreshold=ibi,
+                    minburstlength=minlicks,
+                    longlickThreshold=longlick_th,
+                    remove_longlicks=remove_long if filtered_offset_times else False
+                )
+                
+                # Check minimum burst threshold for Weibull analysis
+                min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
+                num_bursts = enhanced_results.get('bNum', 0)
+                
+                # Create single row for between times analysis
+                division_rows.append({
+                    'id': f"{animal_id}_BT" if animal_id else "BT",
+                    'source_filename': f"{source_filename} (Between {start_time:.0f}-{stop_time:.0f}s)" if source_filename else f"Between {start_time:.0f}-{stop_time:.0f}s",
+                    'start_time': start_time,
+                    'end_time': stop_time,
+                    'duration': stop_time - start_time,
+                    'interburst_interval': ibi,
+                    'min_burst_size': minlicks,
+                    'longlick_threshold': longlick_th,
+                    'total_licks': enhanced_results.get('total', 0),
+                    'intraburst_freq': enhanced_results.get('freq', 0),
+                    'n_bursts': enhanced_results.get('bNum', 0),
+                    'mean_licks_per_burst': enhanced_results.get('bMean', 0),
+                    'weibull_alpha': enhanced_results.get('weib_alpha', np.nan) if (enhanced_results.get('weib_alpha') is not None and num_bursts >= min_bursts_required) else np.nan,
+                    'weibull_beta': enhanced_results.get('weib_beta', np.nan) if (enhanced_results.get('weib_beta') is not None and num_bursts >= min_bursts_required) else np.nan,
+                    'weibull_rsq': enhanced_results.get('weib_rsq', np.nan) if (enhanced_results.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
+                    'n_long_licks': len(enhanced_results.get('longlicks', [])) if filtered_offset_times and enhanced_results.get('longlicks') is not None else 0,
+                    'max_lick_duration': np.max(enhanced_results.get('licklength', [])) if filtered_offset_times and enhanced_results.get('licklength') is not None and len(enhanced_results.get('licklength', [])) > 0 else np.nan,
+                    'long_licks_removed': 'Yes' if (remove_long and filtered_offset_times) else 'No'
                 })
                 
             # Use enhanced lickcalc with division parameters for numeric divisions

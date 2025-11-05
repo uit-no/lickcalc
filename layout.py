@@ -534,7 +534,8 @@ dcc.Store(id='lick-data'),
                         {'label': 'Divide by 2', 'value': 2},
                         {'label': 'Divide by 3', 'value': 3},
                         {'label': 'Divide by 4', 'value': 4},
-                        {'label': 'First n bursts', 'value': 'first_n_bursts'}
+                        {'label': 'First n bursts', 'value': 'first_n_bursts'},
+                        {'label': 'Between times', 'value': 'between'}
                     ],
                     value='whole_session',
                     style={'margin-top': '5px'}
@@ -561,6 +562,28 @@ dcc.Store(id='lick-data'),
                     style={'margin-top': '5px'}
                 )
             ], width=2, id='n-bursts-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("Start (s):", style={'font-weight': 'bold'}),
+                dbc.Input(
+                    id='between-start-time',
+                    type='number',
+                    value=0,
+                    min=0,
+                    step=1,
+                    style={'margin-top': '5px'}
+                )
+            ], width=2, id='between-start-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("Stop (s):", style={'font-weight': 'bold'}),
+                dbc.Input(
+                    id='between-stop-time',
+                    type='number',
+                    value=3600,
+                    min=0,
+                    step=1,
+                    style={'margin-top': '5px'}
+                )
+            ], width=2, id='between-stop-col', style={'display': 'none'}),
         ], style={'margin-bottom': '20px'}),
         
         dbc.Row(children=[
