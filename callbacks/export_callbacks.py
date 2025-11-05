@@ -389,8 +389,8 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                 stop_time = between_stop if between_stop is not None else (session_length_seconds if session_length_seconds else (max(lick_times) if lick_times else 0))
                 
                 # Validate times
-                if stop_time <= start_time:
-                    errors.append(f"{name}: Stop time ({stop_time}) must be greater than start time ({start_time})")
+                if stop_time < start_time:
+                    errors.append(f"{name}: Stop time ({stop_time}) must be greater than or equal to start time ({start_time})")
                     continue
                 
                 # Filter lick times to the specified range
@@ -1041,8 +1041,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 stop_time = between_stop if between_stop is not None else (session_length_seconds if session_length_seconds else max(lick_times) if lick_times else 0)
                 
                 # Ensure stop is after start
-                if stop_time <= start_time:
-                    raise Exception(f"Stop time ({stop_time}) must be greater than start time ({start_time})")
+                if stop_time < start_time:
+                    raise Exception(f"Stop time ({stop_time}) must be greater than or equal to start time ({start_time})")
                 
                 # Filter lick times to the specified range
                 filtered_lick_times = [t for t in lick_times if start_time <= t < stop_time]

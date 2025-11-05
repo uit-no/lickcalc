@@ -37,6 +37,7 @@ dcc.Store(id='lick-data'),
     dcc.Store(id='session-length-seconds'),  # Store for session length in seconds (latent variable)
     dcc.Store(id='between-start-seconds'),  # Store for between start time in seconds
     dcc.Store(id='between-stop-seconds'),  # Store for between stop time in seconds
+    # 'between' refers to 'between times analysis' or 'time range filtering' for session/epoch selection
     html.Div(
     [
         # Floating buttons at top right - vertically arranged

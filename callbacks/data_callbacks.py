@@ -38,7 +38,7 @@ def toggle_dropdown_visibility(division_number):
     else:
         n_bursts_style = {'display': 'none'}
     
-    # Show between-times inputs only for 'between'
+    # Show between-times inputs only for between-times analysis
     if division_number == 'between':
         between_start_style = {'display': 'block'}
         between_stop_style = {'display': 'block'}
