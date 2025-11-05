@@ -96,8 +96,8 @@ def show_batch_file_list(filenames):
     State('division-method', 'value'),
     State('n-bursts-number', 'value'),
     State('session-length-seconds', 'data'),
-    State('between-start-time', 'value'),
-    State('between-stop-time', 'value'),
+    State('between-start-seconds', 'data'),
+    State('between-stop-seconds', 'data'),
     # Export preferences to mirror single-file export
     State('export-data-checklist', 'value'),
     State('animal-id-input', 'value'),
@@ -799,8 +799,8 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
               State('minlicks-slider', 'value'),
               State('longlick-threshold', 'value'),
               State('remove-longlicks-checkbox', 'value'),
-              State('between-start-time', 'value'),
-              State('between-stop-time', 'value'),
+              State('between-start-seconds', 'data'),
+              State('between-stop-seconds', 'data'),
               prevent_initial_call=True)
 def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source_filename, 
                         division_number, division_method, n_bursts_number, session_length_seconds, data_store, onset_key, offset_key,

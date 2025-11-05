@@ -279,6 +279,91 @@ def convert_display_value_on_unit_change(new_unit, current_seconds):
     else:
         return round(new_value, 2)
 
+# Callbacks for between times unit conversion
+@app.callback(
+    Output('between-start-seconds', 'data'),
+    Output('between-stop-seconds', 'data'),
+    Input('between-start-time', 'value'),
+    Input('between-stop-time', 'value'),
+    Input('between-time-unit', 'value')
+)
+def update_between_times_seconds(start_time, stop_time, unit):
+    """Convert between start/stop times to seconds based on the selected unit."""
+    # Convert start time
+    start_seconds = None
+    if start_time is not None:
+        if unit == 'min':
+            start_seconds = start_time * 60
+        elif unit == 'hr':
+            start_seconds = start_time * 3600
+        else:  # unit == 's' or default
+            start_seconds = start_time
+    
+    # Convert stop time
+    stop_seconds = None
+    if stop_time is not None:
+        if unit == 'min':
+            stop_seconds = stop_time * 60
+        elif unit == 'hr':
+            stop_seconds = stop_time * 3600
+        else:  # unit == 's' or default
+            stop_seconds = stop_time
+    
+    return start_seconds, stop_seconds
+
+# Callback to update the input fields when unit changes (convert display values)
+@app.callback(
+    Output('between-start-time', 'value', allow_duplicate=True),
+    Output('between-stop-time', 'value', allow_duplicate=True),
+    Input('between-time-unit', 'value'),
+    State('between-start-seconds', 'data'),
+    State('between-stop-seconds', 'data'),
+    State('between-start-time', 'value'),
+    State('between-stop-time', 'value'),
+    prevent_initial_call=True
+)
+def convert_between_display_values_on_unit_change(new_unit, start_seconds, stop_seconds, current_start, current_stop):
+    """When unit changes, convert the display values to show equivalent in new unit."""
+    # If Store values don't exist yet, assume current values are in seconds (default unit)
+    if start_seconds is None and current_start is not None:
+        start_seconds = current_start
+    if stop_seconds is None and current_stop is not None:
+        stop_seconds = current_stop
+    
+    # Convert start time
+    start_value = dash.no_update
+    if start_seconds is not None:
+        if new_unit == 'min':
+            start_value = start_seconds / 60
+        elif new_unit == 'hr':
+            start_value = start_seconds / 3600
+        else:  # 's'
+            start_value = start_seconds
+        
+        # Round to reasonable precision
+        if start_value >= 10:
+            start_value = round(start_value)
+        else:
+            start_value = round(start_value, 2)
+    
+    # Convert stop time
+    stop_value = dash.no_update
+    if stop_seconds is not None:
+        if new_unit == 'min':
+            stop_value = stop_seconds / 60
+        elif new_unit == 'hr':
+            stop_value = stop_seconds / 3600
+        else:  # 's'
+            stop_value = stop_seconds
+        
+        # Round to reasonable precision
+        if stop_value >= 10:
+            stop_value = round(stop_value)
+        else:
+            stop_value = round(stop_value, 2)
+    
+    return start_value, stop_value
+
 # Callback to dynamically adjust bin slider based on session length
 @app.callback(
     Output('session-bin-slider', 'min'),

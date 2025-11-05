@@ -21,6 +21,7 @@ from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfi
     Output('n-bursts-col', 'style'),
     Output('between-start-col', 'style'),
     Output('between-stop-col', 'style'),
+    Output('between-unit-col', 'style'),
     Input('division-number', 'value')
 )
 def toggle_dropdown_visibility(division_number):
@@ -41,11 +42,13 @@ def toggle_dropdown_visibility(division_number):
     if division_number == 'between':
         between_start_style = {'display': 'block'}
         between_stop_style = {'display': 'block'}
+        between_unit_style = {'display': 'block'}
     else:
         between_start_style = {'display': 'none'}
         between_stop_style = {'display': 'none'}
+        between_unit_style = {'display': 'none'}
     
-    return division_method_style, n_bursts_style, between_start_style, between_stop_style
+    return division_method_style, n_bursts_style, between_start_style, between_stop_style, between_unit_style
 
 # Callback to control visibility of longlick controls based on offset data availability
 @app.callback(Output('longlick-controls-column', 'style'),
