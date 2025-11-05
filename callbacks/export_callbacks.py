@@ -453,7 +453,11 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                     remove_longlicks=remove_long if offset_times else False
                 )
                 start_time = 0
-                end_time = max(lick_times) if lick_times else 0
+                # Use session length from input if available, otherwise fall back to max lick time
+                if session_length_seconds and session_length_seconds > 0:
+                    end_time = session_length_seconds
+                else:
+                    end_time = max(lick_times) if lick_times else 0
                 min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
                 num_bursts = results.get('bNum', 0)
                 rows_for_file.append({
