@@ -211,6 +211,26 @@
                         <li>Download the ZIP file containing 20 Excel workbooks</li>
                         <li>Export the complete results table for statistical analysis (now containing 80 rows: 4 divisions × 20 subjects)</li>
                     </ol>
+
+                    <hr class="mt-4 mb-3"/>
+                    <h5 id="advanced-batch-mode">Advanced Batch Mode</h5>
+                    <p>
+                        Enable the toggle <strong>Advanced mode: select columns per file</strong> in the Batch modal to unlock
+                        per‑file controls and more flexible processing:
+                    </p>
+                    <ul>
+                        <li><strong>Per‑file onset/offset multi‑selects:</strong> Choose one or more onset columns for each file. Offsets are optional; if none are selected, analysis runs on onset times only. Each chosen onset column yields its own row(s) based on the selected epoch (whole session, divisions, first n bursts, between times, or trial‑based).</li>
+                        <li><strong>Automatic offset pairing:</strong> For each onset column, selected offsets are validated automatically (length difference ≤ 1, offset never before onset, and never after the next onset). Invalid pairs are skipped.</li>
+                        <li><strong>Global selections:</strong> Use the <em>Global selections</em> card at the top to pick onset/offset columns once, then click <em>Apply to all files</em>. Only columns that exist in a given file are applied; missing ones are ignored.</li>
+                        <li><strong>Trial‑based in batch:</strong> If the main epoch dropdown is set to <em>Trial-based</em>, the app auto‑detects trials using your minimum ITI and outputs one row per trial <em>for each onset column</em>. If no trials are detected, the whole session is treated as a single trial.</li>
+                        <li><strong>Per‑file Excel export:</strong> When enabled, each file also gets a session‑level Excel workbook (same structure as single‑file export) packaged into a ZIP. Per‑epoch/per‑onset sheets are planned for a future update.</li>
+                    </ul>
+                    <div class="tip-box" style="margin-top: 10px;">
+                        <strong>💡 Tips:</strong> Keep column names consistent across files to make global apply most effective. If offsets differ slightly (e.g., one extra terminal lick), the app trims arrays to align automatically. You can mix supported file types; just set the correct <em>File type</em> before starting batch.
+                    </div>
+                    <div class="warning-box" style="margin-top: 10px;">
+                        <strong>⚠️ Troubleshooting:</strong> If you see fewer rows than expected, confirm the selected onset columns contain data and that any chosen offsets pass validation. Trial‑based rows appear only when <code>Trial-based</code> is selected before launching the batch process.
+                    </div>
                 </div>
             </div>
         </section>
