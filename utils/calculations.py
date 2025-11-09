@@ -6,9 +6,155 @@ Functions for burst analysis, segment statistics, and lick data processing.
 import numpy as np
 import logging
 
-from trompy import lickcalc
+try:
+    from trompy import lickcalc  # type: ignore[import]
+except Exception:
+    # Provide a clear error at runtime if trompy isn't installed, while avoiding import-time editor errors
+    def lickcalc(*args, **kwargs):  # type: ignore
+        raise ImportError("The 'trompy' package is required for lick calculations. Please install it (see requirements.txt).")
 from config_manager import config
 from .validation import validate_onset_offset_pairs
+
+
+def detect_trials(lick_times, min_iti):
+    """
+    Detect trials based on inter-lick intervals.
+    
+    Trials are detected by identifying gaps between licks that are >= min_iti.
+    Each trial consists of licks from after one large gap to before the next large gap.
+    
+    Parameters:
+        lick_times (list or np.array): Lick onset times in seconds
+        min_iti (float): Minimum inter-trial interval in seconds
+        
+    Returns:
+        dict: Dictionary containing:
+            - 'n_trials': Number of trials detected
+            - 'trial_boundaries': List of tuples (start_idx, end_idx) for each trial
+            - 'trial_start_times': List of start times for each trial
+            - 'trial_end_times': List of end times for each trial
+    """
+    if lick_times is None or len(lick_times) == 0:
+        return {
+            'n_trials': 0,
+            'trial_boundaries': [],
+            'trial_start_times': [],
+            'trial_end_times': []
+        }
+    
+    lick_times = np.array(lick_times)
+    
+    # Calculate inter-lick intervals
+    ilis = np.diff(lick_times)
+    
+    # Find gaps >= min_iti (these are trial boundaries)
+    trial_boundaries_idx = np.where(ilis >= min_iti)[0]
+    
+    # Build trial segments
+    trial_boundaries = []
+    trial_start_times = []
+    trial_end_times = []
+    
+    if len(trial_boundaries_idx) == 0:
+        # No large gaps found - entire session is one trial
+        trial_boundaries.append((0, len(lick_times)))
+        trial_start_times.append(float(lick_times[0]))
+        trial_end_times.append(float(lick_times[-1]))
+    else:
+        # First trial: from start to first boundary
+        start_idx = 0
+        for boundary_idx in trial_boundaries_idx:
+            end_idx = boundary_idx + 1  # Include the lick before the gap
+            trial_boundaries.append((start_idx, end_idx))
+            trial_start_times.append(float(lick_times[start_idx]))
+            trial_end_times.append(float(lick_times[end_idx - 1]))
+            start_idx = end_idx  # Start of next trial is after the gap
+        
+        # Last trial: from last boundary to end
+        if start_idx < len(lick_times):
+            trial_boundaries.append((start_idx, len(lick_times)))
+            trial_start_times.append(float(lick_times[start_idx]))
+            trial_end_times.append(float(lick_times[-1]))
+    
+    return {
+        'n_trials': len(trial_boundaries),
+        'trial_boundaries': trial_boundaries,
+        'trial_start_times': trial_start_times,
+        'trial_end_times': trial_end_times
+    }
+
+
+def analyze_trial(lick_times, lick_offsets, trial_idx, start_idx, end_idx, 
+                  ibi, minlicks, longlick_th, remove_long=False, crop_last_burst=False):
+    """
+    Analyze a single trial.
+    
+    Parameters:
+        lick_times (list): All lick onset times
+        lick_offsets (list): All lick offset times (can be None)
+        trial_idx (int): Trial number (for identification)
+        start_idx (int): Starting index in lick_times for this trial
+        end_idx (int): Ending index in lick_times for this trial
+        ibi (float): Inter-burst interval threshold
+        minlicks (int): Minimum licks per burst
+        longlick_th (float): Long lick threshold
+        remove_long (bool): Whether to remove long licks
+        crop_last_burst (bool): Whether to exclude the last burst from analysis
+        
+    Returns:
+        dict: Trial statistics
+    """
+    # Extract trial licks
+    trial_licks = lick_times[start_idx:end_idx]
+    trial_offsets = (
+        lick_offsets[start_idx:end_idx]
+        if (lick_offsets is not None and len(lick_offsets) > 0)
+        else None
+    )
+    
+    if trial_licks is None or len(trial_licks) == 0:
+        return {
+            'trial_number': trial_idx + 1,
+            'start_time': np.nan,
+            'end_time': np.nan,
+            'duration': 0,
+            'total_licks': 0,
+            'intraburst_freq': np.nan,
+            'n_bursts': 0,
+            'mean_licks_per_burst': np.nan,
+            'weibull_alpha': np.nan,
+            'weibull_beta': np.nan,
+            'weibull_rsq': np.nan,
+            'n_long_licks': np.nan,
+            'max_lick_duration': np.nan
+        }
+    
+    # If crop_last_burst is enabled, identify and remove the last burst
+    if crop_last_burst:
+        # First, calculate bursts to identify them
+        burst_data = lickcalc(trial_licks, burstThreshold=ibi, minburstlength=minlicks, remove_longlicks=remove_long)
+        
+        if burst_data['bNum'] > 1:  # Only crop if there's more than 1 burst
+            burst_ends = burst_data.get('bEnd', [])
+            if burst_ends is not None and len(burst_ends) > 0:
+                # Find the end time of the second-to-last burst
+                last_burst_start_time = float(burst_ends[-2]) if len(burst_ends) > 1 else float(burst_ends[0])
+                
+                # Keep only licks up to and including the second-to-last burst
+                trial_licks = [t for t in trial_licks if t <= last_burst_start_time]
+                if trial_offsets is not None:
+                    trial_offsets = trial_offsets[:len(trial_licks)]
+    
+    # Calculate statistics for the trial
+    stats = calculate_segment_stats(trial_licks, trial_offsets, ibi, minlicks, longlick_th, remove_long)
+    
+    # Add trial-specific information
+    stats['trial_number'] = trial_idx + 1
+    stats['start_time'] = float(trial_licks[0]) if len(trial_licks) > 0 else np.nan
+    stats['end_time'] = float(trial_licks[-1]) if len(trial_licks) > 0 else np.nan
+    stats['duration'] = float(trial_licks[-1] - trial_licks[0]) if len(trial_licks) > 1 else 0
+    
+    return stats
 
 
 def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longlick_th, remove_long=False):
@@ -26,7 +172,7 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
     Returns:
         dict: Statistics including total licks, burst metrics, Weibull parameters, and lick durations
     """
-    if not segment_licks:
+    if segment_licks is None or len(segment_licks) == 0:
         return {
             'total_licks': 0,
             'intraburst_freq': np.nan,
@@ -59,7 +205,7 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
     }
     
     # Calculate long lick statistics if offset data available
-    if segment_offsets:
+    if segment_offsets is not None and len(segment_offsets) > 0:
         # Validate onset/offset pairs for this segment
         validation = validate_onset_offset_pairs(segment_licks, segment_offsets)
         
@@ -102,7 +248,7 @@ def get_licks_for_burst_range(lick_times, start_burst, end_burst, ibi, minlicks,
     Returns:
         list: Lick times that fall within the specified burst range
     """
-    if not lick_times or start_burst >= end_burst:
+    if lick_times is None or len(lick_times) == 0 or start_burst >= end_burst:
         return []
     
     # Calculate bursts for the whole session first
@@ -138,7 +284,7 @@ def get_licks_for_burst_range(lick_times, start_burst, end_burst, ibi, minlicks,
     burst_start_times = burst_lickdata.get('bStart', [])
     burst_end_times = burst_lickdata.get('bEnd', [])
     
-    if not burst_start_times or not burst_end_times:
+    if (burst_start_times is None or len(burst_start_times) == 0) or (burst_end_times is None or len(burst_end_times) == 0):
         # Fallback to proportional time-based approach
         start_proportion = start_burst / total_bursts
         end_proportion = end_burst / total_bursts
@@ -174,7 +320,7 @@ def get_offsets_for_licks(original_licks, original_offsets, segment_licks):
     Returns:
         list or None: Corresponding offset times for the segment licks, or None if not available
     """
-    if not original_offsets or not segment_licks:
+    if original_offsets is None or len(original_offsets) == 0 or segment_licks is None or len(segment_licks) == 0:
         return None
     
     # Find indices of segment licks in original lick list

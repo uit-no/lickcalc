@@ -3,7 +3,8 @@ Data loading and validation callbacks for lickcalc webapp.
 """
 
 import io
-import dash
+import os
+import tempfile
 from dash import html, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
@@ -13,7 +14,7 @@ import pandas as pd
 import logging
 
 from app_instance import app
-from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfile, parse_med_arraystyle, parse_csvfile, parse_ddfile, parse_kmfile, parse_ohrbets
+from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfile, parse_med_arraystyle, parse_csvfile, parse_ddfile, parse_kmfile, parse_ohrbets, parse_lsfile
 
 # Callback to show/hide dropdowns based on analysis epoch selection
 @app.callback(
@@ -22,10 +23,15 @@ from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfi
     Output('between-start-col', 'style'),
     Output('between-stop-col', 'style'),
     Output('between-unit-col', 'style'),
+    Output('trial-detection-col', 'style'),
+    Output('trials-detected-col', 'style'),
+    Output('trial-min-iti-col', 'style'),
+    Output('trial-exclude-col', 'style'),
+    Output('trial-load-col', 'style'),
     Input('division-number', 'value')
 )
 def toggle_dropdown_visibility(division_number):
-    """Show division method dropdown only for 'divide by n' options, n-bursts dropdown only for 'first n bursts', and between-times inputs only for 'between'."""
+    """Show division method dropdown only for 'divide by n' options, n-bursts dropdown only for 'first n bursts', between-times inputs only for 'between', and trial controls only for 'trial_based'."""
     # Show division method dropdown for numeric division values (2, 3, 4)
     if isinstance(division_number, int) and division_number > 1:
         division_method_style = {'display': 'block'}
@@ -48,7 +54,23 @@ def toggle_dropdown_visibility(division_number):
         between_stop_style = {'display': 'none'}
         between_unit_style = {'display': 'none'}
     
-    return division_method_style, n_bursts_style, between_start_style, between_stop_style, between_unit_style
+    # Show trial-based controls only for 'trial_based' analysis
+    if division_number == 'trial_based':
+        trial_detection_style = {'display': 'block'}
+        trials_detected_style = {'display': 'block'}
+        trial_min_iti_style = {'display': 'block'}
+        trial_exclude_style = {'display': 'block'}
+        trial_load_style = {'display': 'block'}
+    else:
+        trial_detection_style = {'display': 'none'}
+        trials_detected_style = {'display': 'none'}
+        trial_min_iti_style = {'display': 'none'}
+        trial_exclude_style = {'display': 'none'}
+        trial_load_style = {'display': 'none'}
+    
+    return (division_method_style, n_bursts_style, between_start_style, between_stop_style, 
+            between_unit_style, trial_detection_style, trials_detected_style, trial_min_iti_style, 
+            trial_exclude_style, trial_load_style)
 
 # Callback to control visibility of longlick controls based on offset data availability
 @app.callback(Output('longlick-controls-column', 'style'),
@@ -87,18 +109,31 @@ def load_and_clean_data(list_of_contents, input_file_type, list_of_names, list_o
             f = io.StringIO(decoded.decode('utf-8'))
             
             # Try to parse the file based on selected type
+            # Parse based on selected type (ordered to mirror dropdown: med, med_array, csv, ohrbets, dd, km, ls)
             if input_file_type == 'med':
                 data_array = parse_medfile(f)
             elif input_file_type == 'med_array':
                 data_array = parse_med_arraystyle(f)
             elif input_file_type == 'csv':
                 data_array = parse_csvfile(f)
+            elif input_file_type == 'ohrbets':
+                data_array = parse_ohrbets(f)
             elif input_file_type == 'dd':
                 data_array = parse_ddfile(f)
             elif input_file_type == 'km':
                 data_array = parse_kmfile(f)
-            elif input_file_type == 'ohrbets':
-                data_array = parse_ohrbets(f)
+            elif input_file_type == 'ls':
+                # LS parser expects a file path; write contents to a temporary file
+                tmp = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.csv')
+                try:
+                    tmp.write(decoded)
+                    tmp.close()
+                    data_array = parse_lsfile(tmp.name)
+                finally:
+                    try:
+                        os.remove(tmp.name)
+                    except Exception:
+                        pass
             else:
                 raise ValueError(f"Unknown file type: {input_file_type}")
             
@@ -330,6 +365,65 @@ def get_lick_data(jsonified_dict, df_key):
         session_duration = 3600  # Default to 1 hour if no data
 
     return jsonified_df, session_duration
+
+# Callback to update trials detected display
+@app.callback(
+    Output('trials-detected-display', 'children'),
+    Input('division-number', 'value'),
+    Input('lick-data', 'data'),
+    Input('trial-detection-method', 'value'),
+    Input('trial-min-iti', 'value')
+)
+def update_trials_detected(division_number, lick_data, detection_method, min_iti):
+    """Update the trials detected display when in trial-based mode."""
+    from utils.calculations import detect_trials
+    
+    # Only update if trial-based is selected
+    if division_number != 'trial_based':
+        return 'No trials detected'
+    
+    # If using manual loading, instruct the user
+    if detection_method and detection_method != 'auto':
+        return 'Awaiting loaded trials'
+    
+    # Check if we have data
+    if not lick_data:
+        return 'Load data file'
+    
+    # Check if min_iti is valid
+    if not min_iti or min_iti <= 0:
+        return 'Set ITI > 0'
+    
+    try:
+        # Parse lick data - handle different formats
+        if isinstance(lick_data, str):
+            # If it's a JSON string, parse it
+            lick_df = pd.read_json(io.StringIO(lick_data), orient='split')
+            lick_times = lick_df["licks"].to_list()
+        elif isinstance(lick_data, list):
+            # If it's already a list, use it directly
+            lick_times = lick_data
+        else:
+            logging.error(f"Unexpected lick_data type: {type(lick_data)}")
+            return 'Invalid data format'
+        
+        if not lick_times or len(lick_times) == 0:
+            return 'No licks in data'
+        
+    # Detect trials
+        trial_info = detect_trials(lick_times, min_iti)
+        n_trials = trial_info['n_trials']
+        
+        if n_trials == 0:
+            return 'No trials detected'
+        elif n_trials == 1:
+            return '1 trial detected'
+        else:
+            return f'{n_trials} trials detected'
+            
+    except Exception as e:
+        logging.error(f"Error detecting trials: {e}", exc_info=True)
+        return f'Error: {str(e)[:30]}...'
 
 # Flask route for help documentation
 @app.server.route('/help')

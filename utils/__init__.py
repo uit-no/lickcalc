@@ -15,7 +15,8 @@ from .file_parsers import (
     parse_csvfile,
     parse_ddfile,
     parse_kmfile,
-    parse_ohrbets
+    parse_ohrbets,
+    parse_lsfile
 )
 
 __all__ = [
@@ -29,5 +30,6 @@ __all__ = [
     'parse_csvfile',
     'parse_ddfile',
     'parse_kmfile',
-    'parse_ohrbets'
+    'parse_ohrbets',
+    'parse_lsfile'
 ]

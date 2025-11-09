@@ -13,7 +13,8 @@ app_config = config.get_app_config()
 app = dash.Dash(
     __name__, 
     title=app_config['title'], 
-    prevent_initial_callbacks=True
+    prevent_initial_callbacks=True,
+    suppress_callback_exceptions=True
 )
 
 # Server for deployment

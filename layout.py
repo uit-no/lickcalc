@@ -176,12 +176,13 @@ dcc.Store(id='lick-data'),
             dbc.Col([
                 dcc.Dropdown(id='input-file-type',
                               options=[
-                                  {'label': 'Med (column-based)', 'value': 'med'},
-                                  {'label': 'Med (array-based)', 'value': 'med_array'},
+                                  {'label': 'Med (column)', 'value': 'med'},
+                                  {'label': 'Med (array)', 'value': 'med_array'},
                                   {'label': 'CSV/TXT', 'value': 'csv'},
+                                  {'label': 'OHRBETS', 'value': 'ohrbets'},
                                   {'label': 'DD Lab', 'value': 'dd'},
                                   {'label': 'KM Lab', 'value': 'km'},
-                                  {'label': 'OHRBETS', 'value': 'ohrbets'},],
+                                  {'label': 'LS Lab', 'value': 'ls'},],
                               value=config.get('files.default_file_type', 'med')),
             ], width=2),
             dbc.Col([
@@ -538,7 +539,8 @@ dcc.Store(id='lick-data'),
                         {'label': 'Divide by 3', 'value': 3},
                         {'label': 'Divide by 4', 'value': 4},
                         {'label': 'First n bursts', 'value': 'first_n_bursts'},
-                        {'label': 'Between times', 'value': 'between'}
+                        {'label': 'Between times', 'value': 'between'},
+                        {'label': 'Trial-based', 'value': 'trial_based'}
                     ],
                     value='whole_session',
                     style={'margin-top': '5px'}
@@ -601,6 +603,88 @@ dcc.Store(id='lick-data'),
                     style={'margin-top': '5px'}
                 )
             ], width=1, id='between-unit-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("Trial Detection:", style={'font-weight': 'bold'}),
+                dcc.Dropdown(
+                    id='trial-detection-method',
+                    options=[
+                        {'label': 'Auto-detect', 'value': 'auto'},
+                        {'label': 'Load trial times', 'value': 'load'}
+                    ],
+                    value='auto',
+                    style={'margin-top': '5px'}
+                )
+            ], width=2, id='trial-detection-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("Trials Detected:", style={'font-weight': 'bold'}),
+                html.Div(
+                    id='trials-detected-display',
+                    children='No trials detected',
+                    style={
+                        'margin-top': '5px',
+                        'padding': '6px 12px',
+                        'background-color': '#f8f9fa',
+                        'border': '1px solid #dee2e6',
+                        'border-radius': '4px',
+                        'text-align': 'center',
+                        'font-size': '14px',
+                        'color': '#6c757d',
+                        'min-height': '38px',
+                        'display': 'flex',
+                        'align-items': 'center',
+                        'justify-content': 'center'
+                    }
+                )
+            ], width=2, id='trials-detected-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Div([
+                    html.Label("ITI (s)", style={'font-weight': 'bold', 'display': 'inline-block'}),
+                    html.Span(" ⓘ", id="trial-iti-help", 
+                             style={"color": "#007bff", "cursor": "help", "margin-left": "5px"}),
+                    dbc.Tooltip(
+                        "This should be the minimum ITI expected in the data.",
+                        target="trial-iti-help",
+                        placement="top"
+                    )
+                ]),
+                dbc.Input(
+                    id='trial-min-iti',
+                    type='number',
+                    value=60,
+                    min=0,
+                    step=1,
+                    style={'margin-top': '5px'}
+                )
+            ], width=2, id='trial-min-iti-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Div([
+                    html.Label("Crop trials", style={'font-weight': 'bold', 'display': 'inline-block'}),
+                    html.Span(" ⓘ", id="crop-trials-help", 
+                             style={"color": "#007bff", "cursor": "help", "margin-left": "5px"}),
+                    dbc.Tooltip(
+                        "Excludes the last burst from each trial if there is more than 1 burst.",
+                        target="crop-trials-help",
+                        placement="top"
+                    )
+                ]),
+                dbc.Checklist(
+                    id='trial-exclude-last-burst',
+                    options=[{'label': '', 'value': 'exclude'}],
+                    value=[],
+                    inline=True,
+                    style={'margin-top': '5px'}
+                )
+            ], width=2, id='trial-exclude-col', style={'display': 'none'}),
+            dbc.Col([
+                html.Label("\u00A0", style={'font-weight': 'bold'}),  # Non-breaking space for alignment
+                html.Button(
+                    'Load Trial Types',
+                    id='load-trial-types-btn',
+                    n_clicks=0,
+                    className='btn btn-secondary btn-sm',
+                    style={'margin-top': '5px', 'width': '100%'}
+                )
+            ], width=2, id='trial-load-col', style={'display': 'none'}),
         ], style={'margin-bottom': '20px'}),
         
         dbc.Row(children=[
@@ -689,6 +773,17 @@ dcc.Store(id='lick-data'),
                     switch=True,
                     style={'marginTop': '6px'}
                 ),
+                html.Hr(style={'marginTop': '10px', 'marginBottom': '10px'}),
+                html.Div([
+                    dbc.Checklist(
+                        id='batch-advanced-mode',
+                        options=[{'label': ' Advanced mode: select columns per file', 'value': 'advanced'}],
+                        value=[],
+                        switch=True
+                    ),
+                    html.Small("When enabled, choose multiple onset/offset columns for each file below.", style={'color': '#6c757d'})
+                ], style={'marginTop': '6px', 'marginBottom': '6px'}),
+                html.Div(id='batch-advanced-container', style={'marginTop': '8px'}),
                 dbc.Spinner(
                     children=html.Div(id='batch-status'),
                     size='sm',
@@ -712,6 +807,7 @@ dcc.Store(id='lick-data'),
                 columns=[
                     {'name': 'ID', 'id': 'id', 'type': 'text', 'editable': True},
                     {'name': 'Source File', 'id': 'source_filename', 'type': 'text', 'editable': False},
+                    {'name': 'Onset array', 'id': 'onset_array', 'type': 'text'},
                     {'name': 'Start Time (s)', 'id': 'start_time', 'type': 'numeric', 'format': {'specifier': '.1f'}},
                     {'name': 'End Time (s)', 'id': 'end_time', 'type': 'numeric', 'format': {'specifier': '.1f'}},
                     {'name': 'Duration (s)', 'id': 'duration', 'type': 'numeric', 'format': {'specifier': '.1f'}},
