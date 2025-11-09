@@ -140,18 +140,19 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
             f = io.StringIO(decoded.decode('utf-8', errors='ignore'))
 
             # Parse based on selected type
+            # Parse based on selected type (ordered to mirror dropdown: med, med_array, csv, ohrbets, dd, km)
             if input_file_type == 'med':
                 data_array = parse_medfile(f)
             elif input_file_type == 'med_array':
                 data_array = parse_med_arraystyle(f)
             elif input_file_type == 'csv':
                 data_array = parse_csvfile(f)
+            elif input_file_type == 'ohrbets':
+                data_array = parse_ohrbets(f)
             elif input_file_type == 'dd':
                 data_array = parse_ddfile(f)
             elif input_file_type == 'km':
                 data_array = parse_kmfile(f)
-            elif input_file_type == 'ohrbets':
-                data_array = parse_ohrbets(f)
             else:
                 raise ValueError(f"Unknown file type: {input_file_type}")
 

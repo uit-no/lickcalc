@@ -107,18 +107,19 @@ def load_and_clean_data(list_of_contents, input_file_type, list_of_names, list_o
             f = io.StringIO(decoded.decode('utf-8'))
             
             # Try to parse the file based on selected type
+            # Parse based on selected type (ordered to mirror dropdown: med, med_array, csv, ohrbets, dd, km)
             if input_file_type == 'med':
                 data_array = parse_medfile(f)
             elif input_file_type == 'med_array':
                 data_array = parse_med_arraystyle(f)
             elif input_file_type == 'csv':
                 data_array = parse_csvfile(f)
+            elif input_file_type == 'ohrbets':
+                data_array = parse_ohrbets(f)
             elif input_file_type == 'dd':
                 data_array = parse_ddfile(f)
             elif input_file_type == 'km':
                 data_array = parse_kmfile(f)
-            elif input_file_type == 'ohrbets':
-                data_array = parse_ohrbets(f)
             else:
                 raise ValueError(f"Unknown file type: {input_file_type}")
             

@@ -176,12 +176,12 @@ dcc.Store(id='lick-data'),
             dbc.Col([
                 dcc.Dropdown(id='input-file-type',
                               options=[
-                                  {'label': 'Med (column-based)', 'value': 'med'},
-                                  {'label': 'Med (array-based)', 'value': 'med_array'},
+                                  {'label': 'Med (column)', 'value': 'med'},
+                                  {'label': 'Med (array)', 'value': 'med_array'},
                                   {'label': 'CSV/TXT', 'value': 'csv'},
+                                  {'label': 'OHRBETS', 'value': 'ohrbets'},
                                   {'label': 'DD Lab', 'value': 'dd'},
-                                  {'label': 'KM Lab', 'value': 'km'},
-                                  {'label': 'OHRBETS', 'value': 'ohrbets'},],
+                                  {'label': 'KM Lab', 'value': 'km'},],
                               value=config.get('files.default_file_type', 'med')),
             ], width=2),
             dbc.Col([
