@@ -773,6 +773,17 @@ dcc.Store(id='lick-data'),
                     switch=True,
                     style={'marginTop': '6px'}
                 ),
+                html.Hr(style={'marginTop': '10px', 'marginBottom': '10px'}),
+                html.Div([
+                    dbc.Checklist(
+                        id='batch-advanced-mode',
+                        options=[{'label': ' Advanced mode: select columns per file', 'value': 'advanced'}],
+                        value=[],
+                        switch=True
+                    ),
+                    html.Small("When enabled, choose multiple onset/offset columns for each file below.", style={'color': '#6c757d'})
+                ], style={'marginTop': '6px', 'marginBottom': '6px'}),
+                html.Div(id='batch-advanced-container', style={'marginTop': '8px'}),
                 dbc.Spinner(
                     children=html.Div(id='batch-status'),
                     size='sm',
