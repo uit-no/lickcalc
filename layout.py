@@ -795,6 +795,7 @@ dcc.Store(id='lick-data'),
                 columns=[
                     {'name': 'ID', 'id': 'id', 'type': 'text', 'editable': True},
                     {'name': 'Source File', 'id': 'source_filename', 'type': 'text', 'editable': False},
+                    {'name': 'Onset array', 'id': 'onset_array', 'type': 'text'},
                     {'name': 'Start Time (s)', 'id': 'start_time', 'type': 'numeric', 'format': {'specifier': '.1f'}},
                     {'name': 'End Time (s)', 'id': 'end_time', 'type': 'numeric', 'format': {'specifier': '.1f'}},
                     {'name': 'Duration (s)', 'id': 'duration', 'type': 'numeric', 'format': {'specifier': '.1f'}},

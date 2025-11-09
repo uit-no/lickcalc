@@ -311,6 +311,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                             rows_for_file.append({
                                 'id': f"{name}_T{div['division_number']}",
                                 'source_filename': f"{name} (Time {div['division_number']}/{division_number}: {division_start:.0f}-{division_end:.0f}s)",
+                                'onset_array': onset_key,
                                 'start_time': division_start,
                                 'end_time': division_end,
                                 'duration': division_duration,
@@ -346,6 +347,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                             rows_for_file.append({
                                 'id': f"{name}_B{div['division_number']}",
                                 'source_filename': f"{name} (Bursts {div['start_burst']+1}-{div['end_burst']}, {bursts_in_segment} bursts)",
+                                'onset_array': onset_key,
                                 'start_time': div['start_time'],
                                 'end_time': div['end_time'],
                                 'duration': div['duration'],
@@ -369,6 +371,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                             rows_for_file.append({
                                 'id': f"{name}_B{i+1}",
                                 'source_filename': f"{name} (Bursts {i+1}/{division_number} - no bursts found)",
+                                'onset_array': onset_key,
                                 'start_time': 0,
                                 'end_time': 0,
                                 'duration': 0,
@@ -467,6 +470,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                 rows_for_file.append({
                     'id': name,
                     'source_filename': name,
+                    'onset_array': onset_key,
                     'start_time': start_time,
                     'end_time': end_time,
                     'duration': end_time - start_time,
@@ -871,6 +875,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 new_row = {
                     'id': animal_id or 'Unknown',
                     'source_filename': source_filename if source_filename else 'N/A',
+                    'onset_array': onset_key,
                     'start_time': start_time,
                     'end_time': end_time,
                     'duration': end_time - start_time,
@@ -922,6 +927,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 new_row = {
                     'id': animal_id or 'Unknown',
                     'source_filename': source_filename if source_filename else 'N/A',
+                    'onset_array': onset_key,
                     'start_time': start_time,
                     'end_time': end_time,
                     'duration': end_time - start_time,
@@ -1028,6 +1034,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 division_rows.append({
                     'id': f"{animal_id}_F{n_bursts_number}" if animal_id else f"F{n_bursts_number}",
                     'source_filename': f"{source_filename} (First {n_bursts_number} bursts)" if source_filename else f"First {n_bursts_number} bursts",
+                    'onset_array': onset_key,
                     'start_time': start_time,
                     'end_time': end_time,
                     'duration': duration,
@@ -1090,6 +1097,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     division_rows.append({
                         'id': f"{animal_id}_Trial{trial_stats['trial_number']}" if animal_id else f"Trial{trial_stats['trial_number']}",
                         'source_filename': f"{source_filename} (Trial {trial_stats['trial_number']}/{trial_info['n_trials']})" if source_filename else f"Trial {trial_stats['trial_number']}/{trial_info['n_trials']}",
+                        'onset_array': onset_key,
                         'start_time': trial_stats['start_time'],
                         'end_time': trial_stats['end_time'],
                         'duration': trial_stats['duration'],
@@ -1152,6 +1160,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                 division_rows.append({
                     'id': f"{animal_id}_BT" if animal_id else "BT",
                     'source_filename': f"{source_filename} (Between {start_time:.0f}-{stop_time:.0f}s)" if source_filename else f"Between {start_time:.0f}-{stop_time:.0f}s",
+                    'onset_array': onset_key,
                     'start_time': start_time,
                     'end_time': stop_time,
                     'duration': stop_time - start_time,
