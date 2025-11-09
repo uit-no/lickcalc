@@ -203,7 +203,8 @@ def parse_ohrbets(f):
             for row in reader:
                 if len(row) > 0:
                     row = row[0].split(" ")
-                    codes.append(int(row[0]))
+                    # Keep codes as strings for consistent handling; sort numerically later when possible
+                    codes.append(str(row[0]).strip())
                     ts.append(int(row[1]) / 1000)
     else:
         f.seek(0)
@@ -211,14 +212,22 @@ def parse_ohrbets(f):
         for row in reader:
             if len(row) > 0:
                 row = row[0].split(" ")
-                codes.append(row[0])
+                codes.append(str(row[0]).strip())
                 ts.append(int(row[1]) / 1000)
 
     df = pd.DataFrame({"code": codes, "ts": ts})
 
+    # Define a sort key that prefers numeric codes ordered by integer value,
+    # with non-numeric codes sorted lexicographically after numeric ones.
+    def _code_sort_key(k):
+        s = str(k)
+        return (0, int(s)) if s.isdigit() else (1, s)
+
+    sorted_codes = sorted(df.code.unique().tolist(), key=_code_sort_key)
+
     code_dict = {}
-    for code in df.code.unique():
-        code_dict[code] = df.query("code == @code").ts.values
+    for code in sorted_codes:
+        code_dict[code] = df.loc[df["code"] == code, "ts"].values
 
     data_array = vars2dict(code_dict)
 
