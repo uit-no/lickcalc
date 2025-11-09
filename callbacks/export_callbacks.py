@@ -9,6 +9,8 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 import numpy as np
 import io
+import os
+import tempfile
 import zipfile
 import logging
 from datetime import datetime
@@ -27,6 +29,7 @@ from utils.file_parsers import (
     parse_ddfile,
     parse_kmfile,
     parse_ohrbets,
+    parse_lsfile,
 )
 from utils import validate_onset_offset_pairs
 import base64
@@ -140,7 +143,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
             f = io.StringIO(decoded.decode('utf-8', errors='ignore'))
 
             # Parse based on selected type
-            # Parse based on selected type (ordered to mirror dropdown: med, med_array, csv, ohrbets, dd, km)
+            # Parse based on selected type (ordered to mirror dropdown: med, med_array, csv, ohrbets, dd, km, ls)
             if input_file_type == 'med':
                 data_array = parse_medfile(f)
             elif input_file_type == 'med_array':
@@ -153,6 +156,18 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                 data_array = parse_ddfile(f)
             elif input_file_type == 'km':
                 data_array = parse_kmfile(f)
+            elif input_file_type == 'ls':
+                # LS parser expects a file path; write contents to a temporary file
+                tmp = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.csv')
+                try:
+                    tmp.write(decoded)
+                    tmp.close()
+                    data_array = parse_lsfile(tmp.name)
+                finally:
+                    try:
+                        os.remove(tmp.name)
+                    except Exception:
+                        pass
             else:
                 raise ValueError(f"Unknown file type: {input_file_type}")
 

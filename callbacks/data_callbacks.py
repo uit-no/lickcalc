@@ -3,6 +3,8 @@ Data loading and validation callbacks for lickcalc webapp.
 """
 
 import io
+import os
+import tempfile
 from dash import html, Input, Output, State
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
@@ -12,7 +14,7 @@ import pandas as pd
 import logging
 
 from app_instance import app
-from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfile, parse_med_arraystyle, parse_csvfile, parse_ddfile, parse_kmfile, parse_ohrbets
+from utils import validate_onset_times, validate_onset_offset_pairs, parse_medfile, parse_med_arraystyle, parse_csvfile, parse_ddfile, parse_kmfile, parse_ohrbets, parse_lsfile
 
 # Callback to show/hide dropdowns based on analysis epoch selection
 @app.callback(
@@ -107,7 +109,7 @@ def load_and_clean_data(list_of_contents, input_file_type, list_of_names, list_o
             f = io.StringIO(decoded.decode('utf-8'))
             
             # Try to parse the file based on selected type
-            # Parse based on selected type (ordered to mirror dropdown: med, med_array, csv, ohrbets, dd, km)
+            # Parse based on selected type (ordered to mirror dropdown: med, med_array, csv, ohrbets, dd, km, ls)
             if input_file_type == 'med':
                 data_array = parse_medfile(f)
             elif input_file_type == 'med_array':
@@ -120,6 +122,18 @@ def load_and_clean_data(list_of_contents, input_file_type, list_of_names, list_o
                 data_array = parse_ddfile(f)
             elif input_file_type == 'km':
                 data_array = parse_kmfile(f)
+            elif input_file_type == 'ls':
+                # LS parser expects a file path; write contents to a temporary file
+                tmp = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.csv')
+                try:
+                    tmp.write(decoded)
+                    tmp.close()
+                    data_array = parse_lsfile(tmp.name)
+                finally:
+                    try:
+                        os.remove(tmp.name)
+                    except Exception:
+                        pass
             else:
                 raise ValueError(f"Unknown file type: {input_file_type}")
             

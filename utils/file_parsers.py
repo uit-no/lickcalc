@@ -224,6 +224,32 @@ def parse_ohrbets(f):
 
     return data_array
 
+def get_ilis_from_file(filepath):
+
+    return (
+        pd
+        .read_csv(filepath, skiprows=11, header=None)
+        .astype(np.int32)
+        .iloc[0,:]
+        .T
+        .reset_index(drop=True)
+        .values
+    )
+
+def parse_lsfile(filepath):
+    df = get_ilis_from_file(filepath)
+    solution = pd.read_csv(filepath, skiprows=9, nrows=1)["SOLUTION"].values[0].strip()
+    latency = pd.read_csv(filepath, skiprows=9, nrows=1)[" Latency"].values[0]
+
+    all_ilis = np.array([latency] + df.tolist())
+    licks = np.cumsum(all_ilis)
+    licks_in_seconds = licks / 1000
+
+    data_array = {}
+    data_array[solution] = licks_in_seconds
+
+    return vars2dict(data_array)
+
 def vars2dict(loaded_vars):
          
     data_array = {}
