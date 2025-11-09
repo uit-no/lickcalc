@@ -104,6 +104,7 @@ def render_batch_advanced_controls(adv_value, contents_list, filenames, input_fi
             filenames = [filenames]
 
         controls = []
+        union_columns = set()
         for contents, name in zip(contents_list, filenames):
             # Decode and parse quickly to get column names
             content_type, content_string = contents.split(',')
@@ -150,6 +151,7 @@ def render_batch_advanced_controls(adv_value, contents_list, filenames, input_fi
                 columns = list(data_array.keys())
             else:
                 columns = []
+            union_columns.update(columns)
 
             onset_dropdown = dcc.Dropdown(
                 id={'type': 'batch-onset-multi', 'file': name},
@@ -177,9 +179,71 @@ def render_batch_advanced_controls(adv_value, contents_list, filenames, input_fi
                 ], style={'marginBottom': '8px'})
             )
 
-        return controls
+        # Prepend global controls for quick apply-to-all
+        global_controls = dbc.Card([
+            dbc.CardHeader(html.Strong("Global selections")),
+            dbc.CardBody([
+                html.P("Pick columns once and apply to all files. Values not present in a file are ignored.", style={'color': '#6c757d'}),
+                dbc.Row([
+                    dbc.Col([
+                        html.Label('Global onset columns'),
+                        dcc.Dropdown(
+                            id='batch-global-onset',
+                            options=[{'label': c, 'value': c} for c in sorted(union_columns)],
+                            value=[],
+                            multi=True,
+                            placeholder='Select onset column(s)'
+                        )
+                    ], width=6),
+                    dbc.Col([
+                        html.Label('Global offset columns (optional)'),
+                        dcc.Dropdown(
+                            id='batch-global-offset',
+                            options=[{'label': c, 'value': c} for c in sorted(union_columns)],
+                            value=[],
+                            multi=True,
+                            placeholder='Select offset column(s)'
+                        )
+                    ], width=6),
+                ], className='g-2'),
+                html.Div([
+                    dbc.Button("Apply to all files", id='batch-apply-global', color='secondary', size='sm', className='mt-2')
+                ])
+            ])
+        ], style={'marginBottom': '10px'})
+
+        return [global_controls] + controls
     except Exception:
         return []
+
+# Apply global selections to all per-file dropdowns
+@app.callback(
+    Output({'type': 'batch-onset-multi', 'file': ALL}, 'value'),
+    Output({'type': 'batch-offset-multi', 'file': ALL}, 'value'),
+    Input('batch-apply-global', 'n_clicks'),
+    State('batch-global-onset', 'value'),
+    State('batch-global-offset', 'value'),
+    State({'type': 'batch-onset-multi', 'file': ALL}, 'options'),
+    State({'type': 'batch-offset-multi', 'file': ALL}, 'options'),
+    prevent_initial_call=True
+)
+def apply_global_to_all(n_clicks, global_onsets, global_offsets, onset_options_list, offset_options_list):
+    if not n_clicks:
+        raise PreventUpdate
+    # Helper to filter selected values by available options for each file
+    def _filter_values(selected, options):
+        if not options:
+            return []
+        allowed = set([opt.get('value') for opt in options if isinstance(opt, dict) and 'value' in opt])
+        return [v for v in (selected or []) if v in allowed]
+
+    onset_values = [
+        _filter_values(global_onsets, opts) for opts in (onset_options_list or [])
+    ]
+    offset_values = [
+        _filter_values(global_offsets, opts) for opts in (offset_options_list or [])
+    ]
+    return onset_values, offset_values
 
 # Process uploaded files using current settings and append rows
 @app.callback(
@@ -204,6 +268,10 @@ def render_batch_advanced_controls(adv_value, contents_list, filenames, input_fi
     State('session-length-seconds', 'data'),
     State('between-start-seconds', 'data'),
     State('between-stop-seconds', 'data'),
+    # Trial-based states
+    State('trial-detection-method', 'value'),
+    State('trial-min-iti', 'value'),
+    State('trial-exclude-last-burst', 'value'),
     # Export preferences to mirror single-file export
     State('export-data-checklist', 'value'),
     State('animal-id-input', 'value'),
@@ -220,6 +288,7 @@ def render_batch_advanced_controls(adv_value, contents_list, filenames, input_fi
 def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, minlicks, longlick_th, remove_long_vals, input_file_type, existing_data,
                         division_number=None, division_method='time', n_bursts_number=3, session_length_seconds=None,
                         between_start=None, between_stop=None,
+                        trial_detection_method=None, trial_min_iti=None, trial_crop_last_burst=None,
                         selected_export=None, animal_id_base=None, bin_size_seconds=None, include_all_vals=None,
                         adv_mode=None, onset_values_list=None, onset_ids=None, offset_values_list=None, offset_ids=None):
     if not n_clicks:
