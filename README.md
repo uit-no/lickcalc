@@ -2,7 +2,7 @@
 
 # lickcalc
 
-A simple app for performing analysis of lick microstructure in experiments of rodent ingestive behaviour. The webapp is hosted for use at [lickcalc.uit.no](https://lickcalc.uit.no).
+A simple app for performing analysis of lick microstructure in experiments of rodent ingestive behaviour. The webapp is hosted for use by UiT The Arctic University of Norway at [lickcalc.uit.no](https://lickcalc.uit.no).
 
 Earlier versions of this application can be found [here](https://github.com/jaimemcc/lickcalc_webapp) and [here](https://github.com/mccutcheonlab/Lick-Calc-GUI).
 
@@ -47,8 +47,9 @@ mamba env create -f environment.yml
 mamba activate lickcalc
 python app.py
 ```
+The app will then be available by opening a browser and typing `localhost:8050` in the address bar.
 
-## System Requirements
+## System Requirements (for local install)
 
 - Python 3.8 or newer
 - Windows, macOS, or Linux
