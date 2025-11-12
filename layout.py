@@ -795,6 +795,7 @@ dcc.Store(id='lick-data'),
                 )
             ]),
             dbc.ModalFooter([
+                dbc.Button("Clear All", id="batch-clear-btn", color="warning", className="me-2"),
                 dbc.Button("Start Processing", id="batch-start-btn", color="primary", className="me-2"),
                 dbc.Button("Close", id="batch-close-btn", color="secondary")
             ]),

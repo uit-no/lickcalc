@@ -71,6 +71,21 @@ def toggle_batch_modal(open_clicks, close_clicks, is_open):
         raise PreventUpdate
     return not is_open
 
+# Clear batch modal data
+@app.callback(
+    Output('batch-upload', 'contents'),
+    Output('batch-upload', 'filename'),
+    Output('batch-export-excel', 'value'),
+    Output('batch-include-all-sheets', 'value'),
+    Output('batch-advanced-mode', 'value'),
+    Output('batch-status', 'children'),
+    Input('batch-clear-btn', 'n_clicks'),
+    prevent_initial_call=True
+)
+def clear_batch_modal(n_clicks):
+    """Reset all batch modal fields to their default values."""
+    return None, None, [], ['all'], [], ""
+
 # Show uploaded file list in modal
 @app.callback(
     Output('batch-file-list', 'children'),
