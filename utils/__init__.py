@@ -2,6 +2,7 @@
 
 from .calculations import (
     calculate_segment_stats,
+    calculate_mean_interburst_time,
     get_licks_for_burst_range,
     get_offsets_for_licks
 )
@@ -21,6 +22,7 @@ from .file_parsers import (
 
 __all__ = [
     'calculate_segment_stats',
+    'calculate_mean_interburst_time',
     'get_licks_for_burst_range',
     'get_offsets_for_licks',
     'validate_onset_times',

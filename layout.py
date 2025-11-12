@@ -499,9 +499,10 @@ dcc.Store(id='lick-data'),
                         {'label': 'Lick Lengths Data', 'value': 'lick_lengths'},
                         {'label': 'Burst Histogram Data', 'value': 'burst_hist'},
                         {'label': 'Burst Probability Data', 'value': 'burst_prob'},
-                        {'label': 'Burst Details Data', 'value': 'burst_details'}
+                        {'label': 'Burst Details Data', 'value': 'burst_details'},
+                        {'label': 'Interburst Interval Data', 'value': 'interburst_intervals'}
                     ],
-                    value=['session_hist', 'intraburst_freq'],  # Default selections
+                    value=['session_hist', 'intraburst_freq', 'lick_lengths', 'burst_hist', 'burst_prob', 'burst_details', 'interburst_intervals'],  # All selected by default
                     inline=False,
                     style={'margin-top': '5px'}
                 )
@@ -818,6 +819,7 @@ dcc.Store(id='lick-data'),
                     {'name': 'Intraburst Freq (Hz)', 'id': 'intraburst_freq', 'type': 'numeric', 'format': {'specifier': '.3f'}},
                     {'name': 'N Bursts', 'id': 'n_bursts', 'type': 'numeric', 'format': {'specifier': '.0f'}},
                     {'name': 'Mean Licks/Burst', 'id': 'mean_licks_per_burst', 'type': 'numeric', 'format': {'specifier': '.2f'}},
+                    {'name': 'Mean Interburst Interval (s)', 'id': 'mean_interburst_time', 'type': 'numeric', 'format': {'specifier': '.3f'}},
                     {'name': 'Weibull Alpha', 'id': 'weibull_alpha', 'type': 'numeric', 'format': {'specifier': '.3f'}},
                     {'name': 'Weibull Beta', 'id': 'weibull_beta', 'type': 'numeric', 'format': {'specifier': '.3f'}},
                     {'name': 'Weibull R²', 'id': 'weibull_rsq', 'type': 'numeric', 'format': {'specifier': '.3f'}},

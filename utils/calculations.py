@@ -16,6 +16,34 @@ from config_manager import config
 from .validation import validate_onset_offset_pairs
 
 
+def calculate_mean_interburst_time(burst_starts, burst_ends):
+    """
+    Calculate mean interburst interval from burst start and end times.
+    
+    Interburst interval is defined as the time from the end of one burst 
+    to the start of the next burst.
+    
+    Parameters:
+        burst_starts (list or np.array): Start times of each burst
+        burst_ends (list or np.array): End times of each burst
+        
+    Returns:
+        float or None: Mean interburst interval in seconds, or None if < 2 bursts
+    """
+    if burst_starts is None or burst_ends is None:
+        return None
+    if len(burst_starts) < 2 or len(burst_ends) < 2:
+        return None
+    
+    # Calculate interburst intervals
+    ibis = []
+    for i in range(len(burst_ends) - 1):
+        ibi = burst_starts[i + 1] - burst_ends[i]
+        ibis.append(ibi)
+    
+    return np.mean(ibis) if len(ibis) > 0 else None
+
+
 def detect_trials(lick_times, min_iti):
     """
     Detect trials based on inter-lick intervals.
@@ -178,6 +206,7 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
             'intraburst_freq': np.nan,
             'n_bursts': 0,
             'mean_licks_per_burst': np.nan,
+            'mean_interburst_time': np.nan,
             'weibull_alpha': np.nan,
             'weibull_beta': np.nan,
             'weibull_rsq': np.nan,
@@ -192,11 +221,16 @@ def calculate_segment_stats(segment_licks, segment_offsets, ibi, minlicks, longl
     min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
     num_bursts = burst_lickdata['bNum']
     
+    # Get mean interburst time from lickcalc IBIs output
+    ibis = burst_lickdata.get('IBIs', [])
+    mean_ibi = np.mean(ibis) if ibis is not None and len(ibis) > 0 else np.nan
+    
     stats = {
         'total_licks': burst_lickdata['total'],
         'intraburst_freq': burst_lickdata['freq'],
         'n_bursts': burst_lickdata['bNum'],
         'mean_licks_per_burst': burst_lickdata['bMean'],
+        'mean_interburst_time': mean_ibi,
         'weibull_alpha': burst_lickdata['weib_alpha'] if (burst_lickdata['weib_alpha'] is not None and num_bursts >= min_bursts_required) else np.nan,
         'weibull_beta': burst_lickdata['weib_beta'] if (burst_lickdata['weib_beta'] is not None and num_bursts >= min_bursts_required) else np.nan,
         'weibull_rsq': burst_lickdata['weib_rsq'] if (burst_lickdata['weib_rsq'] is not None and num_bursts >= min_bursts_required) else np.nan,

@@ -784,6 +784,9 @@ def collect_figure_data(jsonified_df, bin_size_seconds, ibi_slider, minlicks_sli
             # Calculate burst durations
             burst_durations = [end - start for start, end in zip(burst_starts, burst_ends)]
             
+            # Get interburst intervals (IBIs) from lickcalc output
+            interburst_intervals = burst_lickdata.get('IBIs', [])
+            
             figure_data['burst_details'] = {
                 'burst_numbers': list(range(1, len(burst_starts) + 1)),
                 'n_licks': burst_licks,
@@ -791,18 +794,31 @@ def collect_figure_data(jsonified_df, bin_size_seconds, ibi_slider, minlicks_sli
                 'end_times': burst_ends,
                 'durations': burst_durations
             }
+            
+            # Store interburst intervals separately for Excel export
+            figure_data['interburst_intervals'] = {
+                'intervals': interburst_intervals
+            }
         else:
             figure_data['burst_details'] = None
+            figure_data['interburst_intervals'] = None
         
         # Summary statistics - check minimum burst threshold for Weibull parameters
         min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
         num_bursts = burst_lickdata['bNum']
+        
+        # Calculate mean interburst time from lickcalc IBIs output
+        mean_interburst_time = None
+        ibis = burst_lickdata.get('IBIs', [])
+        if ibis is not None and len(ibis) > 0:
+            mean_interburst_time = np.mean(ibis)
         
         figure_data['summary_stats'] = {
             'total_licks': burst_lickdata['total'],
             'intraburst_freq': burst_lickdata['freq'],
             'n_bursts': burst_lickdata['bNum'],
             'mean_licks_per_burst': burst_lickdata['bMean'],
+            'mean_interburst_time': mean_interburst_time,
             'weibull_alpha': burst_lickdata['weib_alpha'] if (burst_lickdata['weib_alpha'] is not None and num_bursts >= min_bursts_required) else None,
             'weibull_beta': burst_lickdata['weib_beta'] if (burst_lickdata['weib_beta'] is not None and num_bursts >= min_bursts_required) else None,
             'weibull_rsq': burst_lickdata['weib_rsq'] if (burst_lickdata['weib_rsq'] is not None and num_bursts >= min_bursts_required) else None,
