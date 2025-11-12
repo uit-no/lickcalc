@@ -31,7 +31,7 @@ from utils.file_parsers import (
     parse_ohrbets,
     parse_lsfile,
 )
-from utils import validate_onset_offset_pairs
+from utils import validate_onset_offset_pairs, calculate_mean_interburst_time
 import base64
 
 # Batch process placeholder callback
@@ -552,6 +552,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                         'intraburst_freq': intraburst_freq,
                         'n_bursts': enhanced.get('bNum', 0),
                         'mean_licks_per_burst': enhanced.get('bMean', 0),
+                        'mean_interburst_time': np.mean(enhanced.get('IBIs', [])) if enhanced.get('IBIs') is not None and len(enhanced.get('IBIs', [])) > 0 else np.nan,
                         'weibull_alpha': np.nan,
                         'weibull_beta': np.nan,
                         'weibull_rsq': np.nan,
@@ -595,6 +596,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                                     'intraburst_freq': div['intraburst_freq'],
                                     'n_bursts': div['n_bursts'],
                                     'mean_licks_per_burst': div['mean_licks_per_burst'],
+                                    'mean_interburst_time': div.get('mean_interburst_time', np.nan),
                                     'weibull_alpha': div['weibull_alpha'] if (div['weibull_alpha'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                                     'weibull_beta': div['weibull_beta'] if (div['weibull_beta'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                                     'weibull_rsq': div['weibull_rsq'] if (div['weibull_rsq'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
@@ -631,6 +633,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                                     'intraburst_freq': div['intraburst_freq'],
                                     'n_bursts': div['n_bursts'],
                                     'mean_licks_per_burst': div['mean_licks_per_burst'],
+                                    'mean_interburst_time': div.get('mean_interburst_time', np.nan),
                                     'weibull_alpha': div['weibull_alpha'] if (div['weibull_alpha'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                                     'weibull_beta': div['weibull_beta'] if (div['weibull_beta'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                                     'weibull_rsq': div['weibull_rsq'] if (div['weibull_rsq'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
@@ -715,6 +718,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                         'intraburst_freq': enhanced.get('freq', 0),
                         'n_bursts': enhanced.get('bNum', 0),
                         'mean_licks_per_burst': enhanced.get('bMean', 0),
+                        'mean_interburst_time': np.mean(enhanced.get('IBIs', [])) if enhanced.get('IBIs') is not None and len(enhanced.get('IBIs', [])) > 0 else np.nan,
                         'weibull_alpha': enhanced.get('weib_alpha', np.nan) if (enhanced.get('weib_alpha') is not None and num_bursts >= min_bursts_required) else np.nan,
                         'weibull_beta': enhanced.get('weib_beta', np.nan) if (enhanced.get('weib_beta') is not None and num_bursts >= min_bursts_required) else np.nan,
                         'weibull_rsq': enhanced.get('weib_rsq', np.nan) if (enhanced.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
@@ -755,6 +759,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                         'intraburst_freq': results.get('freq', np.nan),
                         'n_bursts': results.get('bNum', np.nan),
                         'mean_licks_per_burst': results.get('bMean', np.nan),
+                        'mean_interburst_time': np.mean(results.get('IBIs', [])) if results.get('IBIs') is not None and len(results.get('IBIs', [])) > 0 else np.nan,
                         'weibull_alpha': results.get('weib_alpha', np.nan) if (results.get('weib_alpha') is not None and num_bursts >= min_bursts_required) else np.nan,
                         'weibull_beta': results.get('weib_beta', np.nan) if (results.get('weib_beta') is not None and num_bursts >= min_bursts_required) else np.nan,
                         'weibull_rsq': results.get('weib_rsq', np.nan) if (results.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
@@ -982,6 +987,7 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
                     ['Intraburst Frequency (Hz)', f"{stats.get('intraburst_freq', 'N/A'):.3f}" if stats.get('intraburst_freq') else 'N/A'],
                     ['Number of Bursts', stats.get('n_bursts', 'N/A')],
                     ['Mean Licks per Burst', f"{stats.get('mean_licks_per_burst', 'N/A'):.2f}" if stats.get('mean_licks_per_burst') else 'N/A'],
+                    ['Mean Interburst Interval (s)', f"{stats.get('mean_interburst_time', 'N/A'):.3f}" if stats.get('mean_interburst_time') else 'N/A'],
                     ['Weibull Alpha', weibull_alpha_text],
                     ['Weibull Beta', weibull_beta_text],
                     ['Weibull R-squared', weibull_rsq_text],
@@ -1041,6 +1047,15 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
                     'Duration_s': data['durations']
                 })
                 df.to_excel(writer, sheet_name='Burst_Details', index=False)
+            
+            # Add interburst intervals sheet if selected
+            if 'interburst_intervals' in selected_data and figure_data.get('interburst_intervals') and figure_data['interburst_intervals'].get('intervals'):
+                ibis = figure_data['interburst_intervals']['intervals']
+                df = pd.DataFrame({
+                    'Interval_Number': list(range(1, len(ibis) + 1)),
+                    'Interburst_Interval_s': ibis
+                })
+                df.to_excel(writer, sheet_name='Interburst_Intervals', index=False)
         
         # Get the value from the buffer
         output.seek(0)
@@ -1160,6 +1175,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'intraburst_freq': enhanced_results.get('freq', np.nan),
                     'n_bursts': enhanced_results.get('bNum', np.nan),
                     'mean_licks_per_burst': enhanced_results.get('bMean', np.nan),
+                    'mean_interburst_time': np.mean(enhanced_results.get('IBIs', [])) if enhanced_results.get('IBIs') is not None and len(enhanced_results.get('IBIs', [])) > 0 else np.nan,
                     'weibull_alpha': enhanced_results.get('weib_alpha', np.nan) if (enhanced_results.get('weib_alpha') is not None and num_bursts >= min_bursts_required) else np.nan,
                     'weibull_beta': enhanced_results.get('weib_beta', np.nan) if (enhanced_results.get('weib_beta') is not None and num_bursts >= min_bursts_required) else np.nan,
                     'weibull_rsq': enhanced_results.get('weib_rsq', np.nan) if (enhanced_results.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
@@ -1212,6 +1228,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'intraburst_freq': stats.get('intraburst_freq', np.nan),
                     'n_bursts': stats.get('n_bursts', np.nan),
                     'mean_licks_per_burst': stats.get('mean_licks_per_burst', np.nan),
+                    'mean_interburst_time': stats.get('mean_interburst_time', np.nan),
                     'weibull_alpha': stats.get('weibull_alpha', np.nan) if (stats.get('weibull_alpha') is not None and fallback_n_bursts >= min_bursts_required) else np.nan,
                     'weibull_beta': stats.get('weibull_beta', np.nan) if (stats.get('weibull_beta') is not None and fallback_n_bursts >= min_bursts_required) else np.nan,
                     'weibull_rsq': stats.get('weibull_rsq', np.nan) if (stats.get('weibull_rsq') is not None and fallback_n_bursts >= min_bursts_required) else np.nan,
@@ -1319,6 +1336,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'intraburst_freq': intraburst_freq,
                     'n_bursts': enhanced_results.get('bNum', 0),
                     'mean_licks_per_burst': enhanced_results.get('bMean', 0),
+                    'mean_interburst_time': np.mean(enhanced_results.get('IBIs', [])) if enhanced_results.get('IBIs') is not None and len(enhanced_results.get('IBIs', [])) > 0 else np.nan,
                     'weibull_alpha': np.nan,  # Excluded for first n bursts analysis
                     'weibull_beta': np.nan,   # Excluded for first n bursts analysis
                     'weibull_rsq': np.nan,    # Excluded for first n bursts analysis
@@ -1382,6 +1400,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                         'intraburst_freq': trial_stats['intraburst_freq'],
                         'n_bursts': trial_stats['n_bursts'],
                         'mean_licks_per_burst': trial_stats['mean_licks_per_burst'],
+                        'mean_interburst_time': trial_stats.get('mean_interburst_time', np.nan),
                         'weibull_alpha': trial_stats['weibull_alpha'],
                         'weibull_beta': trial_stats['weibull_beta'],
                         'weibull_rsq': trial_stats['weibull_rsq'],
@@ -1445,6 +1464,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'intraburst_freq': enhanced_results.get('freq', 0),
                     'n_bursts': enhanced_results.get('bNum', 0),
                     'mean_licks_per_burst': enhanced_results.get('bMean', 0),
+                    'mean_interburst_time': np.mean(enhanced_results.get('IBIs', [])) if enhanced_results.get('IBIs') is not None and len(enhanced_results.get('IBIs', [])) > 0 else np.nan,
                     'weibull_alpha': enhanced_results.get('weib_alpha', np.nan) if (enhanced_results.get('weib_alpha') is not None and num_bursts >= min_bursts_required) else np.nan,
                     'weibull_beta': enhanced_results.get('weib_beta', np.nan) if (enhanced_results.get('weib_beta') is not None and num_bursts >= min_bursts_required) else np.nan,
                     'weibull_rsq': enhanced_results.get('weib_rsq', np.nan) if (enhanced_results.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
@@ -1496,6 +1516,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                             'intraburst_freq': div['intraburst_freq'],
                             'n_bursts': div['n_bursts'],
                             'mean_licks_per_burst': div['mean_licks_per_burst'],
+                            'mean_interburst_time': div.get('mean_interburst_time', np.nan),
                             'weibull_alpha': div['weibull_alpha'] if (div['weibull_alpha'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                             'weibull_beta': div['weibull_beta'] if (div['weibull_beta'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                             'weibull_rsq': div['weibull_rsq'] if (div['weibull_rsq'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
@@ -1538,6 +1559,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                                 'intraburst_freq': div['intraburst_freq'],
                                 'n_bursts': div['n_bursts'],
                                 'mean_licks_per_burst': div['mean_licks_per_burst'],
+                                'mean_interburst_time': div.get('mean_interburst_time', np.nan),
                                 'weibull_alpha': div['weibull_alpha'] if (div['weibull_alpha'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                                 'weibull_beta': div['weibull_beta'] if (div['weibull_beta'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                                 'weibull_rsq': div['weibull_rsq'] if (div['weibull_rsq'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
@@ -1561,6 +1583,7 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                                 'intraburst_freq': 0,
                                 'n_bursts': 0,
                                 'mean_licks_per_burst': 0,
+                                'mean_interburst_time': np.nan,
                                 'weibull_alpha': 0,
                                 'weibull_beta': 0,
                                 'weibull_rsq': 0,
@@ -1613,6 +1636,7 @@ def update_results_table(stored_data):
                 'intraburst_freq': None,
                 'n_bursts': None,
                 'mean_licks_per_burst': None,
+                'mean_interburst_time': None,
                 'weibull_alpha': None,
                 'weibull_beta': None,
                 'weibull_rsq': None,
