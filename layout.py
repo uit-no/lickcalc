@@ -741,7 +741,15 @@ dcc.Store(id='lick-data'),
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle("Batch Process Files")),
             dbc.ModalBody([
-                html.P("Select a folder or multiple files to process with the current settings."),
+                html.P("Files will be processed using the current settings and file type selected above."),
+                html.Div([
+                    html.Label("Current File Type: ", style={'fontWeight': 'bold', 'marginRight': '10px', 'display': 'inline-block'}),
+                    html.Span(
+                        id='batch-file-type-display', 
+                        children='Med (column)',  # Default, will be updated by callback
+                        style={'display': 'inline-block', 'padding': '5px 10px', 'backgroundColor': '#e9ecef', 'borderRadius': '4px', 'fontFamily': 'monospace'}
+                    )
+                ], style={'marginBottom': '10px'}),
                 dcc.Upload(
                     id='batch-upload',
                     children=html.Div([

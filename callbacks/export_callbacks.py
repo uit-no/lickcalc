@@ -33,6 +33,16 @@ from utils.file_parsers import (
 )
 from utils import validate_onset_offset_pairs, calculate_mean_interburst_time
 import base64
+import re
+
+def natural_sort_key(text):
+    """
+    Generate a key for natural sorting that handles numbers properly.
+    Example: ['1', '2', '10', '20'] instead of ['1', '10', '2', '20']
+    """
+    def atoi(text):
+        return int(text) if text.isdigit() else text.lower()
+    return [atoi(c) for c in re.split(r'(\d+)', str(text))]
 
 # Batch process placeholder callback
 @app.callback(Output('table-status', 'children', allow_duplicate=True),
@@ -86,16 +96,104 @@ def clear_batch_modal(n_clicks):
     """Reset all batch modal fields to their default values."""
     return None, None, [], ['all'], [], ""
 
-# Show uploaded file list in modal
+# Display current file type in modal
+@app.callback(
+    Output('batch-file-type-display', 'children'),
+    Input('input-file-type', 'value'),
+)
+def display_batch_file_type(file_type):
+    # Handle None or missing file type by using default
+    if not file_type:
+        file_type = config.get('files.default_file_type', 'med')
+    
+    type_labels = {
+        'med': 'Med (column)',
+        'med_array': 'Med (array)',
+        'csv': 'CSV/TXT',
+        'ohrbets': 'OHRBETS',
+        'dd': 'DD Lab',
+        'km': 'KM Lab',
+        'ls': 'LS Lab'
+    }
+    return type_labels.get(file_type, 'Not selected')
+
+# Show uploaded file list in modal with parsing status
 @app.callback(
     Output('batch-file-list', 'children'),
     Input('batch-upload', 'filename'),
+    Input('batch-upload', 'contents'),
+    Input('input-file-type', 'value'),
 )
-def show_batch_file_list(filenames):
+def show_batch_file_list(filenames, contents_list, input_file_type):
     if not filenames:
         return html.I("No files selected yet.")
-    items = [html.Li(name) for name in (filenames if isinstance(filenames, list) else [filenames])]
-    return html.Ul(items)
+    
+    if not contents_list or not input_file_type:
+        items = [html.Li(name) for name in (filenames if isinstance(filenames, list) else [filenames])]
+        return html.Ul(items)
+    
+    # Ensure lists
+    if not isinstance(filenames, list):
+        filenames = [filenames]
+    if not isinstance(contents_list, list):
+        contents_list = [contents_list]
+    
+    # Try parsing each file and show status
+    items = []
+    for name, contents in zip(filenames, contents_list):
+        try:
+            # Quick parse attempt
+            content_type, content_string = contents.split(',')
+            decoded = base64.b64decode(content_string)
+            f = io.StringIO(decoded.decode('utf-8', errors='ignore'))
+            
+            # Try to parse based on file type
+            if input_file_type == 'med':
+                data_array = parse_medfile(f)
+            elif input_file_type == 'med_array':
+                data_array = parse_med_arraystyle(f)
+            elif input_file_type == 'csv':
+                data_array = parse_csvfile(f)
+            elif input_file_type == 'ohrbets':
+                data_array = parse_ohrbets(f)
+            elif input_file_type == 'dd':
+                data_array = parse_ddfile(f)
+            elif input_file_type == 'km':
+                data_array = parse_kmfile(f)
+            elif input_file_type == 'ls':
+                tmp = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.csv')
+                try:
+                    tmp.write(decoded)
+                    tmp.close()
+                    data_array = parse_lsfile(tmp.name)
+                finally:
+                    try:
+                        os.remove(tmp.name)
+                    except Exception:
+                        pass
+            else:
+                data_array = {}
+            
+            # Check if parse was successful
+            if data_array and len(data_array) > 0:
+                items.append(html.Li([
+                    html.Span("✓ ", style={'color': 'green', 'fontWeight': 'bold'}),
+                    html.Span(name, style={'color': 'green'})
+                ]))
+            else:
+                items.append(html.Li([
+                    html.Span("✗ ", style={'color': 'red', 'fontWeight': 'bold'}),
+                    html.Span(name, style={'color': 'red'}),
+                    html.Span(" (no data found)", style={'color': '#666', 'fontSize': '0.85em', 'fontStyle': 'italic'})
+                ]))
+        except Exception as e:
+            items.append(html.Li([
+                html.Span("✗ ", style={'color': 'red', 'fontWeight': 'bold'}),
+                html.Span(name, style={'color': 'red'}),
+                html.Span(f" (parse error)", style={'color': '#666', 'fontSize': '0.85em', 'fontStyle': 'italic'})
+            ]))
+    
+    return html.Ul(items, style={'listStyleType': 'none', 'paddingLeft': '0'})
 
 # Render advanced per-file selectors when Advanced mode is enabled
 @app.callback(
@@ -103,7 +201,7 @@ def show_batch_file_list(filenames):
     Input('batch-advanced-mode', 'value'),
     Input('batch-upload', 'contents'),
     Input('batch-upload', 'filename'),
-    State('input-file-type', 'value'),
+    Input('input-file-type', 'value'),
     prevent_initial_call=True
 )
 def render_batch_advanced_controls(adv_value, contents_list, filenames, input_file_type):
@@ -170,14 +268,14 @@ def render_batch_advanced_controls(adv_value, contents_list, filenames, input_fi
 
             onset_dropdown = dcc.Dropdown(
                 id={'type': 'batch-onset-multi', 'file': name},
-                options=[{'label': col, 'value': col} for col in columns],
+                options=[{'label': col, 'value': col} for col in sorted(columns, key=natural_sort_key)],
                 value=[],
                 multi=True,
                 placeholder='Select onset column(s)'
             )
             offset_dropdown = dcc.Dropdown(
                 id={'type': 'batch-offset-multi', 'file': name},
-                options=[{'label': col, 'value': col} for col in columns],
+                options=[{'label': col, 'value': col} for col in sorted(columns, key=natural_sort_key)],
                 value=[],
                 multi=True,
                 placeholder='Select offset column(s) (optional)'
@@ -204,7 +302,7 @@ def render_batch_advanced_controls(adv_value, contents_list, filenames, input_fi
                         html.Label('Global onset columns'),
                         dcc.Dropdown(
                             id='batch-global-onset',
-                            options=[{'label': c, 'value': c} for c in sorted(union_columns)],
+                            options=[{'label': c, 'value': c} for c in sorted(union_columns, key=natural_sort_key)],
                             value=[],
                             multi=True,
                             placeholder='Select onset column(s)'
@@ -214,7 +312,7 @@ def render_batch_advanced_controls(adv_value, contents_list, filenames, input_fi
                         html.Label('Global offset columns (optional)'),
                         dcc.Dropdown(
                             id='batch-global-offset',
-                            options=[{'label': c, 'value': c} for c in sorted(union_columns)],
+                            options=[{'label': c, 'value': c} for c in sorted(union_columns, key=natural_sort_key)],
                             value=[],
                             multi=True,
                             placeholder='Select offset column(s)'
@@ -925,7 +1023,7 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                         errors.append(f"{name}: Excel export failed - {str(ex)}")
 
         except Exception as e:
-            errors.append(f"{name}: {str(e)}")
+            errors.append(f"{name}: {str(e)} - Try selecting a different file type if parsing failed.")
 
     status_children = []
     if processed:
@@ -942,7 +1040,18 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
             )
         )
     if errors:
-        status_children.append(dbc.Alert("\n".join(errors), color="warning", dismissable=True))
+        error_content = [
+            html.H5("⚠️ Some files could not be processed", className="alert-heading"),
+            html.Hr(),
+        ]
+        for error in errors:
+            error_content.append(html.P(error, className="mb-1"))
+        error_content.append(html.Hr())
+        error_content.append(html.P([
+            html.Strong("Tip: "),
+            "If files failed to parse, try changing the File Type dropdown in this modal to match your data format."
+        ], className="mb-0"))
+        status_children.append(dbc.Alert(error_content, color="warning", dismissable=True))
 
     # If Excel files were created, zip and trigger download
     if excel_files:
