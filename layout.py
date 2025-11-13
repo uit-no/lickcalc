@@ -112,12 +112,12 @@ dcc.Store(id='lick-data'),
                 html.Div([
                     html.P([
                         html.Strong("Volcko KL & McCutcheon JE (2025). "),
-                        "lickcalc: Easy analysis of lick microstructure in experiments of rodent ingestive behaviour. ",
-                        html.Em("Journal of Open Source Software"),
+                        "lickcalc: Easy analysis of lick microstructure in experiments of rodent ingestive behaviour.",
+                        html.Em("Github"),
                         ", xxxxx. ",
                         html.A(
-                            "https://doi.org/10.21105/joss.xxxxx",
-                            href="https://doi.org/10.21105/joss.xxxxx",
+                            "https://github.com/uit-no/lickcalc",
+                            href="https://github.com/uit-no/lickcalc",
                             target="_blank"
                         )
                     ], style={"padding": "10px", "background-color": "#f8f9fa", "border-radius": "5px"}),
