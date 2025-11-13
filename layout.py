@@ -54,7 +54,9 @@ dcc.Store(id='lick-data'),
                     "right": "10px",
                     "z-index": "9999",
                     "text-decoration": "none",
-                    "width": "120px"
+                    "width": "120px",
+                    "text-align": "center",
+                    "display": "inline-block"
                 }
             ),
             # Config upload button
@@ -67,7 +69,9 @@ dcc.Store(id='lick-data'),
                     style={
                         "cursor": "pointer",
                         "text-align": "center",
-                        "white-space": "nowrap"
+                        "white-space": "nowrap",
+                        "width": "120px",
+                        "display": "block"
                     }
                 ),
                 multiple=False,
@@ -89,7 +93,8 @@ dcc.Store(id='lick-data'),
                     "top": "80px",
                     "right": "10px",
                     "z-index": "9999",
-                    "width": "120px"
+                    "width": "120px",
+                    "text-align": "center"
                 }
             ),
         ]),
