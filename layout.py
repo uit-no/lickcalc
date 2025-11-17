@@ -462,16 +462,18 @@ dcc.Store(id='lick-data'),
                     html.Tr([html.Th("Property"), html.Th("Value")]),
                     html.Tr([html.Td("No. of bursts"), html.Td(id="nbursts")]),
                     html.Tr([table_cells[3], html.Td(id="licks-per-burst")]),  # Mean licks per burst
-                    html.Tr([table_cells[4], html.Td(id="weibull-alpha")]),  # Weibull: Alpha
-                    html.Tr([table_cells[5], html.Td(id="weibull-beta")]),  # Weibull: Beta
-                    html.Tr([table_cells[6], html.Td(id="weibull-rsq")]),  # Weibull: r-squared
+                    html.Tr([table_cells[4], html.Td(id="mean-ibi")]),  # Mean interburst interval
+                    html.Tr([table_cells[5], html.Td(id="weibull-alpha")]),  # Weibull: Alpha
+                    html.Tr([table_cells[6], html.Td(id="weibull-beta")]),  # Weibull: Beta
+                    html.Tr([table_cells[7], html.Td(id="weibull-rsq")]),  # Weibull: r-squared
                     ],
                     striped=True, hover=True, bordered=True),
                 # Add tooltips
                 table_tooltips[3],  # Mean licks per burst tooltip
-                table_tooltips[4],  # Weibull: Alpha tooltip
-                table_tooltips[5],  # Weibull: Beta tooltip
-                table_tooltips[6],  # Weibull: r-squared tooltip
+                table_tooltips[4],  # Mean interburst interval tooltip
+                table_tooltips[5],  # Weibull: Alpha tooltip
+                table_tooltips[6],  # Weibull: Beta tooltip
+                table_tooltips[7],  # Weibull: r-squared tooltip
             ], width=4),
             
             ]),

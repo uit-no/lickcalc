@@ -517,6 +517,7 @@ def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
 @app.callback(Output('burstprob-fig', 'figure'),
               Output('nbursts', 'children'),
               Output('licks-per-burst', 'children'),
+              Output('mean-ibi', 'children'),
               Output('weibull-alpha', 'children'),
               Output('weibull-beta', 'children'),
               Output('weibull-rsq', 'children'),
@@ -542,7 +543,7 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
             # Return empty figure if no data
             fig = go.Figure()
             fig.update_layout(title="No data available")
-            return fig, "0", "0.00", "0.00", "0.00", "0.00"
+            return fig, "0", "0.00", "N/A", "0.00", "0.00", "0.00"
         
         lick_times = df["licks"].to_list()
         
@@ -566,7 +567,7 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
         if lickdata['burstprob'] is None or len(lickdata['burstprob'][0]) == 0:
             fig = go.Figure()
             fig.update_layout(title="No bursts found with current parameters")
-            return fig, "0", "0.00", "0.00", "0.00", "0.00"
+            return fig, "0", "0.00", "N/A", "0.00", "0.00", "0.00"
         
         # Check if we have enough bursts for Weibull analysis
         min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
@@ -601,7 +602,10 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
             
             bNum = "{}".format(lickdata['bNum'])
             bMean = "{:.2f}".format(lickdata['bMean'])
-            return fig, bNum, bMean, "N/A", "N/A", "N/A"
+            # Calculate mean IBI for this case too
+            ibis = lickdata.get('IBIs', [])
+            mean_ibi = "{:.2f}".format(np.mean(ibis)) if ibis is not None and len(ibis) > 0 else "N/A"
+            return fig, bNum, bMean, mean_ibi, "N/A", "N/A", "N/A"
         
         # Check if Weibull parameters are None (too few bursts for Weibull analysis)
         if lickdata['weib_alpha'] is None or lickdata['weib_beta'] is None or lickdata['weib_rsq'] is None:
@@ -633,7 +637,10 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
             
             bNum = "{}".format(lickdata['bNum'])
             bMean = "{:.2f}".format(lickdata['bMean'])
-            return fig, bNum, bMean, "N/A", "N/A", "N/A"
+            # Calculate mean IBI for this case too
+            ibis = lickdata.get('IBIs', [])
+            mean_ibi = "{:.2f}".format(np.mean(ibis)) if ibis is not None and len(ibis) > 0 else "N/A"
+            return fig, bNum, bMean, mean_ibi, "N/A", "N/A", "N/A"
         
         x=lickdata['burstprob'][0]
         y=lickdata['burstprob'][1]
@@ -649,14 +656,21 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
             showlegend=False)
 
         bNum = "{}".format(lickdata['bNum'])
-        bMean = "{:.2f}".format(lickdata['bMean'])      
+        bMean = "{:.2f}".format(lickdata['bMean'])
+        
+        # Calculate mean interburst interval
+        ibis = lickdata.get('IBIs', [])
+        if ibis is not None and len(ibis) > 0:
+            mean_ibi = "{:.2f}".format(np.mean(ibis))
+        else:
+            mean_ibi = "N/A"
         
         # Handle None values for Weibull parameters gracefully
         alpha = "{:.2f}".format(lickdata['weib_alpha']) if lickdata['weib_alpha'] is not None else "N/A"
         beta = "{:.2f}".format(lickdata['weib_beta']) if lickdata['weib_beta'] is not None else "N/A"
         rsq = "{:.2f}".format(lickdata['weib_rsq']) if lickdata['weib_rsq'] is not None else "N/A"
 
-        return fig , bNum, bMean, alpha, beta, rsq
+        return fig, bNum, bMean, mean_ibi, alpha, beta, rsq
 
 # Data collection callback to store figure data for export
 @app.callback(Output('figure-data-store', 'data'),

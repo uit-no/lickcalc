@@ -34,6 +34,10 @@ TOOLTIP_TEXTS = {
         "These may represent different licking behaviors or incomplete licks."
     ),
     'licks_burst': "Average number of licks in each burst episode.",
+    'mean_ibi': (
+        "Average time interval between bursts (in seconds). "
+        "Longer intervals may indicate stronger satiety or reduced motivation."
+    ),
     'weibull_alpha': "Weibull distribution shape parameter. Describes the shape of the burst size distribution.",
     'weibull_beta': "Weibull distribution scale parameter. Related to the characteristic burst size.",
     'weibull_rsq': (
@@ -140,6 +144,7 @@ def get_table_tooltips():
         create_table_cell_with_tooltip("Intraburst frequency", "freq-help", "freq"),
         create_table_cell_with_tooltip("No. of long licks", "nlonglicks-help", "nlonglicks"),
         create_table_cell_with_tooltip("Mean licks per burst", "licks-burst-help", "licks_burst"),
+        create_table_cell_with_tooltip("Mean interburst interval (s)", "mean-ibi-help", "mean_ibi"),
         create_table_cell_with_tooltip("Weibull: Alpha", "weibull-alpha-help", "weibull_alpha"),
         create_table_cell_with_tooltip("Weibull: Beta", "weibull-beta-help", "weibull_beta"),
         create_table_cell_with_tooltip("Weibull: r-squared", "weibull-rsq-help", "weibull_rsq"),
