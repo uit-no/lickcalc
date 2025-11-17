@@ -233,11 +233,18 @@ def parse_ohrbets(f):
 
     return data_array
 
-def get_ilis_from_file(filepath):
+def find_presentation_line(filepath, str2search="PRESENTATION"):
+    with open(filepath, newline='') as f:
+        reader = csv.reader(f)
+        for i, row in enumerate(reader):
+            if row[0] == str2search:
+                return i
+            
+def get_ilis_from_file(filepath, datastart=None):
 
     return (
         pd
-        .read_csv(filepath, skiprows=11, header=None)
+        .read_csv(filepath, skiprows=datastart+2, header=None)
         .astype(np.int32)
         .iloc[0,:]
         .T
@@ -246,9 +253,12 @@ def get_ilis_from_file(filepath):
     )
 
 def parse_lsfile(filepath):
-    df = get_ilis_from_file(filepath)
-    solution = pd.read_csv(filepath, skiprows=9, nrows=1)["SOLUTION"].values[0].strip()
-    latency = pd.read_csv(filepath, skiprows=9, nrows=1)[" Latency"].values[0]
+
+    datastart = find_presentation_line(filepath)
+
+    df = get_ilis_from_file(filepath, datastart=datastart)
+    solution = pd.read_csv(filepath, skiprows=datastart, nrows=1)["SOLUTION"].values[0].strip()
+    latency = pd.read_csv(filepath, skiprows=datastart, nrows=1)[" Latency"].values[0]
 
     all_ilis = np.array([latency] + df.tolist())
     licks = np.cumsum(all_ilis)
