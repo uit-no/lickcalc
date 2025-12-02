@@ -18,7 +18,7 @@ affiliations:
  - name: Dept. of Psychology, UiT The Arctic University of Norway, Tromsø, Norway
    index: 1
    ror: 00wge5k78
-date: 15 October 2025
+date: 02 December 2025
 bibliography: paper.bib
 
 ---
