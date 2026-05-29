@@ -13,6 +13,8 @@ numpy = ">=2.4.6,<3"
 pandas = ">=3.0.3,<4"
 dash = ">=4.1.0,<5"
 dash-bootstrap-components = ">=2.0.4,<3"
+pyyaml = ">=6.0.3,<7"
+ipykernel = ">=7.2.0,<8"
 
 [pypi-dependencies]
 trompy = ">=0.16.5, <0.17"
