@@ -14,7 +14,7 @@ microstructure:
   long_lick_threshold: 0.3      # Long lick threshold (seconds)
 
 files:
-  default_file_type: 'dd'      # Default file type: 'med', 'csv', or 'dd'
+  default_file_type: 'dd'      # Default file type: 'med', 'med_array', 'csv', 'coulbourn', 'ohrbets', 'dd', 'km', or 'ls'
 
 # Note: The analysis section below defines slider ranges and is optional
 # Only include these if you want to change the min/max ranges for sliders

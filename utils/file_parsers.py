@@ -269,6 +269,23 @@ def parse_lsfile(filepath):
 
     return vars2dict(data_array)
 
+def parse_coulbourn(f):
+    
+    data = pd.read_csv(f)
+    
+    lick_dict = {}
+    for col in ["On1A1", "On1A2", "On1A3", "On1A4", "Off1A1", "Off1A2", "Off1A3", "Off1A4"]:
+        times = data.loc[data[col] == 1, "Time"].values
+        if len(times) > 0:
+            lick_dict[col] = times
+        
+    return vars2dict(lick_dict)
+
+
+def parse_colbourn(f):
+    """Backward-compatible alias for parse_coulbourn."""
+    return parse_coulbourn(f)
+
 def vars2dict(loaded_vars):
          
     data_array = {}

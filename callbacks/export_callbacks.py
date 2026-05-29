@@ -26,6 +26,7 @@ from utils.file_parsers import (
     parse_medfile,
     parse_med_arraystyle,
     parse_csvfile,
+    parse_coulbourn,
     parse_ddfile,
     parse_kmfile,
     parse_ohrbets,
@@ -110,6 +111,8 @@ def display_batch_file_type(file_type):
         'med': 'Med (column)',
         'med_array': 'Med (array)',
         'csv': 'CSV/TXT',
+        'coulbourn': 'Coulbourn',
+        'colbourn': 'Coulbourn',
         'ohrbets': 'OHRBETS',
         'dd': 'DD Lab',
         'km': 'KM Lab',
@@ -154,6 +157,8 @@ def show_batch_file_list(filenames, contents_list, input_file_type):
                 data_array = parse_med_arraystyle(f)
             elif input_file_type == 'csv':
                 data_array = parse_csvfile(f)
+            elif input_file_type in ('coulbourn', 'colbourn'):
+                data_array = parse_coulbourn(f)
             elif input_file_type == 'ohrbets':
                 data_array = parse_ohrbets(f)
             elif input_file_type == 'dd':
@@ -235,6 +240,9 @@ def render_batch_advanced_controls(adv_value, contents_list, filenames, input_fi
                 elif input_file_type == 'csv':
                     f = io.StringIO(decoded.decode('utf-8', errors='ignore'))
                     data_array = parse_csvfile(f)
+                elif input_file_type in ('coulbourn', 'colbourn'):
+                    f = io.StringIO(decoded.decode('utf-8', errors='ignore'))
+                    data_array = parse_coulbourn(f)
                 elif input_file_type == 'ohrbets':
                     f = io.StringIO(decoded.decode('utf-8', errors='ignore'))
                     data_array = parse_ohrbets(f)
@@ -452,13 +460,15 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
             f = io.StringIO(decoded.decode('utf-8', errors='ignore'))
 
             # Parse based on selected type
-            # Parse based on selected type (ordered to mirror dropdown: med, med_array, csv, ohrbets, dd, km, ls)
+            # Parse based on selected type (ordered to mirror dropdown: med, med_array, csv, coulbourn, ohrbets, dd, km, ls)
             if input_file_type == 'med':
                 data_array = parse_medfile(f)
             elif input_file_type == 'med_array':
                 data_array = parse_med_arraystyle(f)
             elif input_file_type == 'csv':
                 data_array = parse_csvfile(f)
+            elif input_file_type in ('coulbourn', 'colbourn'):
+                data_array = parse_coulbourn(f)
             elif input_file_type == 'ohrbets':
                 data_array = parse_ohrbets(f)
             elif input_file_type == 'dd':

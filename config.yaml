@@ -30,7 +30,7 @@ microstructure:
 
 # File processing defaults
 files:
-  # Default file type for dropdown ('med', 'csv', 'dd')
+  # Default file type for dropdown ('med', 'med_array', 'csv', 'coulbourn', 'ohrbets', 'dd', 'km', 'ls')
   default_file_type: 'med'
 
 # UI Configuration
