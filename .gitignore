@@ -27,3 +27,6 @@ paper/paper.crossref
 
 
 
+# pixi environments
+.pixi/*
+!.pixi/config.toml
