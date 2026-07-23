@@ -97,7 +97,27 @@ dcc.Store(id='lick-data'),
                     "text-align": "center"
                 }
             ),
+            # Reset button
+            html.Button(
+                "↻ Reset",
+                id="reset-button",
+                className="btn btn-outline-danger btn-sm",
+                style={
+                    "position": "fixed",
+                    "top": "115px",
+                    "right": "10px",
+                    "z-index": "9999",
+                    "width": "120px",
+                    "text-align": "center"
+                }
+            ),
         ]),
+        # Confirm reset and navigate to force full app reload
+        dcc.ConfirmDialog(
+            id="reset-confirm",
+            message="Are you sure? This will clear all loaded data and reload the app."
+        ),
+        dcc.Location(id="reset-location", refresh=True),
         # About modal
         dbc.Modal([
             dbc.ModalHeader(dbc.ModalTitle("About lickcalc")),
@@ -440,6 +460,8 @@ dcc.Store(id='lick-data'),
                     html.Tr([html.Th("Property"), html.Th("Value")]),
                     html.Tr([table_cells[0], html.Td(id="total-licks")]),  # Total licks
                     html.Tr([table_cells[1], html.Td(id="intraburst-freq")]),  # Intraburst frequency
+                    html.Tr([table_cells[8], html.Td(id="licklength-mode")]),  # Lick length mode
+                    html.Tr([table_cells[9], html.Td(id="intercontact-mode")]),  # Intercontact mode
                     html.Tr([table_cells[2], html.Td(id="nlonglicks")]),  # No. of long licks
                     html.Tr([html.Td("Maximum long lick"), html.Td(id="longlicks-max")]),
                     ],
@@ -447,6 +469,8 @@ dcc.Store(id='lick-data'),
                 # Add tooltips
                 table_tooltips[0],  # Total licks tooltip
                 table_tooltips[1],  # Intraburst frequency tooltip
+                table_tooltips[8],  # Lick length mode tooltip
+                table_tooltips[9],  # Intercontact mode tooltip
                 table_tooltips[2],  # No. of long licks tooltip
             ], width=4),
     ]),
@@ -842,6 +866,8 @@ dcc.Store(id='lick-data'),
                     {'name': 'Weibull R²', 'id': 'weibull_rsq', 'type': 'numeric', 'format': {'specifier': '.3f'}},
                     {'name': 'N Long Licks', 'id': 'n_long_licks', 'type': 'numeric', 'format': {'specifier': '.0f'}},
                     {'name': 'Max Lick Duration (s)', 'id': 'max_lick_duration', 'type': 'numeric', 'format': {'specifier': '.4f'}},
+                    {'name': 'Lick length mode (ms)', 'id': 'licklength_mode', 'type': 'numeric', 'format': {'specifier': '.1f'}},
+                    {'name': 'Intercontact mode (ms)', 'id': 'intercontact_mode', 'type': 'numeric', 'format': {'specifier': '.1f'}},
                     {'name': 'Long Licks Removed?', 'id': 'long_licks_removed', 'type': 'text'}
                 ],
                 data=[],

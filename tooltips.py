@@ -44,6 +44,14 @@ TOOLTIP_TEXTS = {
         "Goodness of fit (R²) for the Weibull distribution model. "
         "Values closer to 1.0 indicate better fit to the theoretical distribution."
     ),
+    'licklength_mode': (
+        "Mode of lick duration (most frequent lick length), shown in milliseconds. "
+        "Requires onset and offset data."
+    ),
+    'intercontact_mode': (
+        "Mode of intercontact time (most frequent gap between lick offset and next onset), "
+        "shown in milliseconds. Requires onset and offset data."
+    ),
     'onset_array': (
         "Select the data column containing lick onset timestamps. "
         "These are the times when licks begin."
@@ -148,6 +156,8 @@ def get_table_tooltips():
         create_table_cell_with_tooltip("Weibull: Alpha", "weibull-alpha-help", "weibull_alpha"),
         create_table_cell_with_tooltip("Weibull: Beta", "weibull-beta-help", "weibull_beta"),
         create_table_cell_with_tooltip("Weibull: r-squared", "weibull-rsq-help", "weibull_rsq"),
+        create_table_cell_with_tooltip("Lick length mode (ms)", "licklength-mode-help", "licklength_mode"),
+        create_table_cell_with_tooltip("Intercontact mode (ms)", "intercontact-mode-help", "intercontact_mode"),
     ]
     
     # Separate cells and tooltips

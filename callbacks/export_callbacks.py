@@ -45,6 +45,16 @@ def natural_sort_key(text):
         return int(text) if text.isdigit() else text.lower()
     return [atoi(c) for c in re.split(r'(\d+)', str(text))]
 
+
+def _to_ms_or_nan(value):
+    """Convert seconds to milliseconds, preserving missing values as NaN."""
+    if value is None:
+        return np.nan
+    try:
+        return float(value) * 1000.0
+    except (TypeError, ValueError):
+        return np.nan
+
 # Batch process placeholder callback
 @app.callback(Output('table-status', 'children', allow_duplicate=True),
               Input('batch-process-btn', 'n_clicks'),
@@ -681,6 +691,8 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                         'weibull_rsq': np.nan,
                         'n_long_licks': len(enhanced.get('longlicks', [])) if offset_times and enhanced.get('longlicks') is not None else 0,
                         'max_lick_duration': np.max(enhanced.get('licklength', [])) if offset_times and enhanced.get('licklength') is not None and len(enhanced.get('licklength', [])) > 0 else np.nan,
+                        'licklength_mode': _to_ms_or_nan(enhanced.get('licklength_mode')),
+                        'intercontact_mode': _to_ms_or_nan(enhanced.get('intercontact_mode')),
                         'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                     })
 
@@ -725,6 +737,8 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                                     'weibull_rsq': div['weibull_rsq'] if (div['weibull_rsq'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                                     'n_long_licks': div['n_long_licks'],
                                     'max_lick_duration': div['max_lick_duration'],
+                                    'licklength_mode': _to_ms_or_nan(div.get('licklength_mode')),
+                                    'intercontact_mode': _to_ms_or_nan(div.get('intercontact_mode')),
                                     'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                                 })
                     else:  # division_method == 'bursts'
@@ -762,6 +776,8 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                                     'weibull_rsq': div['weibull_rsq'] if (div['weibull_rsq'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                                     'n_long_licks': div['n_long_licks'],
                                     'max_lick_duration': div['max_lick_duration'],
+                                    'licklength_mode': _to_ms_or_nan(div.get('licklength_mode')),
+                                    'intercontact_mode': _to_ms_or_nan(div.get('intercontact_mode')),
                                     'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                                 })
                         else:
@@ -786,6 +802,8 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                                     'weibull_rsq': 0,
                                     'n_long_licks': 0,
                                     'max_lick_duration': 0,
+                                    'licklength_mode': np.nan,
+                                    'intercontact_mode': np.nan,
                                     'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                                 })
                 
@@ -847,6 +865,8 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                         'weibull_rsq': enhanced.get('weib_rsq', np.nan) if (enhanced.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
                         'n_long_licks': len(enhanced.get('longlicks', [])) if filtered_offset_times and enhanced.get('longlicks') is not None else 0,
                         'max_lick_duration': np.max(enhanced.get('licklength', [])) if filtered_offset_times and enhanced.get('licklength') is not None and len(enhanced.get('licklength', [])) > 0 else np.nan,
+                        'licklength_mode': _to_ms_or_nan(enhanced.get('licklength_mode')),
+                        'intercontact_mode': _to_ms_or_nan(enhanced.get('intercontact_mode')),
                         'long_licks_removed': 'Yes' if (remove_long and filtered_offset_times) else 'No'
                     })
 
@@ -888,6 +908,8 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                         'weibull_rsq': results.get('weib_rsq', np.nan) if (results.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
                         'n_long_licks': len(results.get('longlicks', [])) if offset_times else np.nan,
                         'max_lick_duration': np.max(results.get('licklength', [])) if offset_times and results.get('licklength') is not None and len(results.get('licklength', [])) > 0 else np.nan,
+                        'licklength_mode': _to_ms_or_nan(results.get('licklength_mode')),
+                        'intercontact_mode': _to_ms_or_nan(results.get('intercontact_mode')),
                         'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                     })
 
@@ -984,7 +1006,9 @@ def batch_process_files(n_clicks, contents_list, filenames, export_opts, ibi, mi
                                 ['Weibull Beta', 'N/A (insufficient bursts)' if weib_beta is None else f"{weib_beta:.3f}"],
                                 ['Weibull R-squared', 'N/A (insufficient bursts)' if weib_rsq is None else f"{weib_rsq:.3f}"],
                                 ['Number of Long Licks', n_long_licks],
-                                ['Maximum Lick Duration (s)', f"{max_lick_duration:.4f}" if isinstance(max_lick_duration, (int, float)) else max_lick_duration]
+                                ['Maximum Lick Duration (s)', f"{max_lick_duration:.4f}" if isinstance(max_lick_duration, (int, float)) else max_lick_duration],
+                                ['Lick length mode (ms)', f"{_to_ms_or_nan(main_lc.get('licklength_mode')):.1f}" if pd.notna(_to_ms_or_nan(main_lc.get('licklength_mode'))) else 'N/A'],
+                                ['Intercontact mode (ms)', f"{_to_ms_or_nan(main_lc.get('intercontact_mode')):.1f}" if pd.notna(_to_ms_or_nan(main_lc.get('intercontact_mode'))) else 'N/A']
                             ], columns=['Property', 'Value'])
                             summary_df.to_excel(writer, sheet_name='Summary', index=False)
 
@@ -1126,7 +1150,9 @@ def export_to_excel(n_clicks, animal_id, selected_data, figure_data, source_file
                     ['Weibull Beta', weibull_beta_text],
                     ['Weibull R-squared', weibull_rsq_text],
                     ['Number of Long Licks', stats.get('n_long_licks', 'N/A')],
-                    ['Maximum Lick Duration (s)', f"{stats.get('max_lick_duration', 'N/A'):.4f}" if isinstance(stats.get('max_lick_duration'), (int, float)) else stats.get('max_lick_duration', 'N/A')]
+                    ['Maximum Lick Duration (s)', f"{stats.get('max_lick_duration', 'N/A'):.4f}" if isinstance(stats.get('max_lick_duration'), (int, float)) else stats.get('max_lick_duration', 'N/A')],
+                    ['Lick length mode (ms)', f"{stats.get('licklength_mode', 'N/A'):.1f}" if isinstance(stats.get('licklength_mode'), (int, float)) else stats.get('licklength_mode', 'N/A')],
+                    ['Intercontact mode (ms)', f"{stats.get('intercontact_mode', 'N/A'):.1f}" if isinstance(stats.get('intercontact_mode'), (int, float)) else stats.get('intercontact_mode', 'N/A')]
                 ], columns=['Property', 'Value'])
                 summary_df.to_excel(writer, sheet_name='Summary', index=False)
             
@@ -1315,6 +1341,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'weibull_rsq': enhanced_results.get('weib_rsq', np.nan) if (enhanced_results.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
                     'n_long_licks': len(enhanced_results.get('longlicks', [])) if offset_times else np.nan,
                     'max_lick_duration': np.max(enhanced_results.get('licklength', [])) if offset_times and enhanced_results.get('licklength') is not None and len(enhanced_results.get('licklength', [])) > 0 else np.nan,
+                    'licklength_mode': _to_ms_or_nan(enhanced_results.get('licklength_mode')),
+                    'intercontact_mode': _to_ms_or_nan(enhanced_results.get('intercontact_mode')),
                     'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                 }
                 
@@ -1368,6 +1396,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'weibull_rsq': stats.get('weibull_rsq', np.nan) if (stats.get('weibull_rsq') is not None and fallback_n_bursts >= min_bursts_required) else np.nan,
                     'n_long_licks': n_long_licks,
                     'max_lick_duration': max_lick_duration,
+                    'licklength_mode': stats.get('licklength_mode', np.nan),
+                    'intercontact_mode': stats.get('intercontact_mode', np.nan),
                     'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                 }
             
@@ -1476,6 +1506,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'weibull_rsq': np.nan,    # Excluded for first n bursts analysis
                     'n_long_licks': len(enhanced_results.get('longlicks', [])) if offset_times and enhanced_results.get('longlicks') is not None else 0,
                     'max_lick_duration': np.max(enhanced_results.get('licklength', [])) if offset_times and enhanced_results.get('licklength') is not None and len(enhanced_results.get('licklength', [])) > 0 else np.nan,
+                    'licklength_mode': _to_ms_or_nan(enhanced_results.get('licklength_mode')),
+                    'intercontact_mode': _to_ms_or_nan(enhanced_results.get('intercontact_mode')),
                     'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                 })
             
@@ -1540,6 +1572,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                         'weibull_rsq': trial_stats['weibull_rsq'],
                         'n_long_licks': trial_stats['n_long_licks'],
                         'max_lick_duration': trial_stats['max_lick_duration'],
+                        'licklength_mode': np.nan,
+                        'intercontact_mode': np.nan,
                         'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                     })
             
@@ -1604,6 +1638,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                     'weibull_rsq': enhanced_results.get('weib_rsq', np.nan) if (enhanced_results.get('weib_rsq') is not None and num_bursts >= min_bursts_required) else np.nan,
                     'n_long_licks': len(enhanced_results.get('longlicks', [])) if filtered_offset_times and enhanced_results.get('longlicks') is not None else 0,
                     'max_lick_duration': np.max(enhanced_results.get('licklength', [])) if filtered_offset_times and enhanced_results.get('licklength') is not None and len(enhanced_results.get('licklength', [])) > 0 else np.nan,
+                    'licklength_mode': _to_ms_or_nan(enhanced_results.get('licklength_mode')),
+                    'intercontact_mode': _to_ms_or_nan(enhanced_results.get('intercontact_mode')),
                     'long_licks_removed': 'Yes' if (remove_long and filtered_offset_times) else 'No'
                 })
                 
@@ -1656,6 +1692,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                             'weibull_rsq': div['weibull_rsq'] if (div['weibull_rsq'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                             'n_long_licks': div['n_long_licks'],
                             'max_lick_duration': div['max_lick_duration'],
+                            'licklength_mode': _to_ms_or_nan(div.get('licklength_mode')),
+                            'intercontact_mode': _to_ms_or_nan(div.get('intercontact_mode')),
                             'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                         })
             
@@ -1699,6 +1737,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                                 'weibull_rsq': div['weibull_rsq'] if (div['weibull_rsq'] is not None and div_n_bursts >= min_bursts_required) else np.nan,
                                 'n_long_licks': div['n_long_licks'],
                                 'max_lick_duration': div['max_lick_duration'],
+                                'licklength_mode': _to_ms_or_nan(div.get('licklength_mode')),
+                                'intercontact_mode': _to_ms_or_nan(div.get('intercontact_mode')),
                                 'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                             })
                     else:
@@ -1723,6 +1763,8 @@ def add_to_results_table(n_clicks, animal_id, figure_data, existing_data, source
                                 'weibull_rsq': 0,
                                 'n_long_licks': 0,
                                 'max_lick_duration': 0,
+                                'licklength_mode': np.nan,
+                                'intercontact_mode': np.nan,
                                 'long_licks_removed': 'Yes' if (remove_long and offset_times) else 'No'
                             })
             
@@ -1775,7 +1817,9 @@ def update_results_table(stored_data):
                 'weibull_beta': None,
                 'weibull_rsq': None,
                 'n_long_licks': None,
-                'max_lick_duration': None
+                'max_lick_duration': None,
+                'licklength_mode': None,
+                'intercontact_mode': None
             }
             empty_rows.append(empty_row)
         return empty_rows
@@ -1786,7 +1830,8 @@ def update_results_table(stored_data):
     # Calculate statistics (ignoring NaN values)
     if len(table_data) > 1:  # Only add stats if there's more than one row
         numeric_columns = ['duration', 'total_licks', 'intraburst_freq', 'n_bursts', 'mean_licks_per_burst', 
-                          'weibull_alpha', 'weibull_beta', 'weibull_rsq', 'n_long_licks', 'max_lick_duration']
+                  'weibull_alpha', 'weibull_beta', 'weibull_rsq', 'n_long_licks', 'max_lick_duration',
+                  'licklength_mode', 'intercontact_mode']
         
         # Convert data to DataFrame for easier calculation
         df = pd.DataFrame(table_data)

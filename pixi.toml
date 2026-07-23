@@ -17,4 +17,5 @@ pyyaml = ">=6.0.3,<7"
 ipykernel = ">=7.2.0,<8"
 
 [pypi-dependencies]
-trompy = ">=0.16.5, <0.17"
+trompy = { git = "https://github.com/mccutcheonlab/trompy.git", rev = "dev" }
+

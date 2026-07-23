@@ -38,3 +38,29 @@ def download_example_files(n_clicks):
         raise PreventUpdate
     
     return dcc.send_file("assets/examples/example-files.zip")
+
+
+@app.callback(
+    Output("reset-confirm", "displayed"),
+    Input("reset-button", "n_clicks"),
+    prevent_initial_call=True
+)
+def show_reset_confirmation(n_clicks):
+    """Show confirmation dialog before resetting app state."""
+    if not n_clicks:
+        raise PreventUpdate
+
+    return True
+
+
+@app.callback(
+    Output("reset-location", "href"),
+    Input("reset-confirm", "submit_n_clicks"),
+    prevent_initial_call=True
+)
+def reset_app(submit_n_clicks):
+    """Reload the app after user confirms reset."""
+    if not submit_n_clicks:
+        raise PreventUpdate
+
+    return "/"

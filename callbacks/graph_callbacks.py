@@ -13,7 +13,7 @@ import numpy as np
 import logging
 
 from app_instance import app
-from trompy import lickcalc
+from trompy import lickcalc, weib_davis
 from utils import validate_onset_offset_pairs, calculate_segment_stats, get_licks_for_burst_range, get_offsets_for_licks
 from config_manager import config
 
@@ -55,26 +55,43 @@ def make_session_graph(jsonified_df, figtype, binsize_seconds, session_length_se
             licks_scaled = df["licks"]
         
         if figtype == "hist":
-            # Create histogram with scaled data
-            fig = px.histogram(df.assign(licks_scaled=licks_scaled),
-                            x="licks_scaled",
-                            range_x=[0, plot_duration_scaled],
-                            nbins=int(plot_duration/binsize_seconds) if plot_duration > 0 and binsize_seconds > 0 else 1)
-        
+            # Use graph_objects instead of plotly.express to avoid template/pattern issues.
+            x_end = plot_duration_scaled if plot_duration_scaled and plot_duration_scaled > 0 else 1
+            bin_size = binsize_scaled if binsize_scaled and binsize_scaled > 0 else x_end
+
+            fig = go.Figure(
+                data=[
+                    go.Histogram(
+                        x=licks_scaled,
+                        xbins=dict(start=0, end=x_end, size=bin_size)
+                    )
+                ]
+            )
+
             fig.update_layout(
                 transition_duration=500,
                 xaxis_title=time_label,
                 yaxis_title="Licks per {:.3g} {}".format(binsize_scaled, time_unit),
-                showlegend=False)
+                showlegend=False,
+                xaxis=dict(range=[0, x_end])
+            )
         else:
-            fig = px.line(x=licks_scaled, y=range(0, len(df["licks"])))
-            
+            fig = go.Figure(
+                data=[
+                    go.Scatter(
+                        x=licks_scaled,
+                        y=list(range(0, len(df["licks"]))),
+                        mode='lines'
+                    )
+                ]
+            )
+
             fig.update_layout(
                 transition_duration=500,
                 xaxis_title=time_label,
                 yaxis_title="Cumulative licks",
                 showlegend=False,
-                xaxis=dict(range=[0, plot_duration_scaled]))
+                xaxis=dict(range=[0, plot_duration_scaled if plot_duration_scaled and plot_duration_scaled > 0 else 1]))
 
         return fig
 
@@ -124,6 +141,8 @@ def update_session_length_suggestion(jsonified_df, custom_config):
 @app.callback(Output('intraburst-fig', 'figure'),
               Output('total-licks', 'children'),
               Output('intraburst-freq', 'children'),
+              Output('licklength-mode', 'children'),
+              Output('intercontact-mode', 'children'),
               Input('lick-data', 'data'),
               Input('interburst-slider', 'value'),
               Input('minlicks-slider', 'value'),
@@ -147,28 +166,38 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
             # Return empty figure if no data
             fig = go.Figure()
             fig.update_layout(title="No data available")
-            return fig, "0", "0.00 Hz"
+            return fig, "0", "0.00 Hz", "N/A", "N/A"
         
         lick_times = df["licks"].to_list()
-        
-        # Check if we have offset data available and checkbox is checked
-        if remove_long and offset_key and offset_key != 'none' and jsonified_dict:
+        offset_times = None
+
+        # Use offset data if available (for lick length/intercontact metrics),
+        # and only remove long licks when checkbox is selected.
+        if offset_key and offset_key != 'none' and jsonified_dict:
             try:
                 import json
                 data_array = json.loads(jsonified_dict)
                 if offset_key in data_array:
                     offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
-                    offset_times = offset_df["licks"].to_list()
-                    
-                    # Check for potential cross-file contamination before processing
-                    if abs(len(lick_times) - len(offset_times)) > 1:
-                        # Severe mismatch suggests cross-file contamination, wait for proper sync
-                        raise PreventUpdate
-                    
-                    lickdata = lickcalc(lick_times, offset=offset_times, burstThreshold=ibi, 
-                                      minburstlength=minlicks, longlickThreshold=longlick_th, remove_longlicks=remove_long)
-                else:
-                    lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
+                    candidate_offset_times = offset_df["licks"].to_list()
+
+                    # Avoid using clearly mismatched onset/offset arrays.
+                    if abs(len(lick_times) - len(candidate_offset_times)) <= 1:
+                        offset_times = candidate_offset_times
+            except Exception:
+                offset_times = None
+        
+        # Compute lick metrics (with offsets when available).
+        if offset_times is not None:
+            try:
+                lickdata = lickcalc(
+                    lick_times,
+                    offset=offset_times,
+                    burstThreshold=ibi,
+                    minburstlength=minlicks,
+                    longlickThreshold=longlick_th,
+                    remove_longlicks=remove_long
+                )
             except Exception as e:
                 lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
         else:
@@ -217,8 +246,21 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
             freq = "{:.2f} Hz".format(lickdata['freq'])
         else:
             freq = "N/A"
+
+        licklength_mode = lickdata.get('licklength_mode')
+        intercontact_mode = lickdata.get('intercontact_mode')
+
+        if licklength_mode is not None:
+            licklength_mode_text = "{:.1f}".format(float(licklength_mode) * 1000)
+        else:
+            licklength_mode_text = "N/A"
+
+        if intercontact_mode is not None:
+            intercontact_mode_text = "{:.1f}".format(float(intercontact_mode) * 1000)
+        else:
+            intercontact_mode_text = "N/A"
         
-        return fig, nlicks, freq
+        return fig, nlicks, freq, licklength_mode_text, intercontact_mode_text
 
 # Callback to sync input fields with sliders when sliders change
 @app.callback(
@@ -642,13 +684,43 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
             mean_ibi = "{:.2f}".format(np.mean(ibis)) if ibis is not None and len(ibis) > 0 else "N/A"
             return fig, bNum, bMean, mean_ibi, "N/A", "N/A", "N/A"
         
-        x=lickdata['burstprob'][0]
-        y=lickdata['burstprob'][1]
+        x = np.asarray(lickdata['burstprob'][0], dtype=float)
+        y = np.asarray(lickdata['burstprob'][1], dtype=float)
 
-        fig = px.scatter(x=x,y=y)
-        
-        fig.update_traces(mode='markers', marker_line_width=2, marker_size=10)
-        
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y,
+                mode='markers',
+                name='Observed',
+                marker=dict(size=10, line=dict(width=2))
+            )
+        )
+
+        # Add fitted curve using trompy's own Weibull form to match reported alpha/beta.
+        alpha = lickdata.get('weib_alpha')
+        beta = lickdata.get('weib_beta')
+        if alpha is not None and beta is not None:
+            try:
+                alpha = float(alpha)
+                beta = float(beta)
+                if alpha > 0 and beta > 0 and np.all(np.isfinite(x)) and len(x) > 0:
+                    x_fit = np.linspace(max(1e-6, float(np.min(x))), float(np.max(x)), 200)
+                    y_fit = weib_davis(x_fit, alpha, beta)
+                    fig.add_trace(
+                        go.Scatter(
+                            x=x_fit,
+                            y=y_fit,
+                            mode='lines',
+                            name='Weibull fit',
+                            line=dict(width=2)
+                        )
+                    )
+            except (TypeError, ValueError, OverflowError):
+                # Keep only observed points if fitted-curve parameters are not usable.
+                pass
+
         fig.update_layout(
             title="Weibull probability plot",
             xaxis_title="Burst size (n)",
@@ -710,7 +782,9 @@ def collect_figure_data(jsonified_df, bin_size_seconds, ibi_slider, minlicks_sli
                 'weibull_beta': 0,
                 'weibull_rsq': 0,
                 'n_long_licks': 0,
-                'max_lick_duration': 0
+                'max_lick_duration': 0,
+                'licklength_mode': 0,
+                'intercontact_mode': 0
             }
             return figure_data
         
@@ -726,7 +800,9 @@ def collect_figure_data(jsonified_df, bin_size_seconds, ibi_slider, minlicks_sli
                 'weibull_beta': 0,
                 'weibull_rsq': 0,
                 'n_long_licks': 0,
-                'max_lick_duration': 0
+                'max_lick_duration': 0,
+                'licklength_mode': 0,
+                'intercontact_mode': 0
             }
             return figure_data
         
@@ -837,7 +913,9 @@ def collect_figure_data(jsonified_df, bin_size_seconds, ibi_slider, minlicks_sli
             'weibull_beta': burst_lickdata['weib_beta'] if (burst_lickdata['weib_beta'] is not None and num_bursts >= min_bursts_required) else None,
             'weibull_rsq': burst_lickdata['weib_rsq'] if (burst_lickdata['weib_rsq'] is not None and num_bursts >= min_bursts_required) else None,
             'n_long_licks': 'N/A (requires offset data)',
-            'max_lick_duration': 'N/A (requires offset data)'
+            'max_lick_duration': 'N/A (requires offset data)',
+            'licklength_mode': (burst_lickdata.get('licklength_mode') * 1000) if burst_lickdata.get('licklength_mode') is not None else 'N/A (requires offset data)',
+            'intercontact_mode': (burst_lickdata.get('intercontact_mode') * 1000) if burst_lickdata.get('intercontact_mode') is not None else 'N/A (requires offset data)'
         }
         
         # Process offset data if available for lick lengths and long lick statistics
@@ -885,6 +963,8 @@ def collect_figure_data(jsonified_df, bin_size_seconds, ibi_slider, minlicks_sli
                         longlicks_array = lickdata_with_offset["longlicks"]
                         figure_data['summary_stats']['n_long_licks'] = len(longlicks_array) if longlicks_array is not None else 0
                         figure_data['summary_stats']['max_lick_duration'] = np.max(licklength) if len(licklength) > 0 else 0
+                        figure_data['summary_stats']['licklength_mode'] = (lickdata_with_offset.get('licklength_mode') * 1000) if lickdata_with_offset.get('licklength_mode') is not None else np.nan
+                        figure_data['summary_stats']['intercontact_mode'] = (lickdata_with_offset.get('intercontact_mode') * 1000) if lickdata_with_offset.get('intercontact_mode') is not None else np.nan
                         
                         logging.debug(f"Calculated n_long_licks = {figure_data['summary_stats']['n_long_licks']}")
                         logging.debug(f"Calculated max_lick_duration = {figure_data['summary_stats']['max_lick_duration']}")
@@ -893,11 +973,15 @@ def collect_figure_data(jsonified_df, bin_size_seconds, ibi_slider, minlicks_sli
                         logging.error(f"Onset/offset validation failed for data export: {validation['message']}")
                         figure_data['summary_stats']['n_long_licks'] = f'N/A (validation failed: {validation["message"][:50]}...)'
                         figure_data['summary_stats']['max_lick_duration'] = 'N/A (validation failed)'
+                        figure_data['summary_stats']['licklength_mode'] = 'N/A (validation failed)'
+                        figure_data['summary_stats']['intercontact_mode'] = 'N/A (validation failed)'
                     
             except (ValueError, KeyError, TypeError) as e:
                 logging.error(f"Error processing offset data: {e}")
                 figure_data['summary_stats']['n_long_licks'] = 'N/A (error)'
                 figure_data['summary_stats']['max_lick_duration'] = 'N/A (error)'
+                figure_data['summary_stats']['licklength_mode'] = 'N/A (error)'
+                figure_data['summary_stats']['intercontact_mode'] = 'N/A (error)'
         
     except (ValueError, KeyError, TypeError) as e:
         logging.error(f"Error collecting figure data: {e}")
