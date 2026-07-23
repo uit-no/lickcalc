@@ -1,0 +1,83 @@
+\Template MPC file for recording lick offsets
+\Author: James McCutcheon, 23.07.2026
+\
+\This template uses a software "toggle" to determine whether
+\contact is being made with the spout.
+\
+\IMPORTANT: To function properly, it is essential that the input
+\on the Med-PC card that corresponds to the lickometer is set to
+\"Level" mode (not "Toggle" mode)
+\
+\Briefly, the script works by changing the variable G (toggle)
+\to 1 whenever first contact is made (and adding a timestamp to
+\the onset array) and then changing variable G back to 0 when there
+\is no longer contact (and adding a timestamp to the offset array).
+\This logic results in relatively small file sizes compared to
+\code which records every millisecond with either on or off.
+\
+\Additional toggles and arrays can be added for more than one
+\lickometer
+
+
+\Inputs
+^LLicks = 7
+
+
+\Outputs
+^HLight = 7
+
+\Variables
+\A = Total Left licks
+\B = Left Lick onset array
+\C = Left lick offset array
+
+\G = Left toggle
+
+\S = Session length
+\T = Time
+
+\Array
+DIM B = 10000
+DIM C = 10000
+
+
+S.S.1 \Initialize program and timer
+    S1,
+        0.001": Set B(0) = -1, B(1) = -987.987, C(0) = -2, C(1) = -987.987, S = 3600; ---> S2
+    S2,
+        #START: On ^HLight; ---> S3
+    S3,
+        0.001": If T > S [@END, @CONT]
+                @END: ---> S3
+                @CONT: Set T = T + 0.001; ---> S3
+    S4,
+        0.1": Off ^HLight; ---> STOPABORTFLUSH
+
+
+S.S.2 \Display module
+    S1,
+        #START: ---> S2
+    S2,
+        0.001": Show 1, Time elapsed, T; Show 2, Left licks, A; ---> Sx
+
+
+S.S.3 \Left lick toggle
+    S1,
+        #START: ---> S2
+    S2,
+        #R^LLicks: Set G = 1; ---> S2
+        0.001": Set G = 0; ---> S2
+
+
+S.S.4 \Left Lick detector
+    S1,
+        #START: ---> S2
+    S2,
+        0.001": If G = 1 [@LLickOn, @NoLick]
+                @LLickOn: Add A; Set B(A) = T, B(A+1) = -987.987; ---> S3
+                @NoLick: ---> S2
+    S3,
+        0.001": If G = 0 [@LLickOff, @Cont]
+                @LLickOff: Set C(A) = T, C(A+1) = -987.987; ---> S2
+                @Cont: ---> S3
+
