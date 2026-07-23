@@ -144,13 +144,14 @@ def update_session_length_suggestion(jsonified_df, custom_config):
               Output('licklength-mode', 'children'),
               Output('intercontact-mode', 'children'),
               Input('lick-data', 'data'),
+              Input('intraburst-fig-type', 'value'),
               Input('interburst-slider', 'value'),
               Input('minlicks-slider', 'value'),
               Input('longlick-threshold', 'value'),
               Input('remove-longlicks-checkbox', 'value'),
-              State('offset-array', 'value'),
-              State('data-store', 'data'))
-def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
+              Input('offset-array', 'value'),
+              Input('data-store', 'data'))
+def make_intraburstfreq_graph(jsonified_df, intraburst_fig_type, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
     # Use slider values directly
     ibi = ibi_slider
     minlicks = minlicks_slider
@@ -165,7 +166,6 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
         if len(df) == 0:
             # Return empty figure if no data
             fig = go.Figure()
-            fig.update_layout(title="No data available")
             return fig, "0", "0.00 Hz", "N/A", "N/A"
         
         lick_times = df["licks"].to_list()
@@ -181,9 +181,11 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
                     offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
                     candidate_offset_times = offset_df["licks"].to_list()
 
-                    # Avoid using clearly mismatched onset/offset arrays.
-                    if abs(len(lick_times) - len(candidate_offset_times)) <= 1:
-                        offset_times = candidate_offset_times
+                    # Use same onset/offset validation strategy as other callbacks.
+                    validation = validate_onset_offset_pairs(lick_times, candidate_offset_times)
+                    if validation.get('valid'):
+                        lick_times = validation.get('corrected_onset', lick_times)
+                        offset_times = validation.get('corrected_offset', candidate_offset_times)
             except Exception:
                 offset_times = None
         
@@ -210,9 +212,30 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
             # Return empty figure if no interlick intervals
             fig = go.Figure()
             fig.update_layout(
-                title="No interlick intervals available",
                 xaxis_title="Interlick interval (s)",
                 yaxis_title="Frequency"
+            )
+        elif intraburst_fig_type == 'first_n_ili':
+            # Placeholder for upcoming first-n-ILIs implementation from trompy.
+            fig = go.Figure()
+            fig.update_layout(
+                annotations=[
+                    dict(
+                        x=0.5,
+                        y=0.5,
+                        xref="paper",
+                        yref="paper",
+                        text="This view is not enabled yet.<br>Use Intraburst ILIs for now.",
+                        showarrow=False,
+                        font=dict(size=16, color="gray"),
+                        xanchor="center",
+                        yanchor="middle"
+                    )
+                ],
+                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                height=400,
+                margin=dict(l=40, r=40, t=60, b=40)
             )
         else:
             try:
@@ -222,11 +245,6 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
                 
                 fig.update_layout(
                     transition_duration=500,
-                    title={
-                        'text': "Intraburst lick frequency",
-                        'x': 0.5,  # Center the title horizontally
-                        'xanchor': 'center'
-                    },
                     xaxis_title="Interlick interval (s)",
                     yaxis_title="Frequency",
                     showlegend=False,
@@ -236,7 +254,6 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
                 # If histogram creation fails, return empty figure
                 fig = go.Figure()
                 fig.update_layout(
-                    title="Error creating interlick interval histogram",
                     xaxis_title="Interlick interval (s)",
                     yaxis_title="Frequency"
                 )
@@ -251,12 +268,12 @@ def make_intraburstfreq_graph(jsonified_df, ibi_slider, minlicks_slider, longlic
         intercontact_mode = lickdata.get('intercontact_mode')
 
         if licklength_mode is not None:
-            licklength_mode_text = "{:.1f}".format(float(licklength_mode) * 1000)
+            licklength_mode_text = "{:.0f}".format(float(licklength_mode) * 1000)
         else:
             licklength_mode_text = "N/A"
 
         if intercontact_mode is not None:
-            intercontact_mode_text = "{:.1f}".format(float(intercontact_mode) * 1000)
+            intercontact_mode_text = "{:.0f}".format(float(intercontact_mode) * 1000)
         else:
             intercontact_mode_text = "N/A"
         
@@ -279,12 +296,13 @@ def update_display_values(ibi_value, minlicks_value, longlick_value):
 @app.callback(Output('longlicks-fig', 'figure'),
               Output('nlonglicks', 'children'),
               Output('longlicks-max', 'children'),
+              Input('longlick-fig-type', 'value'),
               Input('offset-array', 'value'),
               Input('longlick-threshold', 'value'),
               Input('remove-longlicks-checkbox', 'value'),
               State('data-store', 'data'),
               State('lick-data', 'data'))
-def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonified_dict, jsonified_df):
+def make_longlicks_graph(longlick_fig_type, offset_key, longlick_slider, remove_longlicks, jsonified_dict, jsonified_df):
     # Use slider value directly
     longlick_th = longlick_slider
     remove_long = 'remove' in remove_longlicks
@@ -297,11 +315,6 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
         # Return figure with message similar to Weibull plot style
         fig = go.Figure()
         fig.update_layout(
-            title={
-                'text': "No lick duration data available",
-                'x': 0.5,  # Center the title horizontally
-                'xanchor': 'center'
-            },
             annotations=[
                 dict(
                     x=0.5,
@@ -331,7 +344,6 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
         if offset_key not in data_array:
             fig = go.Figure()
             fig.update_layout(
-                title="Lick Duration Analysis",
                 annotations=[
                     dict(
                         text=f"Offset column '{offset_key}' not found in data",
@@ -349,7 +361,6 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
         if len(df) == 0:
             # Return empty figure if no data
             fig = go.Figure()
-            fig.update_layout(title="No data available")
             return fig, "0", "0.00"
         
         onset=df["licks"].to_list()
@@ -369,7 +380,6 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
             logging.error(f"Onset/offset validation failed: {validation['message']}")
             fig = go.Figure()
             fig.update_layout(
-                title="Lick Duration Analysis - Data Validation Error",
                 annotations=[
                     dict(
                         text=f"Data validation error: {validation['message']}",
@@ -398,13 +408,11 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
         if lickdata is None:
             logging.error("lickcalc returned None")
             fig = go.Figure()
-            fig.update_layout(title="Analysis Error")
             return fig, "Error", "Error"
         
         if "licklength" not in lickdata:
             logging.error(f"licklength key not found in lickdata. Available keys: {list(lickdata.keys())}")
             fig = go.Figure()
-            fig.update_layout(title="Analysis Error")
             return fig, "Error", "Error"
             
         licklength = lickdata["licklength"]
@@ -412,26 +420,62 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
         if licklength is None:
             logging.error("licklength is None")
             fig = go.Figure()
-            fig.update_layout(title="Analysis Error") 
             return fig, "Error", "Error"
         
         if len(licklength) == 0:
             fig = go.Figure()
-            fig.update_layout(title="No lick length data available")
             return fig, "0", "0.00"
         
-        counts, bins = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
-        bins = 0.5 * (bins[:-1] + bins[1:])
-        
-        fig = px.bar(x=bins, y=counts)
-    
-        fig.update_layout(
-            transition_duration=500,
-            title="Lick lengths",
-            xaxis_title="Lick length (s)",
-            yaxis_title="Frequency",
-            showlegend=False,
-            # margin=dict(l=20, r=20, t=20, b=20),
+        if longlick_fig_type == 'intercontact_lengths':
+            intercontact = lickdata.get("intercontact_time")
+
+            if intercontact is None or len(intercontact) == 0:
+                fig = go.Figure()
+                fig.update_layout(
+                    xaxis_title="Intercontact length (s)",
+                    yaxis_title="Frequency",
+                    showlegend=False
+                )
+            else:
+                intercontact_array = np.asarray(intercontact, dtype=float)
+                intercontact_array = intercontact_array[np.isfinite(intercontact_array)]
+                intercontact_array = intercontact_array[intercontact_array >= 0]
+
+                if intercontact_array.size == 0:
+                    fig = go.Figure()
+                    fig.update_layout(
+                        xaxis_title="Intercontact length (s)",
+                        yaxis_title="Frequency",
+                        showlegend=False
+                    )
+                else:
+                    if longlick_th is None or longlick_th <= 0:
+                        fig = go.Figure()
+                    else:
+                        counts, bins = np.histogram(
+                            intercontact_array,
+                            bins=np.arange(0, longlick_th, 0.01)
+                        )
+                        bins = 0.5 * (bins[:-1] + bins[1:])
+                        fig = px.bar(x=bins, y=counts)
+                    fig.update_layout(
+                        transition_duration=500,
+                        xaxis_title="Intercontact length (s)",
+                        yaxis_title="Frequency",
+                        showlegend=False,
+                    )
+        else:
+            counts, bins = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
+            bins = 0.5 * (bins[:-1] + bins[1:])
+
+            fig = px.bar(x=bins, y=counts)
+
+            fig.update_layout(
+                transition_duration=500,
+                xaxis_title="Lick length (s)",
+                yaxis_title="Frequency",
+                showlegend=False,
+                # margin=dict(l=20, r=20, t=20, b=20),
             )
         
         # Handle case where longlicks might be None (no licks above threshold)
@@ -456,7 +500,6 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
         
         fig = go.Figure()
         fig.update_layout(
-            title="Lick Duration Analysis - Error",
             annotations=[
                 dict(
                     text=f"Error processing lick duration data: {str(e)}",
@@ -471,13 +514,14 @@ def make_longlicks_graph(offset_key, longlick_slider, remove_longlicks, jsonifie
 
 @app.callback(Output('bursthist-fig', 'figure'),
               Input('lick-data', 'data'),
+              Input('bursthist-fig-type', 'value'),
               Input('interburst-slider', 'value'),
               Input('minlicks-slider', 'value'),
               Input('longlick-threshold', 'value'),
               Input('remove-longlicks-checkbox', 'value'),
               State('offset-array', 'value'),
               State('data-store', 'data'))
-def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
+def make_bursthist_graph(jsonified_df, bursthist_fig_type, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
     # Use slider values directly
     ibi = ibi_slider
     minlicks = minlicks_slider
@@ -491,7 +535,6 @@ def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
         if len(df) == 0:
             # Return empty figure if no data
             fig = go.Figure()
-            fig.update_layout(title="No data available")
             return fig
         
         # Check if we have offset data available and checkbox is checked
@@ -522,13 +565,11 @@ def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
         
         if len(bursts) == 0:
             fig = go.Figure()
-            fig.update_layout(title="No bursts found with current parameters")
             return fig
 
         # Additional safety check for valid burst data before creating histogram
         if not bursts or not all(isinstance(x, (int, float)) and x > 0 for x in bursts):
             fig = go.Figure()
-            fig.update_layout(title="Invalid burst data")
             return fig
 
         try:
@@ -538,18 +579,12 @@ def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
         except Exception as e:
             # If histogram creation fails, return empty figure
             fig = go.Figure()
-            fig.update_layout(title="Error creating burst histogram")
             return fig
         
         # fig.update_traces(mode='markers', marker_line_width=2, marker_size=10)
         
         fig.update_layout(
             transition_duration=500,
-            title={
-                'text': "Burst frequency histogram",
-                'x': 0.5,  # Center the title horizontally
-                'xanchor': 'center'
-            },
             xaxis_title="Burst size",
             yaxis_title="Frequency",
             showlegend=False)
@@ -564,13 +599,14 @@ def make_bursthist_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
               Output('weibull-beta', 'children'),
               Output('weibull-rsq', 'children'),
               Input('lick-data', 'data'),
+              Input('burstprob-fig-type', 'value'),
               Input('interburst-slider', 'value'),
               Input('minlicks-slider', 'value'),
               Input('longlick-threshold', 'value'),
               Input('remove-longlicks-checkbox', 'value'),
               State('offset-array', 'value'),
               State('data-store', 'data'))
-def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
+def make_burstprob_graph(jsonified_df, burstprob_fig_type, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
     # Use slider values directly
     ibi = ibi_slider
     minlicks = minlicks_slider
@@ -584,7 +620,6 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
         if len(df) == 0:
             # Return empty figure if no data
             fig = go.Figure()
-            fig.update_layout(title="No data available")
             return fig, "0", "0.00", "N/A", "0.00", "0.00", "0.00"
         
         lick_times = df["licks"].to_list()
@@ -608,7 +643,6 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
     
         if lickdata['burstprob'] is None or len(lickdata['burstprob'][0]) == 0:
             fig = go.Figure()
-            fig.update_layout(title="No bursts found with current parameters")
             return fig, "0", "0.00", "N/A", "0.00", "0.00", "0.00"
         
         # Check if we have enough bursts for Weibull analysis
@@ -618,11 +652,6 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
         if num_bursts < min_bursts_required:
             fig = go.Figure()
             fig.update_layout(
-                title={
-                    'text': f"Too few bursts for Weibull analysis ({num_bursts} < {min_bursts_required})",
-                    'x': 0.5,  # Center the title horizontally
-                    'xanchor': 'center'
-                },
                 annotations=[
                     dict(
                         x=0.5,
@@ -653,11 +682,6 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
         if lickdata['weib_alpha'] is None or lickdata['weib_beta'] is None or lickdata['weib_rsq'] is None:
             fig = go.Figure()
             fig.update_layout(
-                title={
-                    'text': "Too few bursts for Weibull analysis",
-                    'x': 0.5,  # Center the title horizontally
-                    'xanchor': 'center'
-                },
                 annotations=[
                     dict(
                         x=0.5,
@@ -722,7 +746,6 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
                 pass
 
         fig.update_layout(
-            title="Weibull probability plot",
             xaxis_title="Burst size (n)",
             yaxis_title="Probability of burst>n",
             showlegend=False)
@@ -738,9 +761,9 @@ def make_burstprob_graph(jsonified_df, ibi_slider, minlicks_slider, longlick_sli
             mean_ibi = "N/A"
         
         # Handle None values for Weibull parameters gracefully
-        alpha = "{:.2f}".format(lickdata['weib_alpha']) if lickdata['weib_alpha'] is not None else "N/A"
-        beta = "{:.2f}".format(lickdata['weib_beta']) if lickdata['weib_beta'] is not None else "N/A"
-        rsq = "{:.2f}".format(lickdata['weib_rsq']) if lickdata['weib_rsq'] is not None else "N/A"
+        alpha = "{:.3f}".format(lickdata['weib_alpha']) if lickdata['weib_alpha'] is not None else "N/A"
+        beta = "{:.3f}".format(lickdata['weib_beta']) if lickdata['weib_beta'] is not None else "N/A"
+        rsq = "{:.3f}".format(lickdata['weib_rsq']) if lickdata['weib_rsq'] is not None else "N/A"
 
         return fig, bNum, bMean, mean_ibi, alpha, beta, rsq
 

@@ -103,7 +103,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h6a83c73_3.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zeromq-4.3.5-h3a581c9_11.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
-      - pypi: git+https://github.com/mccutcheonlab/trompy.git?rev=dev#8200d6dc0a78b64f2e841710fbbced2d69e1d587
+      - pypi: git+https://github.com/mccutcheonlab/trompy.git?rev=dev#36503fe27ae779499fce8800a30eea6d0f550401
       - pypi: https://files.pythonhosted.org/packages/05/51/e8054ee005fe613f2e854c31e0882de20f809a5f14bf44aeb82b39dd270c/tdt-0.7.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/08/60/defa5e69641db890a63be281f41345f4c33b157824eaf0b9fad3e08b0dcb/fonttools-4.63.0-cp311-cp311-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -1435,7 +1435,7 @@ packages:
   purls: []
   size: 388453
   timestamp: 1764777142545
-- pypi: git+https://github.com/mccutcheonlab/trompy.git?rev=dev#8200d6dc0a78b64f2e841710fbbced2d69e1d587
+- pypi: git+https://github.com/mccutcheonlab/trompy.git?rev=dev#36503fe27ae779499fce8800a30eea6d0f550401
   name: trompy
   version: 0.17.0
   requires_dist:

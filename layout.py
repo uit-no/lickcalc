@@ -270,20 +270,27 @@ dcc.Store(id='lick-data'),
                 html.Div(id='validation-status', style={'margin': '10px 0'})
             ], width=12)
         ]),
+
+        dbc.Row([
+            dbc.Col([
+                html.Label("Session Plot Type:", style={'font-weight': 'bold', 'margin-bottom': '5px'}),
+                dcc.Dropdown(
+                    id='session-fig-type',
+                    options=[
+                        {'label': 'Standard histogram', 'value': 'hist'},
+                        {'label': 'Cumulative plot', 'value': 'cumul'}
+                    ],
+                    value=config.get('session.fig_type', 'hist'),
+                    clearable=False,
+                    style={'max-width': '320px'}
+                )
+            ], width=12)
+        ], style={'margin-bottom': '8px'}),
         
         dbc.Row(
             dbc.Col(
                 dcc.Graph(id='session-fig'))),
         dbc.Row(children=[
-            dbc.Col([
-                html.Label("Plot Type:", style={'font-weight': 'bold', 'margin-bottom': '5px'}),
-                dcc.RadioItems(
-                    id='session-fig-type',
-                    options=[
-                        {"label": "Standard histogram", "value": "hist"},
-                        {"label": "Cumulative plot", "value": "cumul"}],
-                    value=config.get('session.fig_type', 'hist'))
-                ], width=3),
             dbc.Col([
                 get_session_length_tooltip()[0],
                 dbc.Row([
@@ -449,12 +456,32 @@ dcc.Store(id='lick-data'),
         ], style={'margin-bottom': '20px'}),
         
         dbc.Row(children=[
-            dbc.Col(
-                dcc.Graph(id='intraburst-fig'),
-                width=4),
-            dbc.Col(
-                dcc.Graph(id='longlicks-fig'),
-                width=4),
+            dbc.Col([
+                html.Label("Plot:", style={'font-weight': 'bold', 'margin-bottom': '5px'}),
+                dcc.Dropdown(
+                    id='intraburst-fig-type',
+                    options=[
+                        {'label': 'Intraburst ILIs', 'value': 'intraburst_ili'},
+                        {'label': 'First n ILIs (coming soon)', 'value': 'first_n_ili', 'disabled': True}
+                    ],
+                    value='intraburst_ili',
+                    clearable=False
+                ),
+                dcc.Graph(id='intraburst-fig')
+            ], width=4),
+            dbc.Col([
+                html.Label("Plot:", style={'font-weight': 'bold', 'margin-bottom': '5px'}),
+                dcc.Dropdown(
+                    id='longlick-fig-type',
+                    options=[
+                        {'label': 'Lick lengths', 'value': 'lick_lengths'},
+                        {'label': 'Intercontact lengths', 'value': 'intercontact_lengths'}
+                    ],
+                    value='lick_lengths',
+                    clearable=False
+                ),
+                dcc.Graph(id='longlicks-fig')
+            ], width=4),
             dbc.Col([
                 dbc.Table([
                     html.Tr([html.Th("Property"), html.Th("Value")]),
@@ -463,7 +490,7 @@ dcc.Store(id='lick-data'),
                     html.Tr([table_cells[8], html.Td(id="licklength-mode")]),  # Lick length mode
                     html.Tr([table_cells[9], html.Td(id="intercontact-mode")]),  # Intercontact mode
                     html.Tr([table_cells[2], html.Td(id="nlonglicks")]),  # No. of long licks
-                    html.Tr([html.Td("Maximum long lick"), html.Td(id="longlicks-max")]),
+                    html.Tr([html.Td("Maximum long lick (s)"), html.Td(id="longlicks-max")]),
                     ],
                     striped=True, hover=True, bordered=True),
                 # Add tooltips
@@ -476,12 +503,30 @@ dcc.Store(id='lick-data'),
     ]),
         
         dbc.Row(children=[
-            dbc.Col(
-                dcc.Graph(id='bursthist-fig'),
-                width=4),
-            dbc.Col(
-                dcc.Graph(id='burstprob-fig'),
-                width=4),
+            dbc.Col([
+                html.Label("Plot:", style={'font-weight': 'bold', 'margin-bottom': '5px'}),
+                dcc.Dropdown(
+                    id='bursthist-fig-type',
+                    options=[
+                        {'label': 'Burst histogram', 'value': 'burst_hist'}
+                    ],
+                    value='burst_hist',
+                    clearable=False
+                ),
+                dcc.Graph(id='bursthist-fig')
+            ], width=4),
+            dbc.Col([
+                html.Label("Plot:", style={'font-weight': 'bold', 'margin-bottom': '5px'}),
+                dcc.Dropdown(
+                    id='burstprob-fig-type',
+                    options=[
+                        {'label': 'Weibull probability', 'value': 'weibull_prob'}
+                    ],
+                    value='weibull_prob',
+                    clearable=False
+                ),
+                dcc.Graph(id='burstprob-fig')
+            ], width=4),
             dbc.Col([
                 dbc.Table([
                     html.Tr([html.Th("Property"), html.Th("Value")]),
