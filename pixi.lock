@@ -103,7 +103,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h6a83c73_3.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zeromq-4.3.5-h3a581c9_11.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
-      - pypi: git+https://github.com/mccutcheonlab/trompy.git?rev=dev#36503fe27ae779499fce8800a30eea6d0f550401
       - pypi: https://files.pythonhosted.org/packages/05/51/e8054ee005fe613f2e854c31e0882de20f809a5f14bf44aeb82b39dd270c/tdt-0.7.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/08/60/defa5e69641db890a63be281f41345f4c33b157824eaf0b9fad3e08b0dcb/fonttools-4.63.0-cp311-cp311-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -113,6 +112,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/7e/0d/271aace3342157c64700c9ff4c59c7b392f3dbab393692e8db6fbe7ab96c/matplotlib-3.10.9-cp311-cp311-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/95/da/0d1df507cf574b3f224ccc3d45244c9a1d732c81dcb26b1e8a766ae271a8/scipy-1.17.1-cp311-cp311-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/98/4b/9bd370b004b5c9d8045c6c33cf65bae018b27aca550a3f657cdc99acdbd8/contourpy-1.3.3-cp311-cp311-win_amd64.whl
+      - pypi: https://files.pythonhosted.org/packages/a6/53/51987bc3cc1d72b04cc55a93dee81f60abd7541852a0cba8f9f105d41533/trompy-0.17.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/be/6c/28f17390b62b8f2f520e2915095b3c94d88681ecf0041e75389d9667f202/kiwisolver-1.5.0-cp311-cp311-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/c0/da/977ded879c29cbd04de313843e76868e6e13408a94ed6b987245dc7c8506/openpyxl-3.1.5-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl
@@ -1435,19 +1435,6 @@ packages:
   purls: []
   size: 388453
   timestamp: 1764777142545
-- pypi: git+https://github.com/mccutcheonlab/trompy.git?rev=dev#36503fe27ae779499fce8800a30eea6d0f550401
-  name: trompy
-  version: 0.17.0
-  requires_dist:
-  - numpy
-  - matplotlib
-  - xlrd
-  - scipy
-  - pandas
-  - xlsxwriter
-  - tdt
-  - openpyxl
-  requires_python: '>=3.8'
 - pypi: https://files.pythonhosted.org/packages/05/51/e8054ee005fe613f2e854c31e0882de20f809a5f14bf44aeb82b39dd270c/tdt-0.7.3-py3-none-any.whl
   name: tdt
   version: 0.7.3
@@ -1632,6 +1619,20 @@ packages:
   - pytest-xdist ; extra == 'test-no-images'
   - wurlitzer ; extra == 'test-no-images'
   requires_python: '>=3.11'
+- pypi: https://files.pythonhosted.org/packages/a6/53/51987bc3cc1d72b04cc55a93dee81f60abd7541852a0cba8f9f105d41533/trompy-0.17.1-py3-none-any.whl
+  name: trompy
+  version: 0.17.1
+  sha256: a2fac4cc59908a4839cd589ce10f9ef2b11211021a81958e212c6110dc23e235
+  requires_dist:
+  - numpy
+  - matplotlib
+  - xlrd
+  - scipy
+  - pandas
+  - xlsxwriter
+  - tdt
+  - openpyxl
+  requires_python: '>=3.8'
 - pypi: https://files.pythonhosted.org/packages/be/6c/28f17390b62b8f2f520e2915095b3c94d88681ecf0041e75389d9667f202/kiwisolver-1.5.0-cp311-cp311-win_amd64.whl
   name: kiwisolver
   version: 1.5.0

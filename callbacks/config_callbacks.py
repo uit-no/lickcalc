@@ -7,10 +7,20 @@ from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import yaml
 import base64
+import numpy as np
 
 from app_instance import app
 from config_manager import config
 from tooltips import TOOLTIP_TEXTS, get_binsize_tooltip
+
+
+def _format_mark_label(val):
+    """Format slider mark labels without unnecessary trailing zeros."""
+    if abs(val - round(val)) < 1e-9:
+        return str(int(round(val)))
+    if abs(val * 10 - round(val * 10)) < 1e-9:
+        return f"{val:.1f}"
+    return f"{val:.2f}"
 
 def generate_slider_marks(min_val, max_val, num_marks=6):
     """Generate evenly spaced marks for sliders."""
@@ -40,6 +50,40 @@ def generate_slider_marks(min_val, max_val, num_marks=6):
             marks[val] = str(val)
     
     return marks
+
+
+def generate_interburst_marks(min_val, max_val, slider_step):
+    """Generate readable interburst marks aligned to the available slider steps."""
+    if max_val <= min_val:
+        return {min_val: _format_mark_label(min_val)}
+
+    step = float(slider_step) if slider_step and slider_step > 0 else 0.25
+    mark_range = float(max_val) - float(min_val)
+
+    # Prefer 0.5 s ticks, then 1 s ticks, but keep labels from getting crowded.
+    preferred_intervals = [0.5, 1.0, 2.0]
+    chosen_interval = preferred_intervals[-1]
+    for interval in preferred_intervals:
+        if (mark_range / interval) + 1 <= 8:
+            chosen_interval = interval
+            break
+
+    step_multiple = max(1, int(round(chosen_interval / step)))
+    tick_step = step_multiple * step
+
+    marks = {}
+    n_ticks = int(np.floor(mark_range / tick_step)) + 1
+    for i in range(n_ticks + 1):
+        val = float(min_val) + i * tick_step
+        if val > float(max_val) + 1e-9:
+            break
+        val = round(val, 10)
+        marks[val] = _format_mark_label(val)
+
+    max_key = round(float(max_val), 10)
+    marks[max_key] = _format_mark_label(max_key)
+
+    return dict(sorted(marks.items(), key=lambda item: item[0]))
 
 # Config file management callback
 @app.callback(
@@ -96,30 +140,6 @@ def load_config(config_contents, config_filename, current_session_length):
         session_length_unit = custom_config.get('session', {}).get('length_unit', config.get('session.length_unit', 's'))
         file_type = custom_config.get('files', {}).get('default_file_type', config.get('files.default_file_type', 'med'))
         
-        # Helper function to generate reasonable slider marks
-        def generate_slider_marks(min_val, max_val, num_marks=5):
-            """Generate evenly spaced marks for a slider"""
-            if max_val <= min_val:
-                return {min_val: str(min_val)}
-            
-            # Calculate step for marks (not the same as slider step)
-            mark_range = max_val - min_val
-            mark_step = mark_range / (num_marks - 1)
-            
-            marks = {}
-            for i in range(num_marks):
-                val = min_val + (i * mark_step)
-                # Round to appropriate decimal places based on magnitude
-                if mark_step >= 1:
-                    val = round(val, 0)
-                elif mark_step >= 0.1:
-                    val = round(val, 1)
-                else:
-                    val = round(val, 2)
-                marks[val] = str(val)
-            
-            return marks
-        
         # Extract slider range configurations with fallbacks to defaults
         analysis_config = custom_config.get('analysis', {})
         
@@ -127,7 +147,7 @@ def load_config(config_contents, config_filename, current_session_length):
         ibi_min = analysis_config.get('min_interburst_interval', config.get('analysis.min_interburst_interval', 0))
         ibi_max = analysis_config.get('max_interburst_interval', config.get('analysis.max_interburst_interval', 3))
         ibi_step = analysis_config.get('interburst_step', config.get('analysis.interburst_step', 0.25))
-        ibi_marks = generate_slider_marks(ibi_min, ibi_max, num_marks=6)
+        ibi_marks = generate_interburst_marks(ibi_min, ibi_max, ibi_step)
         
         # Minlicks slider config (typically fixed but allow override)
         minlicks_min = analysis_config.get('min_licks_per_burst_range', 1)

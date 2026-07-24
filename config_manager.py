@@ -6,6 +6,7 @@ Handles loading and validation of configuration from config.yaml
 import yaml
 from pathlib import Path
 from typing import Dict, Any
+import numpy as np
 
 class ConfigManager:
     """Manages configuration loading and access for lickcalc."""
@@ -175,6 +176,46 @@ class ConfigManager:
                 marks[val] = str(val)
         
         return marks
+
+    def _format_mark_label(self, val: float) -> str:
+        """Format slider mark labels without unnecessary trailing zeros."""
+        if abs(val - round(val)) < 1e-9:
+            return str(int(round(val)))
+        if abs(val * 10 - round(val * 10)) < 1e-9:
+            return f"{val:.1f}"
+        return f"{val:.2f}"
+
+    def _generate_interburst_marks(self, min_val: float, max_val: float, slider_step: float) -> Dict[float, str]:
+        """Generate readable interburst marks aligned to the slider step size."""
+        if max_val <= min_val:
+            return {min_val: self._format_mark_label(min_val)}
+
+        step = float(slider_step) if slider_step and slider_step > 0 else 0.25
+        mark_range = float(max_val) - float(min_val)
+
+        preferred_intervals = [0.5, 1.0, 2.0]
+        chosen_interval = preferred_intervals[-1]
+        for interval in preferred_intervals:
+            if (mark_range / interval) + 1 <= 8:
+                chosen_interval = interval
+                break
+
+        step_multiple = max(1, int(round(chosen_interval / step)))
+        tick_step = step_multiple * step
+
+        marks: Dict[float, str] = {}
+        n_ticks = int(np.floor(mark_range / tick_step)) + 1
+        for i in range(n_ticks + 1):
+            val = float(min_val) + i * tick_step
+            if val > float(max_val) + 1e-9:
+                break
+            val = round(val, 10)
+            marks[val] = self._format_mark_label(val)
+
+        max_key = round(float(max_val), 10)
+        marks[max_key] = self._format_mark_label(max_key)
+
+        return dict(sorted(marks.items(), key=lambda item: item[0]))
     
     def get_slider_config(self, slider_name: str) -> Dict[str, Any]:
         """
@@ -202,12 +243,13 @@ class ConfigManager:
         elif slider_name == 'interburst':
             min_val = self.get('analysis.min_interburst_interval', 0)
             max_val = self.get('analysis.max_interburst_interval', 3)
+            step = self.get('analysis.interburst_step', 0.25)
             return {
                 'min': min_val,
                 'max': max_val,
-                'step': self.get('analysis.interburst_step', 0.25),
+                'step': step,
                 'value': self.get('microstructure.interburst_interval', 0.5),
-                'marks': self._generate_slider_marks(min_val, max_val, num_marks=6)
+                'marks': self._generate_interburst_marks(min_val, max_val, step)
             }
         elif slider_name == 'minlicks':
             min_val = 1
