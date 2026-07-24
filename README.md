@@ -75,6 +75,19 @@ You can customize the default parameter values by uploading a custom configurati
 
 The custom configuration will override the default values and remain active until you reload the app.
 
+Quick config keys reference:
+
+| Section | Key | Allowed Values | Example |
+|---|---|---|---|
+| session | fig_type | hist, cumul | hist |
+| microstructure | first_n_ilis | integer 1-20 | 5 |
+| plots | intraburst_fig_type | intraburst_ili, first_n_ili | first_n_ili |
+| plots | longlick_fig_type | lick_lengths, intercontact_lengths | intercontact_lengths |
+| plots | bursthist_fig_type | burst_hist | burst_hist |
+| plots | burstprob_fig_type | weibull_prob | weibull_prob |
+
+See full configuration details in [docs/CONFIG_README.md](docs/CONFIG_README.md).
+
 
 
 ### Core Functions

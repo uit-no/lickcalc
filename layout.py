@@ -263,6 +263,22 @@ dcc.Store(id='lick-data'),
                     # Allow multiple files to be uploaded
                     multiple=False
                 ))),
+
+        dbc.Row([
+            dbc.Col([
+                dbc.Alert([
+                    html.Strong("Synthetic Edge-Case Fixtures: "),
+                    html.Span("Quick test files are available in assets/examples/synthetic_edge_cases/. "),
+                    html.A("Manifest", href="/assets/examples/synthetic_edge_cases/synthetic_manifest.csv", target="_blank"),
+                    html.Span(" | "),
+                    html.A("Core", href="/assets/examples/synthetic_edge_cases/synthetic_core_cases.csv", target="_blank"),
+                    html.Span(" | "),
+                    html.A("Validation", href="/assets/examples/synthetic_edge_cases/synthetic_validation_cases.csv", target="_blank"),
+                    html.Span(" | "),
+                    html.A("Analysis", href="/assets/examples/synthetic_edge_cases/synthetic_analysis_cases.csv", target="_blank")
+                ], color="info", className="py-2", style={'margin': '6px 10px 0 10px'})
+            ], width=12)
+        ]),
         
         # Data validation status display
         dbc.Row([
@@ -462,11 +478,45 @@ dcc.Store(id='lick-data'),
                     id='intraburst-fig-type',
                     options=[
                         {'label': 'Intraburst ILIs', 'value': 'intraburst_ili'},
-                        {'label': 'First n ILIs (coming soon)', 'value': 'first_n_ili', 'disabled': True}
+                        {'label': 'First n ILIs', 'value': 'first_n_ili'}
                     ],
-                    value='intraburst_ili',
+                    value=config.get('plots.intraburst_fig_type', 'intraburst_ili'),
                     clearable=False
                 ),
+                html.Div([
+                    html.Label("Number of ILIs per burst:", style={'font-weight': 'bold', 'margin-top': '10px', 'margin-bottom': '5px'}),
+                    dbc.Row([
+                        dbc.Col([
+                            dcc.Slider(
+                                id='first-n-ili-slider',
+                                min=1,
+                                max=20,
+                                step=1,
+                                value=max(1, min(20, int(config.get('microstructure.first_n_ilis', 5)))),
+                                marks={1: '1', 5: '5', 10: '10', 15: '15', 20: '20'},
+                                tooltip={"placement": "bottom", "always_visible": False}
+                            )
+                        ], width=9),
+                        dbc.Col([
+                            html.Div(
+                                id='first-n-ili-display',
+                                children=str(max(1, min(20, int(config.get('microstructure.first_n_ilis', 5))))),
+                                style={
+                                    'text-align': 'center',
+                                    'padding': '6px 4px',
+                                    'background-color': '#f8f9fa',
+                                    'border': '1px solid #dee2e6',
+                                    'border-radius': '4px',
+                                    'font-weight': 'bold',
+                                    'font-size': '16px',
+                                    'color': '#495057',
+                                    'margin-top': '5px',
+                                    'margin-left': '-5px'
+                                }
+                            )
+                        ], width=3)
+                    ])
+                ], id='first-n-ili-slider-container', style={'display': 'none'}),
                 dcc.Graph(id='intraburst-fig')
             ], width=4),
             dbc.Col([
@@ -477,7 +527,7 @@ dcc.Store(id='lick-data'),
                         {'label': 'Lick lengths', 'value': 'lick_lengths'},
                         {'label': 'Intercontact lengths', 'value': 'intercontact_lengths'}
                     ],
-                    value='lick_lengths',
+                    value=config.get('plots.longlick_fig_type', 'lick_lengths'),
                     clearable=False
                 ),
                 dcc.Graph(id='longlicks-fig')
@@ -510,7 +560,7 @@ dcc.Store(id='lick-data'),
                     options=[
                         {'label': 'Burst histogram', 'value': 'burst_hist'}
                     ],
-                    value='burst_hist',
+                    value=config.get('plots.bursthist_fig_type', 'burst_hist'),
                     clearable=False
                 ),
                 dcc.Graph(id='bursthist-fig')
@@ -522,7 +572,7 @@ dcc.Store(id='lick-data'),
                     options=[
                         {'label': 'Weibull probability', 'value': 'weibull_prob'}
                     ],
-                    value='weibull_prob',
+                    value=config.get('plots.burstprob_fig_type', 'weibull_prob'),
                     clearable=False
                 ),
                 dcc.Graph(id='burstprob-fig')

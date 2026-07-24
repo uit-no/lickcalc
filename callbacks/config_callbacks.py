@@ -105,7 +105,12 @@ def generate_interburst_marks(min_val, max_val, slider_step):
     Output('longlick-threshold', 'step'),
     Output('longlick-threshold', 'marks'),
     Output('longlick-threshold', 'value'),
+    Output('first-n-ili-slider', 'value'),
     Output('session-fig-type', 'value'),
+    Output('intraburst-fig-type', 'value'),
+    Output('longlick-fig-type', 'value'),
+    Output('bursthist-fig-type', 'value'),
+    Output('burstprob-fig-type', 'value'),
     Output('session-length-input', 'value', allow_duplicate=True),
     Output('session-length-unit', 'value'),
     Output('input-file-type', 'value'),
@@ -135,10 +140,18 @@ def load_config(config_contents, config_filename, current_session_length):
         ibi = custom_config.get('microstructure', {}).get('interburst_interval', config.get('microstructure.interburst_interval', 0.5))
         minlicks = custom_config.get('microstructure', {}).get('min_licks_per_burst', config.get('microstructure.min_licks_per_burst', 1))
         longlick = custom_config.get('microstructure', {}).get('long_lick_threshold', config.get('microstructure.long_lick_threshold', 0.3))
+        first_n_ilis = custom_config.get('microstructure', {}).get('first_n_ilis', config.get('microstructure.first_n_ilis', 5))
         figtype = custom_config.get('session', {}).get('fig_type', config.get('session.fig_type', 'hist'))
+        plot_defaults = custom_config.get('plots', {})
+        intraburst_figtype = plot_defaults.get('intraburst_fig_type', config.get('plots.intraburst_fig_type', 'intraburst_ili'))
+        longlick_figtype = plot_defaults.get('longlick_fig_type', config.get('plots.longlick_fig_type', 'lick_lengths'))
+        bursthist_figtype = plot_defaults.get('bursthist_fig_type', config.get('plots.bursthist_fig_type', 'burst_hist'))
+        burstprob_figtype = plot_defaults.get('burstprob_fig_type', config.get('plots.burstprob_fig_type', 'weibull_prob'))
         session_length_config = custom_config.get('session', {}).get('length', 3600)
         session_length_unit = custom_config.get('session', {}).get('length_unit', config.get('session.length_unit', 's'))
         file_type = custom_config.get('files', {}).get('default_file_type', config.get('files.default_file_type', 'med'))
+
+        first_n_ilis = max(1, min(20, int(first_n_ilis)))
         
         # Extract slider range configurations with fallbacks to defaults
         analysis_config = custom_config.get('analysis', {})
@@ -188,7 +201,12 @@ def load_config(config_contents, config_filename, current_session_length):
             longlick_step,
             longlick_marks,
             longlick,
+            first_n_ilis,
             figtype,
+            intraburst_figtype,
+            longlick_figtype,
+            bursthist_figtype,
+            burstprob_figtype,
             session_length,
             session_length_unit,
             file_type,
@@ -217,7 +235,12 @@ def load_config(config_contents, config_filename, current_session_length):
             dash.no_update,  # longlick-threshold step
             dash.no_update,  # longlick-threshold marks
             dash.no_update,  # longlick-threshold value
+            dash.no_update,  # first-n-ili-slider value
             dash.no_update,  # session-fig-type
+            dash.no_update,  # intraburst-fig-type
+            dash.no_update,  # longlick-fig-type
+            dash.no_update,  # bursthist-fig-type
+            dash.no_update,  # burstprob-fig-type
             dash.no_update,  # session-length-input
             dash.no_update,  # session-length-unit
             dash.no_update,  # input-file-type
@@ -246,7 +269,12 @@ def load_config(config_contents, config_filename, current_session_length):
             dash.no_update,  # longlick-threshold step
             dash.no_update,  # longlick-threshold marks
             dash.no_update,  # longlick-threshold value
+            dash.no_update,  # first-n-ili-slider value
             dash.no_update,  # session-fig-type
+            dash.no_update,  # intraburst-fig-type
+            dash.no_update,  # longlick-fig-type
+            dash.no_update,  # bursthist-fig-type
+            dash.no_update,  # burstprob-fig-type
             dash.no_update,  # session-length-input
             dash.no_update,  # session-length-unit
             dash.no_update,  # input-file-type

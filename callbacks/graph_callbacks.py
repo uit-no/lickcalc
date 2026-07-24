@@ -14,7 +14,7 @@ import logging
 
 from app_instance import app
 from trompy import lickcalc, weib_davis
-from utils import validate_onset_offset_pairs, calculate_segment_stats, get_licks_for_burst_range, get_offsets_for_licks
+from utils import validate_onset_offset_pairs, calculate_segment_stats, get_licks_for_burst_range, get_offsets_for_licks, compute_first_n_ili_summary
 from config_manager import config
 
 @app.callback(Output('session-fig', 'figure'),
@@ -145,13 +145,14 @@ def update_session_length_suggestion(jsonified_df, custom_config):
               Output('intercontact-mode', 'children'),
               Input('lick-data', 'data'),
               Input('intraburst-fig-type', 'value'),
+              Input('first-n-ili-slider', 'value'),
               Input('interburst-slider', 'value'),
               Input('minlicks-slider', 'value'),
               Input('longlick-threshold', 'value'),
               Input('remove-longlicks-checkbox', 'value'),
               Input('offset-array', 'value'),
               Input('data-store', 'data'))
-def make_intraburstfreq_graph(jsonified_df, intraburst_fig_type, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
+def make_intraburstfreq_graph(jsonified_df, intraburst_fig_type, first_n_ili, ibi_slider, minlicks_slider, longlick_slider, remove_longlicks, offset_key, jsonified_dict):
     # Use slider values directly
     ibi = ibi_slider
     minlicks = minlicks_slider
@@ -216,27 +217,98 @@ def make_intraburstfreq_graph(jsonified_df, intraburst_fig_type, ibi_slider, min
                 yaxis_title="Frequency"
             )
         elif intraburst_fig_type == 'first_n_ili':
-            # Placeholder for upcoming first-n-ILIs implementation from trompy.
-            fig = go.Figure()
-            fig.update_layout(
-                annotations=[
-                    dict(
-                        x=0.5,
-                        y=0.5,
-                        xref="paper",
-                        yref="paper",
-                        text="This view is not enabled yet.<br>Use Intraburst ILIs for now.",
-                        showarrow=False,
-                        font=dict(size=16, color="gray"),
-                        xanchor="center",
-                        yanchor="middle"
-                    )
-                ],
-                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                height=400,
-                margin=dict(l=40, r=40, t=60, b=40)
+            n_ilis = int(first_n_ili) if first_n_ili else 5
+            n_ilis = max(1, n_ilis)
+
+            summary = compute_first_n_ili_summary(
+                lick_times=lick_times,
+                offset_times=offset_times,
+                ibi=ibi,
+                minlicks=minlicks,
+                longlick_th=longlick_th,
+                remove_long=remove_long,
+                n_ilis=n_ilis
             )
+            y_mean = summary['mean']
+            sem = summary['sem']
+
+            if np.all(np.isnan(y_mean)):
+                fig = go.Figure()
+                fig.update_layout(
+                    xaxis_title="# Lick in burst",
+                    yaxis_title="ILI (s)",
+                    annotations=[
+                        dict(
+                            x=0.5,
+                            y=0.5,
+                            xref="paper",
+                            yref="paper",
+                            text="No eligible bursts for First n ILIs",
+                            showarrow=False,
+                            font=dict(size=14, color="gray"),
+                            xanchor="center",
+                            yanchor="middle"
+                        )
+                    ]
+                )
+            else:
+                x_vals = np.arange(1, n_ilis + 1)
+
+                y_upper = y_mean + sem
+                y_lower = y_mean - sem
+
+                valid = ~np.isnan(y_mean)
+                x_plot = x_vals[valid]
+                y_plot = y_mean[valid]
+                upper_plot = y_upper[valid]
+                lower_plot = y_lower[valid]
+
+                fig = go.Figure()
+                if len(x_plot) > 0:
+                    fig.add_trace(go.Scatter(
+                        x=x_plot,
+                        y=upper_plot,
+                        mode='lines',
+                        line=dict(width=0),
+                        showlegend=False,
+                        hoverinfo='skip'
+                    ))
+                    fig.add_trace(go.Scatter(
+                        x=x_plot,
+                        y=lower_plot,
+                        mode='lines',
+                        fill='tonexty',
+                        fillcolor='rgba(31, 119, 180, 0.22)',
+                        line=dict(width=0),
+                        showlegend=False,
+                        hoverinfo='skip'
+                    ))
+                    fig.add_trace(go.Scatter(
+                        x=x_plot,
+                        y=y_plot,
+                        mode='lines+markers',
+                        name='Mean ILI',
+                        line=dict(color='rgb(31, 119, 180)', width=2),
+                        marker=dict(size=6, color='rgb(31, 119, 180)'),
+                        showlegend=False
+                    ))
+
+                fig.update_layout(
+                    transition_duration=500,
+                    xaxis_title="# Lick in burst",
+                    yaxis_title="ILI (s)",
+                    xaxis=dict(
+                        tickmode='array',
+                        tickvals=sorted(set(
+                            [1, n_ilis] + list(range(1, n_ilis + 1, max(1, int(np.ceil(n_ilis / 8)))))
+                        )),
+                        ticktext=[
+                            str(i) for i in sorted(set(
+                                [1, n_ilis] + list(range(1, n_ilis + 1, max(1, int(np.ceil(n_ilis / 8)))))
+                            ))
+                        ]
+                    )
+                )
         else:
             try:
                 fig = px.histogram(ilis,
@@ -283,15 +355,17 @@ def make_intraburstfreq_graph(jsonified_df, intraburst_fig_type, ibi_slider, min
 @app.callback(
     [Output('interburst-display', 'children'),
      Output('minlicks-display', 'children'),
-     Output('longlick-display', 'children')],
+     Output('longlick-display', 'children'),
+     Output('first-n-ili-display', 'children')],
     [Input('interburst-slider', 'value'),
      Input('minlicks-slider', 'value'),
-     Input('longlick-threshold', 'value')]
+     Input('longlick-threshold', 'value'),
+     Input('first-n-ili-slider', 'value')]
 )
-def update_display_values(ibi_value, minlicks_value, longlick_value):
+def update_display_values(ibi_value, minlicks_value, longlick_value, first_n_ili_value):
     """Update display fields when sliders change"""
     # Return values - the units are already handled in the HTML structure
-    return str(ibi_value), str(minlicks_value), str(longlick_value)
+    return str(ibi_value), str(minlicks_value), str(longlick_value), str(first_n_ili_value)
 
 @app.callback(Output('longlicks-fig', 'figure'),
               Output('nlonglicks', 'children'),

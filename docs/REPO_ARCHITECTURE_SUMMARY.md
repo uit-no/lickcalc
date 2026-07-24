@@ -8,13 +8,19 @@ Last updated: 2026-07-24
   - layout.py
   - callbacks/graph_callbacks.py
   - callbacks/config_callbacks.py
+  - utils/generate_synthetic_data.py
+  - utils/calculations.py
   - config_manager.py
 2. Confirm recent completed work:
   - Intercontact lengths plot is enabled and uses `intercontact_time`.
   - Intercontact histogram uses long-lick-threshold x-range and 0.01s bins.
   - Interburst slider marks are step-aligned and less crowded.
-3. Main pending feature:
-  - Implement `First n ILIs` plot (currently disabled/placeholder).
+  - `First n ILIs` is implemented as a mean +/- SEM line plot.
+  - First-n slider is shown only when `First n ILIs` is selected.
+  - Config supports default plot selections and `first_n_ilis` default value.
+  - Synthetic edge-case data generator is available and fixtures are regenerated.
+3. Main pending focus:
+  - Expand/adjust synthetic fixtures and expected outcomes as new edge cases are discovered.
 4. Keep guardrails in place:
   - Preserve onset/offset validation and severe mismatch protection.
 5. Quick run:
@@ -144,6 +150,7 @@ Common output contract: dict[column_name -> pandas DataFrame JSON (orient='split
 ### Microstructure plots
 
 - Intraburst ILI histogram
+- First n ILIs line plot (mean with SEM shading, using trompy-compatible burst filtering)
 - Lick-length histogram (requires offsets)
 - Burst size histogram
 - Weibull probability plot
@@ -236,7 +243,13 @@ Primary runtime stack:
 ## 11) Tests and quality posture
 
 - tests/test_config.py exists, but is a print-based smoke script rather than assertion-based pytest coverage.
-- No broader automated tests currently visible for parsers, callbacks, or calculations.
+- Added regression tests for first-n ILI computation path:
+  - `tests/test_first_n_ilis.py` (unittest)
+  - guards against cross-burst contamination in SEM path
+  - verifies intraburst-threshold-constrained values and expected means on controlled synthetic inputs
+- Environment note for running these tests:
+  - tests were run successfully in conda env `default`
+  - some other local envs may miss `yaml`, `dash`, or `trompy`
 
 ## 12) Practical extension map (where to add features)
 
@@ -318,9 +331,68 @@ Compact deltas from recent editing work so development can resume quickly on ano
     - callbacks/config_callbacks.py
 
 - Existing staged feature still pending:
-  - `First n ILIs` plot in the intraburst panel is still disabled/placeholder and not yet implemented.
+  - None for first-n plotting: it is implemented and no longer placeholder.
 
 - Stability guardrails retained:
   - Onset/offset validation with mismatch protection remains in plotting callbacks to avoid cross-file contamination effects.
+
+### Additional completed deltas (same session)
+
+- First n ILIs feature completed and hardened:
+  - `intraburst-fig-type` includes selectable `first_n_ili` mode (enabled).
+  - Added `first-n-ili-slider` (default 5), visible only in first-n mode.
+  - Plot is a mean +/- SEM line chart (not histogram), styled with existing Plotly app conventions.
+  - Reduced x-axis tick density for larger n to avoid label crowding.
+
+- Fixed first-n variability bug source:
+  - Root cause was app-side SEM reconstruction windowing crossing burst boundaries when bursts were filtered.
+  - Moved first-n summary logic into reusable utility:
+    - `utils.calculations.compute_first_n_ili_summary(...)`
+  - Callback now consumes that utility, ensuring burst-size-based slicing and threshold filtering consistency.
+
+- Config system expanded:
+  - Added `microstructure.first_n_ilis` default.
+  - Added `plots.*` defaults:
+    - `plots.intraburst_fig_type`
+    - `plots.longlick_fig_type`
+    - `plots.bursthist_fig_type`
+    - `plots.burstprob_fig_type`
+  - Custom YAML upload path updates these controls live.
+  - Updated docs/examples:
+    - `config.yaml`
+    - `custom_config_example.yaml`
+    - `docs/CONFIG_README.md`
+    - `README.md` quick config key reference table.
+
+- Synthetic edge-case fixture workflow added:
+  - New generator source:
+    - `utils/generate_synthetic_data.py`
+  - Generated fixture outputs:
+    - `assets/examples/synthetic_edge_cases/synthetic_core_cases.csv`
+    - `assets/examples/synthetic_edge_cases/synthetic_validation_cases.csv`
+    - `assets/examples/synthetic_edge_cases/synthetic_analysis_cases.csv`
+    - `assets/examples/synthetic_edge_cases/synthetic_manifest.csv`
+  - In-app discoverability:
+    - layout banner with links to the synthetic files and manifest.
+
+- Synthetic timing tuning completed:
+  - Offset generation now enforces `offset < next onset` for non-intentional cases.
+  - Baseline physiological targets tuned for key onset/offset pairs:
+    - lick length mode approximately 50-70 ms
+    - intercontact mode approximately 60 ms
+    - intraburst frequency approximately 6.5-8.5 Hz
+  - Weibull-ready profiles added:
+    - key datasets now use ~20 bursts with exponentially decaying burst sizes
+    - verified to produce non-null Weibull parameters in local checks.
+
+### Cross-machine continuation notes
+
+1. Regenerate synthetic fixtures after editing generator logic:
+  - `python utils/generate_synthetic_data.py`
+2. Primary fixture directory to sync/copy between machines:
+  - `assets/examples/synthetic_edge_cases/`
+3. If first-n regression work continues, run:
+  - `python -m unittest tests.test_first_n_ilis -v`
+4. If a target machine has env mismatch errors (missing `yaml`/`trompy`/`dash`), switch to an env that includes dependencies before validation.
 
 

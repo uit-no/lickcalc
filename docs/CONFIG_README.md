@@ -23,6 +23,16 @@ microstructure:
   interburst_interval: 0.5     # Inter-burst interval threshold (seconds)
   min_licks_per_burst: 1       # Minimum licks per burst
   long_lick_threshold: 0.3     # Long lick duration threshold (seconds)
+  first_n_ilis: 5              # Default n for "First n ILIs" plot
+```
+
+### Default Plot Selection Settings
+```yaml
+plots:
+  intraburst_fig_type: 'intraburst_ili'   # 'intraburst_ili' or 'first_n_ili'
+  longlick_fig_type: 'lick_lengths'       # 'lick_lengths' or 'intercontact_lengths'
+  bursthist_fig_type: 'burst_hist'        # Currently only this option
+  burstprob_fig_type: 'weibull_prob'      # Currently only this option
 ```
 
 ### File Processing Settings
@@ -92,6 +102,9 @@ ui:
 
 files:
   default_file_type: 'csv'    # If your lab primarily uses CSV files
+
+plots:
+  longlick_fig_type: 'intercontact_lengths'   # Start on intercontact plot by default
 ```
 
 ## File Location and Loading
@@ -138,7 +151,7 @@ This will show you the loaded configuration values and verify everything is work
 ### Invalid Values
 - All numeric values must be within reasonable ranges
 - String values for `fig_type` must be 'hist' or 'cumul'
-- String values for `default_file_type` must be 'med', 'csv', or 'dd'
+- String values for `default_file_type` must be one of: 'med', 'med_array', 'csv', 'coulbourn', 'ohrbets', 'dd', 'km', 'ls'
 
 ### PyYAML Not Found
 If you get import errors, install PyYAML:

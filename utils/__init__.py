@@ -4,7 +4,8 @@ from .calculations import (
     calculate_segment_stats,
     calculate_mean_interburst_time,
     get_licks_for_burst_range,
-    get_offsets_for_licks
+    get_offsets_for_licks,
+    compute_first_n_ili_summary
 )
 from .validation import (
     validate_onset_times,
@@ -27,6 +28,7 @@ __all__ = [
     'calculate_mean_interburst_time',
     'get_licks_for_burst_range',
     'get_offsets_for_licks',
+    'compute_first_n_ili_summary',
     'validate_onset_times',
     'validate_onset_offset_pairs',
     'parse_medfile',

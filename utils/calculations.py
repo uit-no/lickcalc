@@ -7,13 +7,122 @@ import numpy as np
 import logging
 
 try:
-    from trompy import lickcalc  # type: ignore[import]
+    from trompy import lickcalc, Lickcalc  # type: ignore[import]
 except Exception:
     # Provide a clear error at runtime if trompy isn't installed, while avoiding import-time editor errors
     def lickcalc(*args, **kwargs):  # type: ignore
         raise ImportError("The 'trompy' package is required for lick calculations. Please install it (see requirements.txt).")
+    class Lickcalc:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            raise ImportError("The 'trompy' package is required for lick calculations. Please install it (see requirements.txt).")
 from config_manager import config
 from .validation import validate_onset_offset_pairs
+
+
+def compute_first_n_ili_summary(lick_times, offset_times, ibi, minlicks, longlick_th, remove_long, n_ilis):
+    """Compute first-n ILI mean/SEM using Lickcalc burst definitions.
+
+    Returns a dictionary with:
+    - mean: np.ndarray of length n_ilis (NaN where unavailable)
+    - sem: np.ndarray of length n_ilis (NaN where unavailable)
+    - counts: np.ndarray sample size per ILI index
+    - matrix: 2D array (bursts x n_ilis) after filtering
+    """
+    n_ilis = max(1, int(n_ilis))
+
+    lc_kwargs = {
+        'licks': lick_times,
+        'burst_threshold': ibi,
+        'min_burst_length': minlicks,
+        'long_lick_threshold': longlick_th,
+        'remove_longlicks': remove_long if offset_times is not None else False,
+    }
+    if offset_times is not None:
+        lc_kwargs['offset'] = offset_times
+
+    try:
+        lc_obj = Lickcalc(**lc_kwargs)
+    except Exception:
+        return {
+            'mean': np.full(n_ilis, np.nan),
+            'sem': np.full(n_ilis, np.nan),
+            'counts': np.zeros(n_ilis, dtype=int),
+            'matrix': np.empty((0, n_ilis), dtype=float)
+        }
+
+    method_means = None
+    if hasattr(lc_obj, 'get_first_n_ilis_in_bursts'):
+        try:
+            method_series = lc_obj.get_first_n_ilis_in_bursts(n_ilis=n_ilis)
+            if method_series is not None and len(method_series) > 0:
+                method_means = np.asarray(method_series, dtype=float)
+        except Exception:
+            method_means = None
+
+    licks_arr = np.asarray(lick_times, dtype=float)
+    all_ilis = np.diff(licks_arr)
+    burst_starts = list(getattr(lc_obj, 'burst_inds', []) or [])
+    burst_sizes = list(getattr(lc_obj, 'burst_licks', []) or [])
+
+    first_n_matrix = []
+    for burst_start, burst_size in zip(burst_starts, burst_sizes):
+        burst_start = int(burst_start)
+        burst_size = int(burst_size)
+        if burst_size < 2:
+            continue
+
+        burst_ili_end = burst_start + (burst_size - 1)
+        burst_ilis = all_ilis[burst_start:burst_ili_end]
+        if len(burst_ilis) == 0:
+            continue
+
+        pre_ili = all_ilis[burst_start - 1] if burst_start > 0 else np.nan
+        if np.isnan(pre_ili) or pre_ili <= 4:
+            continue
+
+        # Keep intraburst ILIs only and preserve trompy-style lower bound.
+        burst_ilis = burst_ilis[(burst_ilis > 0.06) & (burst_ilis < ibi)]
+        if len(burst_ilis) == 0:
+            continue
+
+        row = np.full(n_ilis, np.nan)
+        n_take = min(n_ilis, len(burst_ilis))
+        row[:n_take] = burst_ilis[:n_take]
+        first_n_matrix.append(row)
+
+    if len(first_n_matrix) > 0:
+        arr = np.asarray(first_n_matrix, dtype=float)
+        counts = np.sum(~np.isnan(arr), axis=0)
+        fallback_mean = np.full(n_ilis, np.nan)
+        sem = np.full(n_ilis, np.nan)
+
+        valid_mean = counts > 0
+        if np.any(valid_mean):
+            fallback_mean[valid_mean] = np.nanmean(arr[:, valid_mean], axis=0)
+
+        valid_sem = counts > 1
+        if np.any(valid_sem):
+            std = np.nanstd(arr[:, valid_sem], axis=0, ddof=1)
+            sem[valid_sem] = std / np.sqrt(counts[valid_sem])
+    else:
+        arr = np.empty((0, n_ilis), dtype=float)
+        fallback_mean = np.full(n_ilis, np.nan)
+        counts = np.zeros(n_ilis, dtype=int)
+        sem = np.full(n_ilis, np.nan)
+
+    if method_means is not None and len(method_means) > 0:
+        y_mean = np.full(n_ilis, np.nan)
+        n_copy = min(n_ilis, len(method_means))
+        y_mean[:n_copy] = method_means[:n_copy]
+    else:
+        y_mean = fallback_mean
+
+    return {
+        'mean': y_mean,
+        'sem': sem,
+        'counts': counts,
+        'matrix': arr
+    }
 
 
 def calculate_mean_interburst_time(burst_starts, burst_ends):

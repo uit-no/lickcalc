@@ -62,7 +62,14 @@ class ConfigManager:
             'microstructure': {
                 'interburst_interval': 0.5,
                 'min_licks_per_burst': 1,
-                'long_lick_threshold': 0.3
+                'long_lick_threshold': 0.3,
+                'first_n_ilis': 5
+            },
+            'plots': {
+                'intraburst_fig_type': 'intraburst_ili',
+                'longlick_fig_type': 'lick_lengths',
+                'bursthist_fig_type': 'burst_hist',
+                'burstprob_fig_type': 'weibull_prob'
             },
             'files': {
                 'default_file_type': 'med'
@@ -126,7 +133,8 @@ class ConfigManager:
         return {
             'interburst_interval': self.get('microstructure.interburst_interval', 0.5),
             'min_licks_per_burst': self.get('microstructure.min_licks_per_burst', 1),
-            'long_lick_threshold': self.get('microstructure.long_lick_threshold', 0.3)
+            'long_lick_threshold': self.get('microstructure.long_lick_threshold', 0.3),
+            'first_n_ilis': self.get('microstructure.first_n_ilis', 5)
         }
     
     def _generate_slider_marks(self, min_val: float, max_val: float, num_marks: int = 5) -> Dict[float, str]:

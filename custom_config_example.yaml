@@ -12,6 +12,13 @@ microstructure:
   interburst_interval: 0.5      # Default inter-burst interval (seconds)
   min_licks_per_burst: 1        # Minimum licks per burst
   long_lick_threshold: 0.3      # Long lick threshold (seconds)
+  first_n_ilis: 5               # Default n for "First n ILIs" plot
+
+plots:
+  intraburst_fig_type: 'intraburst_ili'      # 'intraburst_ili' or 'first_n_ili'
+  longlick_fig_type: 'lick_lengths'          # 'lick_lengths' or 'intercontact_lengths'
+  bursthist_fig_type: 'burst_hist'           # Currently only 'burst_hist'
+  burstprob_fig_type: 'weibull_prob'         # Currently only 'weibull_prob'
 
 files:
   default_file_type: 'dd'      # Default file type: 'med', 'med_array', 'csv', 'coulbourn', 'ohrbets', 'dd', 'km', or 'ls'

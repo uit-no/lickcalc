@@ -28,6 +28,23 @@ microstructure:
   # Long lick threshold (seconds)
   long_lick_threshold: 0.3
 
+  # Default number of ILIs to include per burst in "First n ILIs" plot
+  first_n_ilis: 5
+
+# Default plot selections for each panel
+plots:
+  # Intraburst panel: 'intraburst_ili' or 'first_n_ili'
+  intraburst_fig_type: 'intraburst_ili'
+
+  # Lick duration panel: 'lick_lengths' or 'intercontact_lengths'
+  longlick_fig_type: 'lick_lengths'
+
+  # Burst size panel currently supports only 'burst_hist'
+  bursthist_fig_type: 'burst_hist'
+
+  # Burst probability panel currently supports only 'weibull_prob'
+  burstprob_fig_type: 'weibull_prob'
+
 # File processing defaults
 files:
   # Default file type for dropdown ('med', 'med_array', 'csv', 'coulbourn', 'ohrbets', 'dd', 'km', 'ls')
