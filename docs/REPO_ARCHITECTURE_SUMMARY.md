@@ -1,6 +1,24 @@
 # lickcalc Repository Architecture Summary
 
-Last updated: 2026-07-23
+Last updated: 2026-07-24
+
+## Quick Resume Checklist
+
+1. Open these files first:
+  - layout.py
+  - callbacks/graph_callbacks.py
+  - callbacks/config_callbacks.py
+  - config_manager.py
+2. Confirm recent completed work:
+  - Intercontact lengths plot is enabled and uses `intercontact_time`.
+  - Intercontact histogram uses long-lick-threshold x-range and 0.01s bins.
+  - Interburst slider marks are step-aligned and less crowded.
+3. Main pending feature:
+  - Implement `First n ILIs` plot (currently disabled/placeholder).
+4. Keep guardrails in place:
+  - Preserve onset/offset validation and severe mismatch protection.
+5. Quick run:
+  - `python app.py`
 
 ## 1) What this app is
 
@@ -277,4 +295,32 @@ Primary runtime stack:
   - python app.py
 - App default URL:
   - http://localhost:8050
+
+## 16) Session handoff notes (2026-07-24)
+
+Compact deltas from recent editing work so development can resume quickly on another machine.
+
+- Implemented intercontact lengths plot:
+  - `longlick-fig-type` now includes `Intercontact lengths` (enabled).
+  - `make_longlicks_graph` now renders a histogram from `lickdata["intercontact_time"]`.
+  - Uses same x-axis and binning logic as lick lengths:
+    - x-range based on long lick threshold
+    - bins from `np.arange(0, longlick_th, 0.01)`
+  - Main files:
+    - layout.py
+    - callbacks/graph_callbacks.py
+
+- Improved Interburst slider ticks to match usable steps and avoid crushed labels:
+  - New interburst-specific mark generators added in both startup/default config path and uploaded custom-config path.
+  - Tick spacing now favors readable intervals (0.5s, then 1s, then coarser if needed), aligned to slider step multiples.
+  - Main files:
+    - config_manager.py
+    - callbacks/config_callbacks.py
+
+- Existing staged feature still pending:
+  - `First n ILIs` plot in the intraburst panel is still disabled/placeholder and not yet implemented.
+
+- Stability guardrails retained:
+  - Onset/offset validation with mismatch protection remains in plotting callbacks to avoid cross-file contamination effects.
+
 
