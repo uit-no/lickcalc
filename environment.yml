@@ -11,8 +11,8 @@ dependencies:
   - charset-normalizer=3.4.4
   - click=8.3.0
   - colorama=0.4.6
-  - dash=3.2.0
-  - dash-bootstrap-components=2.0.4
+  - dash=4.4.1
+  - dash-bootstrap-components>=1.5.0
   - flask=3.1.2
   - h2=4.3.0
   - hpack=4.1.0
@@ -74,6 +74,6 @@ dependencies:
   - zstandard=0.25.0
   - zstd=1.5.7
   - pip:
-    - trompy==0.16.1
+    - trompy>=0.17.1
 
 prefix: "C:\\Users\\jmc010\\.local\\share\\mamba\\envs\\lickcalc"
