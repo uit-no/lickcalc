@@ -8,6 +8,7 @@ from dash import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 import plotly.express as px
+import plotly.io as pio
 import pandas as pd
 import numpy as np
 import logging
@@ -16,6 +17,58 @@ from app_instance import app
 from trompy import lickcalc, weib_davis
 from utils import validate_onset_offset_pairs, calculate_segment_stats, get_licks_for_burst_range, get_offsets_for_licks, compute_first_n_ili_summary
 from config_manager import config
+
+MODERN_COLORWAY = [
+    "#0B8F8C",  # Teal
+    "#F05D5E",  # Coral red
+    "#F4A259",  # Apricot
+    "#4B6A9B",  # Slate blue
+    "#7AA95C",  # Moss green
+    "#8D5A97"   # Muted violet
+]
+
+MODERN_TEMPLATE_NAME = "lickcalc_modern"
+
+if MODERN_TEMPLATE_NAME not in pio.templates:
+    pio.templates[MODERN_TEMPLATE_NAME] = go.layout.Template(
+        layout=go.Layout(
+            colorway=MODERN_COLORWAY,
+            paper_bgcolor="#FFFFFF",
+            plot_bgcolor="#FFFFFF",
+            font=dict(family="Segoe UI, Verdana, sans-serif", size=13, color="#2B3440"),
+            margin=dict(l=50, r=24, t=28, b=46),
+            bargap=0.08,
+            xaxis=dict(
+                showgrid=True,
+                gridcolor="#E3EAF2",
+                gridwidth=1,
+                zeroline=False,
+                showline=True,
+                linecolor="#C4D0DE",
+                linewidth=1,
+                ticks="outside",
+                tickcolor="#97A5B5"
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor="#E3EAF2",
+                gridwidth=1,
+                zeroline=False,
+                showline=True,
+                linecolor="#C4D0DE",
+                linewidth=1,
+                ticks="outside",
+                tickcolor="#97A5B5"
+            )
+        ),
+        data=dict(
+            histogram=[go.Histogram(marker=dict(color="#0B8F8C", line=dict(width=0)))],
+            bar=[go.Bar(marker=dict(color="#0B8F8C", line=dict(width=0)))],
+            scatter=[go.Scatter(line=dict(width=2.5), marker=dict(size=7))]
+        )
+    )
+
+pio.templates.default = f"plotly_white+{MODERN_TEMPLATE_NAME}"
 
 @app.callback(Output('session-fig', 'figure'),
               Input('lick-data', 'data'),
@@ -278,7 +331,7 @@ def make_intraburstfreq_graph(jsonified_df, intraburst_fig_type, first_n_ili, ib
                         y=lower_plot,
                         mode='lines',
                         fill='tonexty',
-                        fillcolor='rgba(31, 119, 180, 0.22)',
+                        fillcolor='rgba(11, 143, 140, 0.20)',
                         line=dict(width=0),
                         showlegend=False,
                         hoverinfo='skip'
@@ -288,8 +341,8 @@ def make_intraburstfreq_graph(jsonified_df, intraburst_fig_type, first_n_ili, ib
                         y=y_plot,
                         mode='lines+markers',
                         name='Mean ILI',
-                        line=dict(color='rgb(31, 119, 180)', width=2),
-                        marker=dict(size=6, color='rgb(31, 119, 180)'),
+                        line=dict(color='#0B8F8C', width=2),
+                        marker=dict(size=6, color='#0B8F8C'),
                         showlegend=False
                     ))
 
@@ -404,7 +457,7 @@ def make_longlicks_graph(longlick_fig_type, offset_key, longlick_slider, remove_
             ],
             xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
             yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-            height=400,  # Match other plot heights
+            height=300,  # Match other plot heights
             margin=dict(l=40, r=40, t=60, b=40)  # Standard margins
         )
         return fig, "N/A", "N/A"
@@ -457,7 +510,7 @@ def make_longlicks_graph(longlick_fig_type, offset_key, longlick_slider, remove_
                         font=dict(size=11, color="red")
                     )
                 ],
-                height=400,
+                height=300,
                 margin=dict(l=40, r=40, t=60, b=40)
             )
             return fig, "Error", "Error"
@@ -750,7 +803,7 @@ def make_burstprob_graph(jsonified_df, burstprob_fig_type, ibi_slider, minlicks_
                 ],
                 xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
                 yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                height=400,
+                height=300,
                 margin=dict(l=40, r=40, t=60, b=40)
             )
             
@@ -782,7 +835,7 @@ def make_burstprob_graph(jsonified_df, burstprob_fig_type, ibi_slider, minlicks_
                 ],
                 xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
                 yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                height=400,  # Match other plot heights
+                height=300,  # Match other plot heights
                 margin=dict(l=40, r=40, t=60, b=40)  # Standard margins
             )
             
@@ -812,7 +865,7 @@ def make_burstprob_graph(jsonified_df, burstprob_fig_type, ibi_slider, minlicks_
                 ],
                 xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
                 yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                height=400,  # Match other plot heights
+                height=300,  # Match other plot heights
                 margin=dict(l=40, r=40, t=60, b=40)  # Standard margins
             )
             
@@ -831,9 +884,10 @@ def make_burstprob_graph(jsonified_df, burstprob_fig_type, ibi_slider, minlicks_
             go.Scatter(
                 x=x,
                 y=y,
-                mode='markers',
+                mode='lines',
+                line_shape='hv',
                 name='Observed',
-                marker=dict(size=10, line=dict(width=2))
+                line=dict(width=2.5)
             )
         )
 

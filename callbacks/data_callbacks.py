@@ -74,25 +74,36 @@ def toggle_dropdown_visibility(division_number):
 
 # Callback to control visibility of longlick controls based on offset data availability
 @app.callback(Output('longlick-controls-column', 'style'),
+              Output('remove-longlicks-control', 'style'),
               Input('offset-array', 'value'),
               Input('data-store', 'data'))  # Add data-store as input to trigger on file load
 def toggle_longlick_controls_visibility(offset_key, data_store):
     """Show/hide longlick controls based on whether offset data is selected"""
     if offset_key is None or offset_key == 'none':
         # Hide longlick controls when no offset data is available
-        return {'display': 'none'}
+        return {'display': 'none'}, {'margin-top': '15px', 'display': 'none', 'align-items': 'center'}
     else:
         # Show longlick controls when offset data is available
-        return {'display': 'block', 'width': '33.33%'}  # Maintain the 4-column width (width=4 = 33.33%)
+        return (
+            {'display': 'block', 'width': '33.33%'},
+            {'margin-top': '15px', 'display': 'flex', 'align-items': 'center'}
+        )  # Maintain the 4-column width (width=4 = 33.33%)
 
 
 @app.callback(Output('first-n-ili-slider-container', 'style'),
+              Output('longlick-graph-spacer', 'style'),
               Input('intraburst-fig-type', 'value'))
 def toggle_first_n_ili_slider(intraburst_fig_type):
     """Show/hide first-n-ILI slider for the corresponding intraburst plot mode."""
     if intraburst_fig_type == 'first_n_ili':
-        return {'display': 'block', 'margin-top': '8px', 'margin-bottom': '10px'}
-    return {'display': 'none'}
+        return (
+            {'display': 'block', 'margin-top': '8px', 'margin-bottom': '10px'},
+            {'display': 'block', 'height': '96px'}
+        )
+    return (
+        {'display': 'none', 'margin-top': '8px', 'margin-bottom': '10px'},
+        {'display': 'none'}
+    )
     
 @app.callback(Output('data-store', 'data'),
               Output('fileloadLbl', 'children'),

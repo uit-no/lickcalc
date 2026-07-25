@@ -300,7 +300,7 @@ dcc.Store(id='lick-data'),
         
         dbc.Row(
             dbc.Col(
-                dcc.Graph(id='session-fig'))),
+                dcc.Graph(id='session-fig', style={'height': '320px'}))),
         dbc.Row(children=[
             dbc.Col([
                 get_session_length_tooltip()[0],
@@ -439,30 +439,6 @@ dcc.Store(id='lick-data'),
                         })
                     ], width=3)
                 ]),
-                # Move the remove long licks checkbox below the slider and value box
-                dbc.Row([
-                    dbc.Col([
-                        html.Div([
-                            html.Span("Remove long licks", style={'font-size': '16px', 'color': '#495057'}),  # Not bold, larger font
-                            html.Span(" ⓘ", id="remove-longlicks-help", 
-                                    style={"color": "#007bff", "cursor": "help", "margin-left": "8px"}),
-                            dbc.Checklist(
-                                id='remove-longlicks-checkbox',
-                                options=[{'label': '', 'value': 'remove'}],  # Empty label since we have text above
-                                value=[],  # Default unchecked
-                                inline=True,
-                                style={'margin-left': '10px', 'display': 'inline-block'}
-                            ),
-                            dbc.Tooltip(
-                                "Removes licks longer than the threshold from analysis. "
-                                "Requires offset data to calculate lick durations. "
-                                "Only affects long lick duration analysis when offset data is available.",
-                                target="remove-longlicks-help",
-                                placement="top"
-                            )
-                        ], style={'margin-top': '15px', 'display': 'flex', 'align-items': 'center'})
-                    ], width=12)
-                ])
             ], width=4, id='longlick-controls-column'),  # Add ID for visibility control
         ], style={'margin-bottom': '20px'}),
         
@@ -479,40 +455,42 @@ dcc.Store(id='lick-data'),
                     clearable=False
                 ),
                 html.Div([
-                    html.Label("Number of ILIs per burst:", style={'font-weight': 'bold', 'margin-top': '10px', 'margin-bottom': '5px'}),
-                    dbc.Row([
-                        dbc.Col([
-                            dcc.Slider(
-                                id='first-n-ili-slider',
-                                min=1,
-                                max=20,
-                                step=1,
-                                value=max(1, min(20, int(config.get('microstructure.first_n_ilis', 5)))),
-                                marks={1: '1', 5: '5', 10: '10', 15: '15', 20: '20'},
-                                tooltip={"placement": "bottom", "always_visible": False}
-                            )
-                        ], width=9),
-                        dbc.Col([
-                            html.Div(
-                                id='first-n-ili-display',
-                                children=str(max(1, min(20, int(config.get('microstructure.first_n_ilis', 5))))),
-                                style={
-                                    'text-align': 'center',
-                                    'padding': '6px 4px',
-                                    'background-color': '#f8f9fa',
-                                    'border': '1px solid #dee2e6',
-                                    'border-radius': '4px',
-                                    'font-weight': 'bold',
-                                    'font-size': '16px',
-                                    'color': '#495057',
-                                    'margin-top': '5px',
-                                    'margin-left': '-5px'
-                                }
-                            )
-                        ], width=3)
-                    ])
-                ], id='first-n-ili-slider-container', style={'display': 'none'}),
-                dcc.Graph(id='intraburst-fig')
+                    html.Div([
+                        html.Label("Number of ILIs per burst:", style={'font-weight': 'bold', 'margin-top': '10px', 'margin-bottom': '5px'}),
+                        dbc.Row([
+                            dbc.Col([
+                                dcc.Slider(
+                                    id='first-n-ili-slider',
+                                    min=1,
+                                    max=20,
+                                    step=1,
+                                    value=max(1, min(20, int(config.get('microstructure.first_n_ilis', 5)))),
+                                    marks={1: '1', 5: '5', 10: '10', 15: '15', 20: '20'},
+                                    tooltip={"placement": "bottom", "always_visible": False}
+                                )
+                            ], width=9),
+                            dbc.Col([
+                                html.Div(
+                                    id='first-n-ili-display',
+                                    children=str(max(1, min(20, int(config.get('microstructure.first_n_ilis', 5))))),
+                                    style={
+                                        'text-align': 'center',
+                                        'padding': '6px 4px',
+                                        'background-color': '#f8f9fa',
+                                        'border': '1px solid #dee2e6',
+                                        'border-radius': '4px',
+                                        'font-weight': 'bold',
+                                        'font-size': '16px',
+                                        'color': '#495057',
+                                        'margin-top': '5px',
+                                        'margin-left': '-5px'
+                                    }
+                                )
+                            ], width=3)
+                        ])
+                    ], id='first-n-ili-slider-container', style={'display': 'none', 'margin-top': '8px', 'margin-bottom': '10px'})
+                ], id='first-n-ili-slider-shell'),
+                dcc.Graph(id='intraburst-fig', style={'height': '300px'})
             ], width=4),
             dbc.Col([
                 html.Label("Plot:", style={'font-weight': 'bold', 'margin-bottom': '5px'}),
@@ -525,7 +503,8 @@ dcc.Store(id='lick-data'),
                     value=config.get('plots.longlick_fig_type', 'lick_lengths'),
                     clearable=False
                 ),
-                dcc.Graph(id='longlicks-fig')
+                html.Div(id='longlick-graph-spacer', style={'display': 'none'}),
+                dcc.Graph(id='longlicks-fig', style={'height': '300px'})
             ], width=4),
             dbc.Col([
                 dbc.Table([
@@ -544,6 +523,25 @@ dcc.Store(id='lick-data'),
                 table_tooltips[8],  # Lick length mode tooltip
                 table_tooltips[9],  # Intercontact mode tooltip
                 table_tooltips[2],  # No. of long licks tooltip
+                html.Div([
+                    html.Span("Remove long licks", style={'font-size': '16px', 'color': '#495057'}),
+                    html.Span(" ⓘ", id="remove-longlicks-help",
+                              style={"color": "#007bff", "cursor": "help", "margin-left": "8px"}),
+                    dbc.Checklist(
+                        id='remove-longlicks-checkbox',
+                        options=[{'label': '', 'value': 'remove'}],
+                        value=[],
+                        inline=True,
+                        style={'margin-left': '10px', 'display': 'inline-block'}
+                    ),
+                    dbc.Tooltip(
+                        "Removes licks longer than the threshold from analysis. "
+                        "Requires offset data to calculate lick durations. "
+                        "Only affects long lick duration analysis when offset data is available.",
+                        target="remove-longlicks-help",
+                        placement="top"
+                    )
+                ], id='remove-longlicks-control', style={'margin-top': '15px', 'display': 'none', 'align-items': 'center'})
             ], width=4),
     ]),
         
@@ -558,7 +556,7 @@ dcc.Store(id='lick-data'),
                     value=config.get('plots.bursthist_fig_type', 'burst_hist'),
                     clearable=False
                 ),
-                dcc.Graph(id='bursthist-fig')
+                dcc.Graph(id='bursthist-fig', style={'height': '300px'})
             ], width=4),
             dbc.Col([
                 html.Label("Plot:", style={'font-weight': 'bold', 'margin-bottom': '5px'}),
@@ -570,7 +568,7 @@ dcc.Store(id='lick-data'),
                     value=config.get('plots.burstprob_fig_type', 'weibull_prob'),
                     clearable=False
                 ),
-                dcc.Graph(id='burstprob-fig')
+                dcc.Graph(id='burstprob-fig', style={'height': '300px'})
             ], width=4),
             dbc.Col([
                 dbc.Table([
