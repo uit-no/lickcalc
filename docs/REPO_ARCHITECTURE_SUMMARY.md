@@ -23,6 +23,10 @@ Last updated: 2026-07-25
   - **[2026-07-25] Removed firstnlowvar and firstn_highvar datasets** from synthetic data generation; analysis_cases now contains only: sparse, dense, trial_like.
   - **[2026-07-25] Moved synthetic data fixtures section** from main layout alert box to About dialog (under "Example Data Files" section).
   - **[2026-07-25] Updated citation** in About modal to 2026 bioRxiv: Volcko KL & McCutcheon JE (2026) *lickcalc*: bioRxiv, doi: https://doi.org/10.64898/2026.03.09.710511
+  - **[2026-07-25] UI polish pass completed**: microstructure controls and graphs were adjusted for cleaner alignment and more compact plot sizing.
+  - **[2026-07-25] Plot theme refresh completed**: modernized grid/axis styling, improved colorway, and plot background matched to app background.
+  - **[2026-07-25] Weibull observed trace updated** from marker points to staircase (step-line) rendering.
+  - **[2026-07-25] Dependency alignment update**: Dash raised to 4.4.1 and environment manifest constraints aligned with deployment requirements policy.
 3. Main pending focus:
   - Expand/adjust synthetic fixtures and expected outcomes as new edge cases are discovered.
 4. Keep guardrails in place:
@@ -398,5 +402,60 @@ Compact deltas from recent editing work so development can resume quickly on ano
 3. If first-n regression work continues, run:
   - `python -m unittest tests.test_first_n_ilis -v`
 4. If a target machine has env mismatch errors (missing `yaml`/`trompy`/`dash`), switch to an env that includes dependencies before validation.
+
+## 17) Session handoff notes (2026-07-25)
+
+Compact deltas from UI and dependency updates completed after the 2026-07-24 handoff.
+
+- Microstructure layout adjustments:
+  - Moved Remove long licks control below the microstructure stats table (instead of above the long-lick threshold slider).
+  - Reduced key graph heights to a squatter layout (session plot and microstructure plots).
+  - Main file:
+    - `layout.py`
+
+- First-n slider alignment fix:
+  - Avoided permanent misalignment caused by always reserving slider space in only one column.
+  - Implemented synchronized spacer logic so columns stay aligned only when First n ILIs slider is visible.
+  - Main files:
+    - `layout.py`
+    - `callbacks/data_callbacks.py`
+
+- Plot aesthetics refresh:
+  - Added a custom default Plotly template for cleaner grid/axis styling and updated colorway.
+  - Set `paper_bgcolor` and `plot_bgcolor` to white to match app background.
+  - Main file:
+    - `callbacks/graph_callbacks.py`
+
+- Weibull plot tweak:
+  - Changed observed series from circle markers to a staircase-style step line (`line_shape='hv'`).
+  - Main file:
+    - `callbacks/graph_callbacks.py`
+
+- Dependency and deployment consistency:
+  - Dash updated to `4.4.1` in deployment-facing dependency manifest.
+  - Confirmed Azure staging workflow installs from `requirements.txt`.
+  - Aligned `environment.yml` constraints for `dash-bootstrap-components` and `trompy` to reduce drift with requirements-based deployment behavior.
+  - Main files:
+    - `requirements.txt`
+    - `environment.yml`
+    - `.github/workflows/p-resapp-staging-deploy.yml`
+
+### Suggested next continuation steps
+
+1. If more visual polish is desired, tune only one dimension at a time:
+  - axis/grid contrast
+  - colorway accents
+  - table/control surface styling
+2. If dark mode is revisited later, implement in two phases:
+  - phase 1: app/page + Plotly theme toggle
+  - phase 2: controls/tables/tooltips full polish
+3. Keep dependency manifests synchronized when updating runtime packages:
+  - `requirements.txt` (deployment source of truth)
+  - `environment.yml` (local conda/mamba parity)
+4. Before release/deploy, run a focused smoke test:
+  - file upload
+  - session/intraburst/longlick/burst plots
+  - results table append/export
+  - Weibull step-trace rendering
 
 
