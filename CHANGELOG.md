@@ -16,6 +16,19 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ### Fixed
 - No entries yet.
 
+## [1.2.1] - 2026-07-25
+
+### Added
+- No entries yet.
+
+### Changed
+- Version bump from 1.2.0 to 1.2.1.
+- Updated Dash dependency to 4.4.1 for deployment/runtime consistency.
+- Aligned environment dependency constraints with the known-good deployment dependency policy in requirements.txt.
+
+### Fixed
+- Reduced dependency drift between deployment and local environment manifests for dash-bootstrap-components and trompy.
+
 ## [1.2.0] - 2026-07-25
 
 ### Added
