@@ -131,13 +131,13 @@ dcc.Store(id='lick-data'),
                 ]),
                 html.Div([
                     html.P([
-                        html.Strong("Volcko KL & McCutcheon JE (2025). "),
-                        "lickcalc: Easy analysis of lick microstructure in experiments of rodent ingestive behaviour.",
-                        html.Em("Github"),
-                        ", xxxxx. ",
+                        html.Strong("Volcko KL & McCutcheon JE (2026). "),
+                        html.Em("lickcalc"),
+                        ": Easy analysis of lick microstructure in experiments of rodent ingestive behaviour. ",
+                        "bioRxiv, doi: ",
                         html.A(
-                            "https://github.com/uit-no/lickcalc",
-                            href="https://github.com/uit-no/lickcalc",
+                            "https://doi.org/10.64898/2026.03.09.710511",
+                            href="https://doi.org/10.64898/2026.03.09.710511",
                             target="_blank"
                         )
                     ], style={"padding": "10px", "background-color": "#f8f9fa", "border-radius": "5px"}),
@@ -164,6 +164,17 @@ dcc.Store(id='lick-data'),
                     className="btn btn-outline-success btn-sm"
                 ),
                 dcc.Download(id="download-examples"),
+                
+                html.H6("Synthetic Edge-Case Fixtures", className="mt-3 mb-2"),
+                html.Div([
+                    html.P("Quick test files are available:", style={"margin-bottom": "0.5rem"}),
+                    html.Ul([
+                        html.Li(html.A("Manifest", href="/assets/examples/synthetic_edge_cases/synthetic_manifest.csv", target="_blank")),
+                        html.Li(html.A("Core", href="/assets/examples/synthetic_edge_cases/synthetic_core_cases.csv", target="_blank")),
+                        html.Li(html.A("Validation", href="/assets/examples/synthetic_edge_cases/synthetic_validation_cases.csv", target="_blank")),
+                        html.Li(html.A("Analysis", href="/assets/examples/synthetic_edge_cases/synthetic_analysis_cases.csv", target="_blank")),
+                    ])
+                ], style={"margin-left": "1rem"}),
                 
                 html.H5("License", className="mt-4"),
                 html.P("lickcalc is open source software licensed under the GPL-3.0 License."),
@@ -263,22 +274,6 @@ dcc.Store(id='lick-data'),
                     # Allow multiple files to be uploaded
                     multiple=False
                 ))),
-
-        dbc.Row([
-            dbc.Col([
-                dbc.Alert([
-                    html.Strong("Synthetic Edge-Case Fixtures: "),
-                    html.Span("Quick test files are available in assets/examples/synthetic_edge_cases/. "),
-                    html.A("Manifest", href="/assets/examples/synthetic_edge_cases/synthetic_manifest.csv", target="_blank"),
-                    html.Span(" | "),
-                    html.A("Core", href="/assets/examples/synthetic_edge_cases/synthetic_core_cases.csv", target="_blank"),
-                    html.Span(" | "),
-                    html.A("Validation", href="/assets/examples/synthetic_edge_cases/synthetic_validation_cases.csv", target="_blank"),
-                    html.Span(" | "),
-                    html.A("Analysis", href="/assets/examples/synthetic_edge_cases/synthetic_analysis_cases.csv", target="_blank")
-                ], color="info", className="py-2", style={'margin': '6px 10px 0 10px'})
-            ], width=12)
-        ]),
         
         # Data validation status display
         dbc.Row([

@@ -1,6 +1,6 @@
 # lickcalc Repository Architecture Summary
 
-Last updated: 2026-07-24
+Last updated: 2026-07-25
 
 ## Quick Resume Checklist
 
@@ -19,6 +19,10 @@ Last updated: 2026-07-24
   - First-n slider is shown only when `First n ILIs` is selected.
   - Config supports default plot selections and `first_n_ilis` default value.
   - Synthetic edge-case data generator is available and fixtures are regenerated.
+  - **[2026-07-25] Fixed trial_like dataset burst analysis display**: make_burstprob_graph() now returns actual burst metrics (n_bursts, mean_licks_per_burst, mean_ibi) when burstprob is empty, instead of returning zeros.
+  - **[2026-07-25] Removed firstnlowvar and firstn_highvar datasets** from synthetic data generation; analysis_cases now contains only: sparse, dense, trial_like.
+  - **[2026-07-25] Moved synthetic data fixtures section** from main layout alert box to About dialog (under "Example Data Files" section).
+  - **[2026-07-25] Updated citation** in About modal to 2026 bioRxiv: Volcko KL & McCutcheon JE (2026) *lickcalc*: bioRxiv, doi: https://doi.org/10.64898/2026.03.09.710511
 3. Main pending focus:
   - Expand/adjust synthetic fixtures and expected outcomes as new edge cases are discovered.
 4. Keep guardrails in place:

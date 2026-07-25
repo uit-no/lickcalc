@@ -276,8 +276,26 @@ def update_validation_status(data_store, onset_key, offset_key):
                 dismissable=True
             )
         
+        # Check for insufficient data (very few licks) - ALWAYS check, regardless of offset
+        # This gets shown as a warning/error, but can be overridden by critical offset validation failures
+        low_lick_alert = None
+        if len(onset_times) == 1:
+            low_lick_alert = dbc.Alert(
+                "❌ Insufficient data: Only 1 lick detected. Most analysis measures require multiple licks and bursts.",
+                color="danger",
+                dismissable=True
+            )
+        elif len(onset_times) < 10:
+            low_lick_alert = dbc.Alert(
+                f"⚠️ Limited data: Only {len(onset_times)} licks detected. Most microstructural measures and burst statistics will not be calculated. Minimum recommended: 10+ licks.",
+                color="warning",
+                dismissable=True
+            )
+        
         # If no offset column selected, show info and return early
         if not offset_key or offset_key == 'none':
+            if low_lick_alert:
+                return low_lick_alert
             return dbc.Alert(
                 "ℹ️ Onset-only data loaded (no offset column selected). Lick duration analysis will not be available.",
                 color="info",
@@ -286,47 +304,56 @@ def update_validation_status(data_store, onset_key, offset_key):
         
         # Continue with offset validation if offset key is selected
         if offset_key not in data_array:
-            return ""
+            return low_lick_alert if low_lick_alert else ""
         
         # Additional safeguard: Ensure both arrays exist and are non-empty
         # This helps prevent validation against stale/mismatched data
         if not data_array[offset_key]:
-            return ""
+            return low_lick_alert if low_lick_alert else ""
         
         offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
         offset_times = offset_df["licks"].to_list()
         
         # Additional safety check for offset data
         if not offset_times:
-            return ""
+            return low_lick_alert if low_lick_alert else ""
         
         # Critical fix: Check if this appears to be cross-file contamination
-        # If we get a severe length mismatch (>1 difference), it might be old data
+        # If we get a severe length mismatch (>1 difference), show prominent error (overrides low lick warning)
         if abs(len(onset_times) - len(offset_times)) > 1:
-            # This suggests possible cross-file contamination
-            # Return empty instead of showing misleading error
-            return ""
+            severe_mismatch_msg = f"Severe data mismatch: {len(onset_times)} onsets vs {len(offset_times)} offsets ({abs(len(onset_times) - len(offset_times))} lick difference). This suggests cross-file contamination or data sync issue."
+            return dbc.Alert(
+                f"❌ {severe_mismatch_msg}",
+                color="danger",
+                dismissable=True
+            )
         
-        # Validate the onset-offset pairs
+        # CRITICAL: Validate the onset-offset pairs (overrides low lick warning if it fails)
+        # This ensures temporal errors are always shown to the user
         validation = validate_onset_offset_pairs(onset_times, offset_times)
         
-        if validation['valid']:
-            if "Warning" in validation['message']:
-                return dbc.Alert(
-                    f"⚠️ Data loaded with warnings: {validation['message']}",
-                    color="warning",
-                    dismissable=True
-                )
-            else:
-                return dbc.Alert(
-                    f"✅ Data validation successful: {validation['message']}",
-                    color="success",
-                    dismissable=True
-                )
-        else:
+        if not validation['valid']:
             return dbc.Alert(
                 f"❌ Data validation failed: {validation['message']}",
                 color="danger",
+                dismissable=True
+            )
+        
+        # If we have a low lick warning and offset validation passed, show the low lick warning
+        if low_lick_alert:
+            return low_lick_alert
+        
+        # If all critical validations pass, show success or warning messages from offset validation
+        if "Warning" in validation['message']:
+            return dbc.Alert(
+                f"⚠️ Data loaded with warnings: {validation['message']}",
+                color="warning",
+                dismissable=True
+            )
+        else:
+            return dbc.Alert(
+                f"✅ Data validation successful: {validation['message']}",
+                color="success",
                 dismissable=True
             )
             

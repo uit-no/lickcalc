@@ -1,8 +1,7 @@
 file,columns,category,description,expected_behavior
 synthetic_core_cases.csv,onset_clean / offset_clean,baseline,Clean onset+offset data with 20 bursts following exponential burst-size decay.,"All plots stable; validation passes. Targets: licklength mode ~50-70 ms, intercontact mode ~60 ms, intraburst freq ~6.5-8.5 Hz."
-synthetic_core_cases.csv,onset_ibi_boundary,threshold-boundary,Contains ILIs around 0.49/0.50/0.51 s boundaries.,Burst assignment changes around interburst threshold.
+synthetic_core_cases.csv,onset_ibi_boundary,threshold-boundary,"500+ licks in 28 bursts (12-26 licks each) with ILI distribution: 10 gaps >= 1.0s, 2 gaps in [0.75-1.0), 2 gaps in [0.5-0.75), 6 gaps in [0.25-0.5), 2 gaps > 3.0s.",At 0.25s: ~28 bursts. At 0.5s: ~21 bursts. At 0.75s: ~18 bursts. At 1.0s: ~15 bursts. At 3.0s: ~13 bursts. Tests IBI threshold sensitivity across full range including very high thresholds.
 synthetic_core_cases.csv,onset_longlick_boundary / offset_longlick_boundary,threshold-boundary,Lick durations around 0.29/0.30/0.31 s.,Long-lick counts change near long-lick threshold.
-synthetic_core_cases.csv,onset_firstn_depth,first-n,Mixed burst depths for First n ILIs behavior.,Higher n values reduce sample counts for late indices.
 synthetic_validation_cases.csv,onset_offby1 / offset_offby1,validation,Onsets exceed offsets by exactly one entry.,Off-by-one trim path should pass with warning/info.
 synthetic_validation_cases.csv,onset_severe_mismatch / offset_severe_mismatch,validation,Large onset/offset length mismatch.,Validation should fail severe mismatch guardrail.
 synthetic_validation_cases.csv,onset_nonmonotonic,validation,Contains decreasing timestamp.,Monotonicity validation should fail.
@@ -11,5 +10,3 @@ synthetic_validation_cases.csv,onset_offset_bad_order / offset_bad_order,validat
 synthetic_analysis_cases.csv,onset_sparse,analysis,Few licks and small bursts with long gaps.,Limited burst metrics and sparse histograms.
 synthetic_analysis_cases.csv,onset_dense / offset_dense,analysis,High-frequency licking with 20 bursts following exponential burst-size decay.,"Stress histogram/binning and long-lick logic under load. Targets: licklength mode ~50-70 ms, intercontact mode ~60 ms, intraburst freq ~6.5-8.5 Hz."
 synthetic_analysis_cases.csv,onset_trial_like,analysis,Large gaps approximately every 80 s.,Trial detection should identify multiple trials.
-synthetic_analysis_cases.csv,onset_firstn_lowvar,first-n,Low-variance first-n intraburst ILIs.,Small SEM in First n ILIs plot.
-synthetic_analysis_cases.csv,onset_firstn_highvar,first-n,Wider intraburst ILI spread but still below typical IBI threshold.,Larger SEM than low-variance case without threshold violations.

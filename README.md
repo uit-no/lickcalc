@@ -113,15 +113,17 @@ Core functions can also be extracted from this package and integrated with other
 ## Citations
 If you use `lickcalc` in your work, please cite us as follows:
 
-Volcko KL & McCutcheon JE. lickcalc: Easy analysis of lick microstructure in experiments of rodent ingestive behaviour.
+Volcko KL & McCutcheon JE (2026). lickcalc: Easy analysis of lick microstructure in experiments of rodent ingestive behaviour. *bioRxiv*, https://doi.org/10.64898/2026.03.09.710511
 
 **BibTeX:**
 ```bibtex
-@software{lickcalc,
+@article{lickcalc,
 	author = {Volcko, K. Linnea and McCutcheon, James E.},
 	title = {lickcalc: Easy analysis of lick microstructure in experiments of rodent ingestive behaviour},
-	url = {https://github.com/uit-no/lickcalc},
-	year = {2025}
+	journal = {bioRxiv},
+	year = {2026},
+	doi = {10.64898/2026.03.09.710511},
+	url = {https://doi.org/10.64898/2026.03.09.710511}
 }
 ```
 

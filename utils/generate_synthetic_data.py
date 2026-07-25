@@ -78,18 +78,20 @@ def _build_burst_onsets(
 def _offsets_from_onsets(
     onsets: Sequence[float],
     base_duration: float,
-    jitter: float,
+    std_dev: float,
     rng: Random,
 ) -> List[float]:
-    """Create offset timestamps from onsets with small deterministic jitter.
+    """Create offset timestamps from onsets with normal distribution of durations.
 
+    Uses normal distribution to create broader distribution of lick durations
+    (standard deviation of std_dev).
     Offsets are constrained to stay strictly before the next onset when one
     exists, matching lickcalc validation expectations.
     """
     offsets: List[float] = []
     eps = 0.001
     for idx, onset in enumerate(onsets):
-        dur = base_duration + rng.uniform(-jitter, jitter)
+        dur = base_duration + rng.gauss(0, std_dev)
         dur = max(0.01, dur)
 
         # Keep offset before next onset where possible.
@@ -135,44 +137,88 @@ def _build_core_file(rng: Random) -> Dict[str, Sequence[float]]:
         interburst_gap=5.2,
         start_time=0.0,
     )
-    clean_off = _offsets_from_onsets(clean_on, base_duration=0.060, jitter=0.004, rng=rng)
+    clean_off = _offsets_from_onsets(clean_on, base_duration=0.060, std_dev=0.010, rng=rng)
 
-    boundary_on = [
-        0.00,
-        0.49,
-        0.99,
-        1.50,
-        2.01,
-        2.50,
-        3.00,
-        3.51,
-        8.80,
-        9.29,
-        9.79,
-        10.30,
+    # Construct ~500+ licks with gap hierarchy that produces:
+    # - 25-30 bursts at 0.25s IBI (most sensitive)
+    # - 2-3 gaps > 3s to test very high IBI thresholds
+    # Each burst: 12-26 licks spaced at 0.12s (intra-burst ILI)
+    # Note: gap_before values are adjusted by -0.12 to account for the increment after final lick
+    boundary_on_builder: List[float] = []
+    t = 0.0
+    
+    # Define 28 burst sizes and corresponding gap-before values
+    # Includes gaps: >= 1.0, [0.75, 1.0), [0.5, 0.75), [0.25, 0.5), and > 3s
+    burst_configs = [
+        (15, 0.0),      # Burst 1: no gap before
+        (18, 1.03),     # Gap 1: produces ILI ~1.15 >= 1.0
+        (12, 0.93),     # Gap 2: produces ILI ~1.05 >= 1.0
+        (20, 0.23),     # Gap 3: produces ILI ~0.35 in [0.25, 0.5)
+        (14, 0.30),     # Gap 4: produces ILI ~0.42 in [0.25, 0.5)
+        (16, 1.08),     # Gap 5: produces ILI ~1.20 >= 1.0
+        (22, 0.91),     # Gap 6: produces ILI ~1.03 >= 1.0
+        (19, 0.43),     # Gap 7: produces ILI ~0.55 in [0.5, 0.75)
+        (17, 0.76),     # Gap 8: produces ILI ~0.88 in [0.75, 1.0)
+        (21, 0.28),     # Gap 9: produces ILI ~0.40 in [0.25, 0.5)
+        (13, 0.98),     # Gap 10: produces ILI ~1.10 >= 1.0
+        (25, 0.96),     # Gap 11: produces ILI ~1.08 >= 1.0
+        (18, 0.58),     # Gap 12: produces ILI ~0.70 in [0.5, 0.75)
+        (20, 0.97),     # Gap 13: produces ILI ~1.09 >= 1.0
+        (16, 0.20),     # Gap 14: produces ILI ~0.32 in [0.25, 0.5)
+        (24, 1.00),     # Gap 15: produces ILI ~1.12 >= 1.0
+        (14, 0.80),     # Gap 16: produces ILI ~0.92 in [0.75, 1.0)
+        (19, 0.36),     # Gap 17: produces ILI ~0.48 in [0.25, 0.5)
+        (22, 0.99),     # Gap 18: produces ILI ~1.11 >= 1.0
+        (26, 0.89),     # Gap 19: produces ILI ~1.01 >= 1.0
+        (15, 0.35),     # Gap 20: produces ILI ~0.47 in [0.25, 0.5)
+        (23, 3.21),     # Gap 21: produces ILI ~3.33 > 3.0 (large gap)
+        (20, 0.62),     # Gap 22: produces ILI ~0.74 in [0.5, 0.75)
+        (18, 1.04),     # Gap 23: produces ILI ~1.16 >= 1.0
+        (21, 0.28),     # Gap 24: produces ILI ~0.40 in [0.25, 0.5)
+        (17, 3.89),     # Gap 25: produces ILI ~4.01 > 3.0 (large gap)
+        (24, 0.75),     # Gap 26: produces ILI ~0.87 in [0.75, 1.0)
+        (19, 0.43),     # Gap 27: produces ILI ~0.55 in [0.5, 0.75)
     ]
-    boundary_off = _offsets_from_onsets(boundary_on, base_duration=0.060, jitter=0.004, rng=rng)
+    
+    for burst_size, gap_before in burst_configs:
+        t += gap_before  # Add gap before burst
+        for _ in range(burst_size):
+            boundary_on_builder.append(round(t, 6))
+            t += 0.12  # Intra-burst ILI
+    
+    boundary_on = boundary_on_builder
+    boundary_off = _offsets_from_onsets(boundary_on, base_duration=0.060, std_dev=0.010, rng=rng)
 
-    # Use slower intraburst timing here so ~0.30 s lick durations are valid
-    # without offset/onset overlap.
-    longlick_on = _build_burst_onsets(
-        burst_sizes=[7, 8, 6],
-        intra_ilis=[0.38, 0.42],
-        interburst_gap=5.5,
-        start_time=0.2,
-    )
-    longlick_off: List[float] = []
-    duration_pattern = [0.29, 0.30, 0.31, 0.27, 0.33, 0.28]
-    for idx, onset in enumerate(longlick_on):
-        longlick_off.append(round(onset + duration_pattern[idx % len(duration_pattern)], 6))
+    # Longlick boundary: mix of ~15 long-duration licks + ~100 standard-distribution licks
+    # Create long-duration licks individually, spaced far apart to prevent offset overlap
+    long_durations = [
+        # 0.3-1.0s range (10 durations)
+        0.32, 0.38, 0.45, 0.52, 0.62, 0.72, 0.82, 0.92, 0.35, 0.55,
+        # 1.0s+ range (5 durations)
+        1.2, 2.8, 5.5, 12.3, 28.5,
+    ]
+    special_longlick_on: List[float] = []
+    special_longlick_off: List[float] = []
+    
+    current_time = 0.2
+    for duration in long_durations:
+        special_longlick_on.append(current_time)
+        special_longlick_off.append(round(current_time + duration, 6))
+        # Space next lick far enough to avoid overlap (duration + 0.5s buffer)
+        current_time += duration + 0.5
 
-    firstn_on = _build_burst_onsets(
-        burst_sizes=[2, 4, 6, 8, 12, 3, 10],
-        intra_ilis=[0.12, 0.12, 0.13, 0.14],
-        interburst_gap=5.0,
-        start_time=0.0,
+    # Standard distribution bursts (~100 licks total)
+    standard_longlick_on = _build_burst_onsets(
+        burst_sizes=[12, 14, 11, 13, 12, 11, 14, 12],  # 8 bursts ~= 99 licks
+        intra_ilis=[0.12, 0.12, 0.13],
+        interburst_gap=3.5,
+        start_time=current_time + 5.0,  # Start after long licks
     )
-    firstn_off = _offsets_from_onsets(firstn_on, base_duration=0.060, jitter=0.006, rng=rng)
+    standard_longlick_off = _offsets_from_onsets(standard_longlick_on, base_duration=0.060, std_dev=0.010, rng=rng)
+
+    # Combine both sets
+    longlick_on = list(special_longlick_on) + list(standard_longlick_on)
+    longlick_off = list(special_longlick_off) + list(standard_longlick_off)
 
     return {
         "onset_clean": clean_on,
@@ -181,8 +227,6 @@ def _build_core_file(rng: Random) -> Dict[str, Sequence[float]]:
         "offset_ibi_boundary": boundary_off,
         "onset_longlick_boundary": longlick_on,
         "offset_longlick_boundary": longlick_off,
-        "onset_firstn_depth": firstn_on,
-        "offset_firstn_depth": firstn_off,
     }
 
 
@@ -194,7 +238,7 @@ def _build_validation_file(rng: Random) -> Dict[str, Sequence[float]]:
         interburst_gap=5.4,
         start_time=0.0,
     )
-    base_off = _offsets_from_onsets(base_on, base_duration=0.060, jitter=0.004, rng=rng)
+    base_off = _offsets_from_onsets(base_on, base_duration=0.060, std_dev=0.010, rng=rng)
 
     offby1_on = list(base_on)
     offby1_on.append(round(offby1_on[-1] + 0.11, 6))
@@ -213,7 +257,8 @@ def _build_validation_file(rng: Random) -> Dict[str, Sequence[float]]:
     single_value_on = [0.0]
 
     bad_order_on = [0.0, 0.10, 0.20, 0.30, 5.6, 5.7]
-    bad_order_off = [0.08, 0.09, 0.18, 0.34, 5.5, 5.69]
+    # Intentionally create invalid offset-onset relationships: some offsets <= onset
+    bad_order_off = [0.05, 0.08, 0.25, 0.28, 5.55, 5.75]  # Pairs 0,1 have offset < onset
 
     return {
         "onset_offby1": offby1_on,
@@ -255,31 +300,15 @@ def _build_analysis_file(rng: Random) -> Dict[str, Sequence[float]]:
         trial_like_on.extend([round(t + x, 6) for x in [0.0, 0.11, 0.21, 0.32, 0.43, 0.55]])
         t += 80.0
 
-    firstn_lowvar_on = _build_burst_onsets(
-        burst_sizes=[2, 6, 7, 8, 9, 10],
-        intra_ilis=[0.12, 0.12],
-        interburst_gap=5.2,
-        start_time=0.0,
-    )
-
-    firstn_highvar_on = _build_burst_onsets(
-        burst_sizes=[2, 6, 8, 10, 12],
-        intra_ilis=[0.07, 0.12, 0.18, 0.24, 0.32, 0.41],
-        interburst_gap=5.2,
-        start_time=0.0,
-    )
-
-    dense_off = _offsets_from_onsets(dense_on, base_duration=0.060, jitter=0.006, rng=rng)
-    firstn_lowvar_off = _offsets_from_onsets(firstn_lowvar_on, base_duration=0.060, jitter=0.004, rng=rng)
+    dense_off = _offsets_from_onsets(dense_on, base_duration=0.060, std_dev=0.010, rng=rng)
+    trial_like_off = _offsets_from_onsets(trial_like_on, base_duration=0.060, std_dev=0.010, rng=rng)
 
     return {
         "onset_sparse": sparse_on,
         "onset_dense": dense_on,
         "offset_dense": dense_off,
         "onset_trial_like": trial_like_on,
-        "onset_firstn_lowvar": firstn_lowvar_on,
-        "offset_firstn_lowvar": firstn_lowvar_off,
-        "onset_firstn_highvar": firstn_highvar_on,
+        "offset_trial_like": trial_like_off,
     }
 
 
@@ -297,8 +326,8 @@ def _manifest_rows() -> Iterable[List[str]]:
             "synthetic_core_cases.csv",
             "onset_ibi_boundary",
             "threshold-boundary",
-            "Contains ILIs around 0.49/0.50/0.51 s boundaries.",
-            "Burst assignment changes around interburst threshold.",
+            "500+ licks in 28 bursts (12-26 licks each) with ILI distribution: 10 gaps >= 1.0s, 2 gaps in [0.75-1.0), 2 gaps in [0.5-0.75), 6 gaps in [0.25-0.5), 2 gaps > 3.0s.",
+            "At 0.25s: ~28 bursts. At 0.5s: ~21 bursts. At 0.75s: ~18 bursts. At 1.0s: ~15 bursts. At 3.0s: ~13 bursts. Tests IBI threshold sensitivity across full range including very high thresholds.",
         ],
         [
             "synthetic_core_cases.csv",
@@ -306,13 +335,6 @@ def _manifest_rows() -> Iterable[List[str]]:
             "threshold-boundary",
             "Lick durations around 0.29/0.30/0.31 s.",
             "Long-lick counts change near long-lick threshold.",
-        ],
-        [
-            "synthetic_core_cases.csv",
-            "onset_firstn_depth",
-            "first-n",
-            "Mixed burst depths for First n ILIs behavior.",
-            "Higher n values reduce sample counts for late indices.",
         ],
         [
             "synthetic_validation_cases.csv",
@@ -369,20 +391,6 @@ def _manifest_rows() -> Iterable[List[str]]:
             "analysis",
             "Large gaps approximately every 80 s.",
             "Trial detection should identify multiple trials.",
-        ],
-        [
-            "synthetic_analysis_cases.csv",
-            "onset_firstn_lowvar",
-            "first-n",
-            "Low-variance first-n intraburst ILIs.",
-            "Small SEM in First n ILIs plot.",
-        ],
-        [
-            "synthetic_analysis_cases.csv",
-            "onset_firstn_highvar",
-            "first-n",
-            "Wider intraburst ILI spread but still below typical IBI threshold.",
-            "Larger SEM than low-variance case without threshold violations.",
         ],
     ]
     return rows

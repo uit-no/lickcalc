@@ -441,10 +441,26 @@ def make_longlicks_graph(longlick_fig_type, offset_key, longlick_slider, remove_
         offset=offset_df["licks"].to_list()
         
         # Critical fix: Check for potential cross-file contamination
-        # If severe length mismatch, likely old data - skip validation
+        # If severe length mismatch, show error message
         if abs(len(onset) - len(offset)) > 1:
-            # Severe mismatch suggests cross-file contamination, wait for proper data sync
-            raise PreventUpdate
+            # Severe mismatch - show clear error message
+            mismatch_msg = f"Severe data mismatch: {len(onset)} onsets vs {len(offset)} offsets. Difference of {abs(len(onset) - len(offset))} licks suggests cross-file contamination or data sync issue."
+            logging.error(mismatch_msg)
+            fig = go.Figure()
+            fig.update_layout(
+                annotations=[
+                    dict(
+                        text=f"Data Error: {mismatch_msg}",
+                        xref="paper", yref="paper",
+                        x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                        showarrow=False,
+                        font=dict(size=11, color="red")
+                    )
+                ],
+                height=400,
+                margin=dict(l=40, r=40, t=60, b=40)
+            )
+            return fig, "Error", "Error"
         
         # Validate onset/offset pairs
         validation = validate_onset_offset_pairs(onset, offset)
@@ -716,9 +732,34 @@ def make_burstprob_graph(jsonified_df, burstprob_fig_type, ibi_slider, minlicks_
             lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
     
         if lickdata['burstprob'] is None or len(lickdata['burstprob'][0]) == 0:
+            # burstprob is empty/unavailable, but we still have burst metrics
             fig = go.Figure()
-            return fig, "0", "0.00", "N/A", "0.00", "0.00", "0.00"
-        
+            fig.update_layout(
+                annotations=[
+                    dict(
+                        x=0.5,
+                        y=0.5,
+                        xref="paper",
+                        yref="paper",
+                        text="Insufficient burst size distribution data for Weibull analysis",
+                        showarrow=False,
+                        font=dict(size=14, color="gray"),
+                        xanchor="center",
+                        yanchor="middle"
+                    )
+                ],
+                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                height=400,
+                margin=dict(l=40, r=40, t=60, b=40)
+            )
+            
+            # Still return the burst metrics even though burstprob is unavailable
+            bNum = "{}".format(lickdata.get('bNum', 0))
+            bMean = "{:.2f}".format(lickdata.get('bMean', 0)) if lickdata.get('bMean') else "N/A"
+            ibis = lickdata.get('IBIs', [])
+            mean_ibi = "{:.2f}".format(np.mean(ibis)) if ibis is not None and len(ibis) > 0 else "N/A"
+            return fig, bNum, bMean, mean_ibi, "N/A", "N/A", "N/A"
         # Check if we have enough bursts for Weibull analysis
         min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
         num_bursts = lickdata['bNum']
