@@ -13,12 +13,14 @@ lickcalc_webapp/
 │       ├── getting-started.html
 │       ├── file-formats.html
 │       ├── session-analysis.html
-│       ├── time-window.html
 │       ├── microstructural.html
 │       ├── parameters.html
 │       ├── data-export.html
 │       ├── results-table.html
+│       ├── advanced-use.html
 │       ├── troubleshooting.html
+│       ├── theoretical-practical.html
+│       ├── references.html            # Present in folder, not included in help.html
 │       └── glossary.html
 └── assets/
     └── help_styles.css              # Shared CSS for help pages

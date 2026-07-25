@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-Help documentation is now split into **11 separate chapter files** for easy editing!
+Help documentation is now split into **12 separate chapter files** for easy editing!
 
 ## File Locations
 
@@ -12,12 +12,14 @@ templates/help_chapters/
 ├── getting-started.html    ← Setup instructions  
 ├── file-formats.html       ← Supported formats
 ├── session-analysis.html   ← Session graphs
-├── time-window.html        ← Time selection
 ├── microstructural.html    ← Burst analysis
 ├── parameters.html         ← Parameter docs ⭐ Most edited
 ├── data-export.html        ← Export features
 ├── results-table.html      ← Results management
+├── advanced-use.html       ← Advanced usage
 ├── troubleshooting.html    ← Common issues
+├── theoretical-practical.html ← Background/context
+├── references.html        ← Present in the folder, not linked in help.html
 └── glossary.html           ← Terminology
 ```
 

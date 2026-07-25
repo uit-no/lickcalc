@@ -46,27 +46,30 @@ templates/
 │   │   ├── {% include 'help_chapters/getting-started.html' %}
 │   │   ├── {% include 'help_chapters/file-formats.html' %}
 │   │   ├── {% include 'help_chapters/session-analysis.html' %}
-│   │   ├── {% include 'help_chapters/time-window.html' %}
 │   │   ├── {% include 'help_chapters/microstructural.html' %}
 │   │   ├── {% include 'help_chapters/parameters.html' %}
 │   │   ├── {% include 'help_chapters/data-export.html' %}
 │   │   ├── {% include 'help_chapters/results-table.html' %}
+│   │   ├── {% include 'help_chapters/advanced-use.html' %}
 │   │   ├── {% include 'help_chapters/troubleshooting.html' %}
+│   │   ├── {% include 'help_chapters/theoretical-practical.html' %}
 │   │   └── {% include 'help_chapters/glossary.html' %}
 │   ├── Footer
 │   └── JavaScript (50 lines)
 │
-└── help_chapters/ 📁 11 focused files
+└── help_chapters/ 📁 12 files used by help.html, plus 1 extra draft file
     ├── overview.html (15 lines)
     ├── getting-started.html (130 lines)
     ├── file-formats.html (50 lines)
     ├── session-analysis.html (35 lines)
-    ├── time-window.html (45 lines)
     ├── microstructural.html (90 lines)
     ├── parameters.html (115 lines)
     ├── data-export.html (45 lines)
     ├── results-table.html (110 lines)
+    ├── advanced-use.html (45 lines)
     ├── troubleshooting.html (150 lines)
+    ├── theoretical-practical.html (60 lines)
+    ├── references.html (draft, not included)
     └── glossary.html (60 lines)
 
 assets/

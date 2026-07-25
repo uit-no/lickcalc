@@ -11,17 +11,19 @@ lickcalc_webapp/
 ├── templates/
 │   ├── help.html                          # Main template (106 lines)
 │   ├── README_HELP.md                     # Documentation guide
-│   └── help_chapters/                     # 11 separate chapter files
+│   └── help_chapters/                     # 12 chapters used by help.html + 1 extra draft file
 │       ├── overview.html                  # ~15 lines
 │       ├── getting-started.html           # ~130 lines
 │       ├── file-formats.html              # ~50 lines
 │       ├── session-analysis.html          # ~35 lines
-│       ├── time-window.html               # ~45 lines
 │       ├── microstructural.html           # ~90 lines
 │       ├── parameters.html                # ~115 lines
 │       ├── data-export.html               # ~45 lines
 │       ├── results-table.html             # ~110 lines
+│       ├── advanced-use.html              # ~45 lines
 │       ├── troubleshooting.html           # ~150 lines
+│       ├── theoretical-practical.html     # ~60 lines
+│       ├── references.html               # draft / not included
 │       └── glossary.html                  # ~60 lines
 ├── assets/
 │   ├── help.html                          # Original backup (983 lines)
@@ -29,7 +31,7 @@ lickcalc_webapp/
 ├── manage_help.py                         # Chapter management tool
 └── split_help.py                          # Original splitting script
 
-Statistics: 11 chapters, 40 KB, ~700 lines total (avg 63 lines/chapter)
+Statistics: 12 included chapters, 1 extra draft file
 ```
 
 ## Benefits

@@ -38,7 +38,7 @@ A:
                     <div class="card">
                         <div class="card-header">CSV/TXT</div>
                         <div class="card-body">
-                            <p>Comma or tab-separated files with columns:</p>
+                            <p>Comma or tab-separated files with columns. Header rows are supported; if no header is present, the file is read as generic numeric columns:</p>
                             <div class="code-block">
 onset,offset,other
 0.123,0.199,data
@@ -70,6 +70,15 @@ onset,offset,other
                         </div>
                     </div>
                 </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">Coulbourn</div>
+                        <div class="card-body">
+                            <p>Coulbourn-format CSV files with onset and offset event columns such as <code>On1A1</code> and <code>Off1A1</code>.</p>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="col-md-4">
                     <div class="card">
@@ -87,6 +96,15 @@ onset,offset,other
                         <div class="card-body">
                             <p>Custom KM Lab format with specific parsing rules.</p>
                             <a href="/assets/examples/km_test.csv" download class="btn btn-sm btn-primary mt-2">Download example file</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">LS Lab</div>
+                        <div class="card-body">
+                            <p>LS Lab files are converted from interlick-interval presentations into cumulative lick timestamps.</p>
                         </div>
                     </div>
                 </div>
