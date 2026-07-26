@@ -260,16 +260,8 @@ def make_intraburstfreq_graph(jsonified_df, intraburst_fig_type, first_n_ili, ib
             lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
             
         ilis = lickdata["ilis"]
-        
-        # Validate ilis data before creating histogram
-        if ilis is None or len(ilis) == 0 or not hasattr(ilis, '__iter__'):
-            # Return empty figure if no interlick intervals
-            fig = go.Figure()
-            fig.update_layout(
-                xaxis_title="Interlick interval (s)",
-                yaxis_title="Frequency"
-            )
-        elif intraburst_fig_type == 'first_n_ili':
+
+        if intraburst_fig_type == 'first_n_ili':
             n_ilis = int(first_n_ili) if first_n_ili else 5
             n_ilis = max(1, n_ilis)
 
@@ -362,26 +354,113 @@ def make_intraburstfreq_graph(jsonified_df, intraburst_fig_type, first_n_ili, ib
                         ]
                     )
                 )
-        else:
-            try:
-                fig = px.histogram(ilis,
-                                range_x=[0, 0.5],
-                                nbins=50)
-                
+        elif intraburst_fig_type in ('lick_lengths', 'intercontact_lengths'):
+            if offset_times is None:
+                fig = go.Figure()
                 fig.update_layout(
-                    transition_duration=500,
-                    xaxis_title="Interlick interval (s)",
-                    yaxis_title="Frequency",
-                    showlegend=False,
-                    # margin=dict(l=20, r=20, t=20, b=20),
+                    annotations=[
+                        dict(
+                            x=0.5,
+                            y=0.5,
+                            xref="paper",
+                            yref="paper",
+                            text="No lick duration data available<br>Offsets required",
+                            showarrow=False,
+                            font=dict(size=16, color="gray"),
+                            xanchor="center",
+                            yanchor="middle"
+                        )
+                    ],
+                    xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                    yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                    height=300,
+                    margin=dict(l=40, r=40, t=60, b=40)
                 )
-            except Exception as e:
-                # If histogram creation fails, return empty figure
+            elif intraburst_fig_type == 'intercontact_lengths':
+                intercontact = lickdata.get("intercontact_time")
+
+                if intercontact is None or len(intercontact) == 0:
+                    fig = go.Figure()
+                    fig.update_layout(
+                        xaxis_title="Intercontact length (s)",
+                        yaxis_title="Frequency",
+                        showlegend=False
+                    )
+                else:
+                    intercontact_array = np.asarray(intercontact, dtype=float)
+                    intercontact_array = intercontact_array[np.isfinite(intercontact_array)]
+                    intercontact_array = intercontact_array[intercontact_array >= 0]
+
+                    if intercontact_array.size == 0:
+                        fig = go.Figure()
+                        fig.update_layout(
+                            xaxis_title="Intercontact length (s)",
+                            yaxis_title="Frequency",
+                            showlegend=False
+                        )
+                    else:
+                        if longlick_th is None or longlick_th <= 0:
+                            fig = go.Figure()
+                        else:
+                            counts, bins = np.histogram(
+                                intercontact_array,
+                                bins=np.arange(0, longlick_th, 0.01)
+                            )
+                            bins = 0.5 * (bins[:-1] + bins[1:])
+                            fig = px.bar(x=bins, y=counts)
+                        fig.update_layout(
+                            transition_duration=500,
+                            xaxis_title="Intercontact length (s)",
+                            yaxis_title="Frequency",
+                            showlegend=False,
+                        )
+            else:
+                licklength = lickdata.get("licklength")
+                if licklength is None or len(licklength) == 0:
+                    fig = go.Figure()
+                    fig.update_layout(
+                        xaxis_title="Lick length (s)",
+                        yaxis_title="Frequency",
+                        showlegend=False
+                    )
+                else:
+                    counts, bins = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
+                    bins = 0.5 * (bins[:-1] + bins[1:])
+                    fig = px.bar(x=bins, y=counts)
+
+                    fig.update_layout(
+                        transition_duration=500,
+                        xaxis_title="Lick length (s)",
+                        yaxis_title="Frequency",
+                        showlegend=False,
+                    )
+        else:
+            # Intraburst ILI histogram
+            if ilis is None or len(ilis) == 0 or not hasattr(ilis, '__iter__'):
                 fig = go.Figure()
                 fig.update_layout(
                     xaxis_title="Interlick interval (s)",
                     yaxis_title="Frequency"
                 )
+            else:
+                try:
+                    fig = px.histogram(ilis,
+                                    range_x=[0, 0.5],
+                                    nbins=50)
+                    
+                    fig.update_layout(
+                        transition_duration=500,
+                        xaxis_title="Interlick interval (s)",
+                        yaxis_title="Frequency",
+                        showlegend=False,
+                    )
+                except Exception as e:
+                    # If histogram creation fails, return empty figure
+                    fig = go.Figure()
+                    fig.update_layout(
+                        xaxis_title="Interlick interval (s)",
+                        yaxis_title="Frequency"
+                    )
         
         nlicks = "{}".format(lickdata['total'])
         if lickdata['freq'] is not None:
@@ -425,20 +504,27 @@ def update_display_values(ibi_value, minlicks_value, longlick_value, first_n_ili
               Output('longlicks-max', 'children'),
               Input('longlick-fig-type', 'value'),
               Input('offset-array', 'value'),
+              Input('interburst-slider', 'value'),
+              Input('minlicks-slider', 'value'),
+              Input('first-n-ili-slider', 'value'),
               Input('longlick-threshold', 'value'),
               Input('remove-longlicks-checkbox', 'value'),
               State('data-store', 'data'),
               State('lick-data', 'data'))
-def make_longlicks_graph(longlick_fig_type, offset_key, longlick_slider, remove_longlicks, jsonified_dict, jsonified_df):
-    # Use slider value directly
+def make_longlicks_graph(longlick_fig_type, offset_key, ibi_slider, minlicks_slider, first_n_ili, longlick_slider, remove_longlicks, jsonified_dict, jsonified_df):
+    # Use slider values directly
+    ibi = ibi_slider
+    minlicks = minlicks_slider
     longlick_th = longlick_slider
     remove_long = 'remove' in remove_longlicks
     
     if jsonified_df is None:
         raise PreventUpdate
     
-    # Check if offset data is available
-    if offset_key is None or offset_key == 'none':
+    requires_offset = longlick_fig_type in ('lick_lengths', 'intercontact_lengths')
+
+    # Check if offset data is available for duration-based plots
+    if requires_offset and (offset_key is None or offset_key == 'none'):
         # Return figure with message similar to Weibull plot style
         fig = go.Figure()
         fig.update_layout(
@@ -465,110 +551,220 @@ def make_longlicks_graph(longlick_fig_type, offset_key, longlick_slider, remove_
     try:        
         df = pd.read_json(io.StringIO(jsonified_df), orient='split')
         
-        data_array = json.loads(jsonified_dict)
-        
-        # Check if the offset key exists in the data
-        if offset_key not in data_array:
-            fig = go.Figure()
-            fig.update_layout(
-                annotations=[
-                    dict(
-                        text=f"Offset column '{offset_key}' not found in data",
-                        xref="paper", yref="paper",
-                        x=0.5, y=0.5, xanchor='center', yanchor='middle',
-                        showarrow=False,
-                        font=dict(size=14, color="red")
-                    )
-                ]
-            )
-            return fig, "N/A", "N/A"
-        
-        offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
-        
         if len(df) == 0:
             # Return empty figure if no data
             fig = go.Figure()
             return fig, "0", "0.00"
         
-        onset=df["licks"].to_list()
-        offset=offset_df["licks"].to_list()
-        
-        # Critical fix: Check for potential cross-file contamination
-        # If severe length mismatch, show error message
-        if abs(len(onset) - len(offset)) > 1:
-            # Severe mismatch - show clear error message
-            mismatch_msg = f"Severe data mismatch: {len(onset)} onsets vs {len(offset)} offsets. Difference of {abs(len(onset) - len(offset))} licks suggests cross-file contamination or data sync issue."
-            logging.error(mismatch_msg)
+        onset = df["licks"].to_list()
+        offset = None
+
+        if offset_key and offset_key != 'none' and jsonified_dict:
+            data_array = json.loads(jsonified_dict)
+
+            # Check if the offset key exists in the data
+            if offset_key in data_array:
+                offset_df = pd.read_json(io.StringIO(data_array[offset_key]), orient='split')
+                candidate_offset = offset_df["licks"].to_list()
+
+                # Critical fix: Check for potential cross-file contamination
+                if abs(len(onset) - len(candidate_offset)) > 1:
+                    if requires_offset:
+                        mismatch_msg = f"Severe data mismatch: {len(onset)} onsets vs {len(candidate_offset)} offsets. Difference of {abs(len(onset) - len(candidate_offset))} licks suggests cross-file contamination or data sync issue."
+                        logging.error(mismatch_msg)
+                        fig = go.Figure()
+                        fig.update_layout(
+                            annotations=[
+                                dict(
+                                    text=f"Data Error: {mismatch_msg}",
+                                    xref="paper", yref="paper",
+                                    x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                                    showarrow=False,
+                                    font=dict(size=11, color="red")
+                                )
+                            ],
+                            height=300,
+                            margin=dict(l=40, r=40, t=60, b=40)
+                        )
+                        return fig, "Error", "Error"
+                else:
+                    validation = validate_onset_offset_pairs(onset, candidate_offset)
+
+                    if validation['valid']:
+                        onset = validation['corrected_onset']
+                        offset = validation['corrected_offset']
+                    elif requires_offset:
+                        logging.error(f"Onset/offset validation failed: {validation['message']}")
+                        fig = go.Figure()
+                        fig.update_layout(
+                            annotations=[
+                                dict(
+                                    text=f"Data validation error: {validation['message']}",
+                                    xref="paper", yref="paper",
+                                    x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                                    showarrow=False,
+                                    font=dict(size=12, color="red")
+                                )
+                            ]
+                        )
+                        return fig, "Error", "Error"
+
+        if offset is not None:
+            lickdata = lickcalc(
+                onset,
+                offset=offset,
+                burstThreshold=ibi,
+                minburstlength=minlicks,
+                longlickThreshold=longlick_th,
+                remove_longlicks=remove_long
+            )
+        else:
+            lickdata = lickcalc(onset, burstThreshold=ibi, minburstlength=minlicks)
+
+        # Default stats for the long-lick table cells.
+        nlonglicks = "N/A"
+        longlick_max = "N/A"
+        licklength = lickdata.get("licklength")
+        if licklength is not None:
+            nlonglicks = "{}".format(len(lickdata.get("longlicks") or []))
+            longlick_max = "{:.2f}".format(np.max(licklength)) if len(licklength) > 0 else "0.00"
+
+        if longlick_fig_type == 'intraburst_ili':
+            ilis = lickdata.get("ilis")
+            if ilis is None or len(ilis) == 0 or not hasattr(ilis, '__iter__'):
+                fig = go.Figure()
+                fig.update_layout(
+                    xaxis_title="Interlick interval (s)",
+                    yaxis_title="Frequency"
+                )
+            else:
+                fig = px.histogram(ilis, range_x=[0, 0.5], nbins=50)
+                fig.update_layout(
+                    transition_duration=500,
+                    xaxis_title="Interlick interval (s)",
+                    yaxis_title="Frequency",
+                    showlegend=False,
+                )
+            return fig, nlonglicks, longlick_max
+
+        if longlick_fig_type == 'first_n_ili':
+            n_ilis = int(first_n_ili) if first_n_ili else 5
+            n_ilis = max(1, n_ilis)
+
+            summary = compute_first_n_ili_summary(
+                lick_times=onset,
+                offset_times=offset,
+                ibi=ibi,
+                minlicks=minlicks,
+                longlick_th=longlick_th,
+                remove_long=remove_long,
+                n_ilis=n_ilis
+            )
+            y_mean = summary['mean']
+            sem = summary['sem']
+
+            if np.all(np.isnan(y_mean)):
+                fig = go.Figure()
+                fig.update_layout(
+                    xaxis_title="# Lick in burst",
+                    yaxis_title="ILI (s)",
+                    annotations=[
+                        dict(
+                            x=0.5,
+                            y=0.5,
+                            xref="paper",
+                            yref="paper",
+                            text="No eligible bursts for First n ILIs",
+                            showarrow=False,
+                            font=dict(size=14, color="gray"),
+                            xanchor="center",
+                            yanchor="middle"
+                        )
+                    ]
+                )
+            else:
+                x_vals = np.arange(1, n_ilis + 1)
+                y_upper = y_mean + sem
+                y_lower = y_mean - sem
+
+                valid = ~np.isnan(y_mean)
+                x_plot = x_vals[valid]
+                y_plot = y_mean[valid]
+                upper_plot = y_upper[valid]
+                lower_plot = y_lower[valid]
+
+                fig = go.Figure()
+                if len(x_plot) > 0:
+                    fig.add_trace(go.Scatter(
+                        x=x_plot,
+                        y=upper_plot,
+                        mode='lines',
+                        line=dict(width=0),
+                        showlegend=False,
+                        hoverinfo='skip'
+                    ))
+                    fig.add_trace(go.Scatter(
+                        x=x_plot,
+                        y=lower_plot,
+                        mode='lines',
+                        fill='tonexty',
+                        fillcolor='rgba(11, 143, 140, 0.20)',
+                        line=dict(width=0),
+                        showlegend=False,
+                        hoverinfo='skip'
+                    ))
+                    fig.add_trace(go.Scatter(
+                        x=x_plot,
+                        y=y_plot,
+                        mode='lines+markers',
+                        name='Mean ILI',
+                        line=dict(color='#0B8F8C', width=2),
+                        marker=dict(size=6, color='#0B8F8C'),
+                        showlegend=False
+                    ))
+
+                fig.update_layout(
+                    transition_duration=500,
+                    xaxis_title="# Lick in burst",
+                    yaxis_title="ILI (s)",
+                    xaxis=dict(
+                        tickmode='array',
+                        tickvals=sorted(set(
+                            [1, n_ilis] + list(range(1, n_ilis + 1, max(1, int(np.ceil(n_ilis / 8)))))
+                        )),
+                        ticktext=[
+                            str(i) for i in sorted(set(
+                                [1, n_ilis] + list(range(1, n_ilis + 1, max(1, int(np.ceil(n_ilis / 8)))))
+                            ))
+                        ]
+                    )
+                )
+            return fig, nlonglicks, longlick_max
+
+        # From here on, duration-based plots require offsets.
+        if offset is None:
             fig = go.Figure()
             fig.update_layout(
                 annotations=[
                     dict(
-                        text=f"Data Error: {mismatch_msg}",
-                        xref="paper", yref="paper",
-                        x=0.5, y=0.5, xanchor='center', yanchor='middle',
+                        x=0.5,
+                        y=0.5,
+                        xref="paper",
+                        yref="paper",
+                        text="No lick duration data available<br>Offsets required",
                         showarrow=False,
-                        font=dict(size=11, color="red")
+                        font=dict(size=16, color="gray"),
+                        xanchor="center",
+                        yanchor="middle"
                     )
                 ],
+                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
                 height=300,
                 margin=dict(l=40, r=40, t=60, b=40)
             )
-            return fig, "Error", "Error"
-        
-        # Validate onset/offset pairs
-        validation = validate_onset_offset_pairs(onset, offset)
-        
-        if not validation['valid']:
-            # Show error for invalid data
-            logging.error(f"Onset/offset validation failed: {validation['message']}")
-            fig = go.Figure()
-            fig.update_layout(
-                annotations=[
-                    dict(
-                        text=f"Data validation error: {validation['message']}",
-                        xref="paper", yref="paper",
-                        x=0.5, y=0.5, xanchor='center', yanchor='middle',
-                        showarrow=False,
-                        font=dict(size=12, color="red")
-                    )
-                ]
-            )
-            return fig, "Error", "Error"
-        
-        # Use corrected arrays
-        onset = validation['corrected_onset']
-        offset = validation['corrected_offset']
-        
-        # Log validation message (could be warning about overlaps)
-        if "Warning" in validation['message']:
-            logging.warning(f"Onset/offset validation: {validation['message']}")
-        else:
-            logging.info(f"Onset/offset validation: {validation['message']}")
-        
-        lickdata = lickcalc(onset, offset=offset, longlickThreshold=longlick_th, remove_longlicks=remove_long)
-        
-        # Simple validation of the result
-        if lickdata is None:
-            logging.error("lickcalc returned None")
-            fig = go.Figure()
-            return fig, "Error", "Error"
-        
-        if "licklength" not in lickdata:
-            logging.error(f"licklength key not found in lickdata. Available keys: {list(lickdata.keys())}")
-            fig = go.Figure()
-            return fig, "Error", "Error"
-            
-        licklength = lickdata["licklength"]
-        
-        if licklength is None:
-            logging.error("licklength is None")
-            fig = go.Figure()
-            return fig, "Error", "Error"
-        
-        if len(licklength) == 0:
-            fig = go.Figure()
-            return fig, "0", "0.00"
-        
+            return fig, "N/A", "N/A"
+
         if longlick_fig_type == 'intercontact_lengths':
             intercontact = lickdata.get("intercontact_time")
 
@@ -608,6 +804,15 @@ def make_longlicks_graph(longlick_fig_type, offset_key, longlick_slider, remove_
                         showlegend=False,
                     )
         else:
+            if licklength is None or len(licklength) == 0:
+                fig = go.Figure()
+                fig.update_layout(
+                    xaxis_title="Lick length (s)",
+                    yaxis_title="Frequency",
+                    showlegend=False
+                )
+                return fig, nlonglicks, longlick_max
+
             counts, bins = np.histogram(licklength, bins=np.arange(0, longlick_th, 0.01))
             bins = 0.5 * (bins[:-1] + bins[1:])
 
@@ -618,14 +823,8 @@ def make_longlicks_graph(longlick_fig_type, offset_key, longlick_slider, remove_
                 xaxis_title="Lick length (s)",
                 yaxis_title="Frequency",
                 showlegend=False,
-                # margin=dict(l=20, r=20, t=20, b=20),
             )
-        
-        # Handle case where longlicks might be None (no licks above threshold)
-        longlicks_array = lickdata["longlicks"]
-        nlonglicks = "{}".format(len(longlicks_array) if longlicks_array is not None else 0)
-        longlick_max = "{:.2f}".format(np.max(licklength)) if len(licklength) > 0 else "0.00"
-        
+
         return fig, nlonglicks, longlick_max
         
     except Exception as e:
@@ -715,6 +914,127 @@ def make_bursthist_graph(jsonified_df, bursthist_fig_type, ibi_slider, minlicks_
             fig = go.Figure()
             return fig
 
+        if bursthist_fig_type == 'burst_size_over_time':
+            burst_numbers = list(range(1, len(bursts) + 1))
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=burst_numbers,
+                    y=bursts,
+                    mode='lines+markers',
+                    marker=dict(
+                        symbol='circle',
+                        opacity=0.7,
+                        line=dict(width=0)
+                    ),
+                    line=dict(width=2),
+                    showlegend=False
+                )
+            )
+            fig.update_layout(
+                transition_duration=500,
+                xaxis_title="Burst number",
+                yaxis_title="Burst size (licks)",
+                showlegend=False)
+            return fig
+
+        if bursthist_fig_type == 'interburst_interval_over_time':
+            ibis = lickdata.get('IBIs', [])
+            if ibis is None or len(ibis) == 0:
+                fig = go.Figure()
+                return fig
+
+            ibi_numbers = list(range(1, len(ibis) + 1))
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=ibi_numbers,
+                    y=ibis,
+                    mode='lines+markers',
+                    marker=dict(
+                        symbol='circle',
+                        opacity=0.7,
+                        line=dict(width=0)
+                    ),
+                    line=dict(width=2),
+                    showlegend=False
+                )
+            )
+            fig.update_layout(
+                transition_duration=500,
+                xaxis_title="Interburst interval number",
+                yaxis_title="Interburst interval (s)",
+                showlegend=False)
+            return fig
+
+        if bursthist_fig_type == 'weibull_prob':
+            burstprob = lickdata.get('burstprob')
+            if burstprob is None or len(burstprob[0]) == 0:
+                fig = go.Figure()
+                fig.update_layout(
+                    annotations=[
+                        dict(
+                            x=0.5,
+                            y=0.5,
+                            xref="paper",
+                            yref="paper",
+                            text="Insufficient burst size distribution data for Weibull analysis",
+                            showarrow=False,
+                            font=dict(size=14, color="gray"),
+                            xanchor="center",
+                            yanchor="middle"
+                        )
+                    ],
+                    xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                    yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                    height=300,
+                    margin=dict(l=40, r=40, t=60, b=40)
+                )
+                return fig
+
+            x = np.asarray(burstprob[0], dtype=float)
+            y = np.asarray(burstprob[1], dtype=float)
+
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=y,
+                    mode='lines',
+                    line_shape='hv',
+                    name='Observed',
+                    line=dict(width=2.5)
+                )
+            )
+
+            alpha = lickdata.get('weib_alpha')
+            beta = lickdata.get('weib_beta')
+            if alpha is not None and beta is not None:
+                try:
+                    alpha = float(alpha)
+                    beta = float(beta)
+                    if alpha > 0 and beta > 0 and np.all(np.isfinite(x)) and len(x) > 0:
+                        x_fit = np.linspace(max(1e-6, float(np.min(x))), float(np.max(x)), 200)
+                        y_fit = weib_davis(x_fit, alpha, beta)
+                        fig.add_trace(
+                            go.Scatter(
+                                x=x_fit,
+                                y=y_fit,
+                                mode='lines',
+                                name='Weibull fit',
+                                line=dict(width=2)
+                            )
+                        )
+                except (TypeError, ValueError, OverflowError):
+                    pass
+
+            fig.update_layout(
+                transition_duration=500,
+                xaxis_title="Burst size (n)",
+                yaxis_title="Probability of burst>n",
+                showlegend=False)
+            return fig
+
         try:
             fig = px.histogram(bursts,
                                 range_x=[1, max(bursts)],
@@ -723,12 +1043,12 @@ def make_bursthist_graph(jsonified_df, bursthist_fig_type, ibi_slider, minlicks_
             # If histogram creation fails, return empty figure
             fig = go.Figure()
             return fig
-        
+
         # fig.update_traces(mode='markers', marker_line_width=2, marker_size=10)
-        
+
         fig.update_layout(
             transition_duration=500,
-            xaxis_title="Burst size",
+            xaxis_title="Burst size (licks)",
             yaxis_title="Frequency",
             showlegend=False)
 
@@ -784,140 +1104,142 @@ def make_burstprob_graph(jsonified_df, burstprob_fig_type, ibi_slider, minlicks_
         else:
             lickdata = lickcalc(lick_times, burstThreshold=ibi, minburstlength=minlicks)
     
-        if lickdata['burstprob'] is None or len(lickdata['burstprob'][0]) == 0:
-            # burstprob is empty/unavailable, but we still have burst metrics
-            fig = go.Figure()
-            fig.update_layout(
-                annotations=[
-                    dict(
-                        x=0.5,
-                        y=0.5,
-                        xref="paper",
-                        yref="paper",
-                        text="Insufficient burst size distribution data for Weibull analysis",
-                        showarrow=False,
-                        font=dict(size=14, color="gray"),
-                        xanchor="center",
-                        yanchor="middle"
+        bursts = lickdata.get('bLicks', [])
+        if burstprob_fig_type == 'burst_hist':
+            if not bursts:
+                fig = go.Figure()
+            elif not all(isinstance(x, (int, float)) and x > 0 for x in bursts):
+                fig = go.Figure()
+            else:
+                fig = px.histogram(
+                    bursts,
+                    range_x=[1, max(bursts)],
+                    nbins=int(np.max(bursts))
+                )
+                fig.update_layout(
+                    transition_duration=500,
+                    xaxis_title="Burst size (licks)",
+                    yaxis_title="Frequency",
+                    showlegend=False
+                )
+        elif burstprob_fig_type == 'burst_size_over_time':
+            if not bursts:
+                fig = go.Figure()
+            else:
+                burst_numbers = list(range(1, len(bursts) + 1))
+                fig = go.Figure()
+                fig.add_trace(
+                    go.Scatter(
+                        x=burst_numbers,
+                        y=bursts,
+                        mode='lines+markers',
+                        marker=dict(
+                            symbol='circle',
+                            opacity=0.7,
+                            line=dict(width=0)
+                        ),
+                        line=dict(width=2),
+                        showlegend=False
                     )
-                ],
-                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                height=300,
-                margin=dict(l=40, r=40, t=60, b=40)
-            )
-            
-            # Still return the burst metrics even though burstprob is unavailable
-            bNum = "{}".format(lickdata.get('bNum', 0))
-            bMean = "{:.2f}".format(lickdata.get('bMean', 0)) if lickdata.get('bMean') else "N/A"
+                )
+                fig.update_layout(
+                    transition_duration=500,
+                    xaxis_title="Burst number",
+                    yaxis_title="Burst size (licks)",
+                    showlegend=False
+                )
+        elif burstprob_fig_type == 'interburst_interval_over_time':
             ibis = lickdata.get('IBIs', [])
-            mean_ibi = "{:.2f}".format(np.mean(ibis)) if ibis is not None and len(ibis) > 0 else "N/A"
-            return fig, bNum, bMean, mean_ibi, "N/A", "N/A", "N/A"
-        # Check if we have enough bursts for Weibull analysis
-        min_bursts_required = config.get('analysis.min_bursts_for_weibull', 10)
-        num_bursts = lickdata['bNum']
-        
-        if num_bursts < min_bursts_required:
-            fig = go.Figure()
-            fig.update_layout(
-                annotations=[
-                    dict(
-                        x=0.5,
-                        y=0.5,
-                        xref="paper",
-                        yref="paper",
-                        text=f"Too few bursts ({num_bursts})<br>Weibull analysis requires ≥{min_bursts_required} bursts",
-                        showarrow=False,
-                        font=dict(size=16, color="gray"),
-                        xanchor="center",
-                        yanchor="middle"
+            if ibis is None or len(ibis) == 0:
+                fig = go.Figure()
+            else:
+                ibi_numbers = list(range(1, len(ibis) + 1))
+                fig = go.Figure()
+                fig.add_trace(
+                    go.Scatter(
+                        x=ibi_numbers,
+                        y=ibis,
+                        mode='lines+markers',
+                        marker=dict(
+                            symbol='circle',
+                            opacity=0.7,
+                            line=dict(width=0)
+                        ),
+                        line=dict(width=2),
+                        showlegend=False
                     )
-                ],
-                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                height=300,  # Match other plot heights
-                margin=dict(l=40, r=40, t=60, b=40)  # Standard margins
-            )
-            
-            bNum = "{}".format(lickdata['bNum'])
-            bMean = "{:.2f}".format(lickdata['bMean'])
-            # Calculate mean IBI for this case too
-            ibis = lickdata.get('IBIs', [])
-            mean_ibi = "{:.2f}".format(np.mean(ibis)) if ibis is not None and len(ibis) > 0 else "N/A"
-            return fig, bNum, bMean, mean_ibi, "N/A", "N/A", "N/A"
-        
-        # Check if Weibull parameters are None (too few bursts for Weibull analysis)
-        if lickdata['weib_alpha'] is None or lickdata['weib_beta'] is None or lickdata['weib_rsq'] is None:
-            fig = go.Figure()
-            fig.update_layout(
-                annotations=[
-                    dict(
-                        x=0.5,
-                        y=0.5,
-                        xref="paper",
-                        yref="paper",
-                        text="Too few bursts<br>Weibull analysis requires more data",
-                        showarrow=False,
-                        font=dict(size=16, color="gray"),
-                        xanchor="center",
-                        yanchor="middle"
-                    )
-                ],
-                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                height=300,  # Match other plot heights
-                margin=dict(l=40, r=40, t=60, b=40)  # Standard margins
-            )
-            
-            bNum = "{}".format(lickdata['bNum'])
-            bMean = "{:.2f}".format(lickdata['bMean'])
-            # Calculate mean IBI for this case too
-            ibis = lickdata.get('IBIs', [])
-            mean_ibi = "{:.2f}".format(np.mean(ibis)) if ibis is not None and len(ibis) > 0 else "N/A"
-            return fig, bNum, bMean, mean_ibi, "N/A", "N/A", "N/A"
-        
-        x = np.asarray(lickdata['burstprob'][0], dtype=float)
-        y = np.asarray(lickdata['burstprob'][1], dtype=float)
-
-        fig = go.Figure()
-        fig.add_trace(
-            go.Scatter(
-                x=x,
-                y=y,
-                mode='lines',
-                line_shape='hv',
-                name='Observed',
-                line=dict(width=2.5)
-            )
-        )
-
-        # Add fitted curve using trompy's own Weibull form to match reported alpha/beta.
-        alpha = lickdata.get('weib_alpha')
-        beta = lickdata.get('weib_beta')
-        if alpha is not None and beta is not None:
-            try:
-                alpha = float(alpha)
-                beta = float(beta)
-                if alpha > 0 and beta > 0 and np.all(np.isfinite(x)) and len(x) > 0:
-                    x_fit = np.linspace(max(1e-6, float(np.min(x))), float(np.max(x)), 200)
-                    y_fit = weib_davis(x_fit, alpha, beta)
-                    fig.add_trace(
-                        go.Scatter(
-                            x=x_fit,
-                            y=y_fit,
-                            mode='lines',
-                            name='Weibull fit',
-                            line=dict(width=2)
+                )
+                fig.update_layout(
+                    transition_duration=500,
+                    xaxis_title="Interburst interval number",
+                    yaxis_title="Interburst interval (s)",
+                    showlegend=False
+                )
+        else:
+            burstprob = lickdata.get('burstprob')
+            if burstprob is None or len(burstprob[0]) == 0:
+                fig = go.Figure()
+                fig.update_layout(
+                    annotations=[
+                        dict(
+                            x=0.5,
+                            y=0.5,
+                            xref="paper",
+                            yref="paper",
+                            text="Insufficient burst size distribution data for Weibull analysis",
+                            showarrow=False,
+                            font=dict(size=14, color="gray"),
+                            xanchor="center",
+                            yanchor="middle"
                         )
-                    )
-            except (TypeError, ValueError, OverflowError):
-                # Keep only observed points if fitted-curve parameters are not usable.
-                pass
+                    ],
+                    xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                    yaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                    height=300,
+                    margin=dict(l=40, r=40, t=60, b=40)
+                )
+            else:
+                x = np.asarray(burstprob[0], dtype=float)
+                y = np.asarray(burstprob[1], dtype=float)
 
-        fig.update_layout(
-            xaxis_title="Burst size (n)",
-            yaxis_title="Probability of burst>n",
-            showlegend=False)
+                fig = go.Figure()
+                fig.add_trace(
+                    go.Scatter(
+                        x=x,
+                        y=y,
+                        mode='lines',
+                        line_shape='hv',
+                        name='Observed',
+                        line=dict(width=2.5)
+                    )
+                )
+
+                alpha = lickdata.get('weib_alpha')
+                beta = lickdata.get('weib_beta')
+                if alpha is not None and beta is not None:
+                    try:
+                        alpha = float(alpha)
+                        beta = float(beta)
+                        if alpha > 0 and beta > 0 and np.all(np.isfinite(x)) and len(x) > 0:
+                            x_fit = np.linspace(max(1e-6, float(np.min(x))), float(np.max(x)), 200)
+                            y_fit = weib_davis(x_fit, alpha, beta)
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=x_fit,
+                                    y=y_fit,
+                                    mode='lines',
+                                    name='Weibull fit',
+                                    line=dict(width=2)
+                                )
+                            )
+                    except (TypeError, ValueError, OverflowError):
+                        pass
+
+                fig.update_layout(
+                    xaxis_title="Burst size (n)",
+                    yaxis_title="Probability of burst>n",
+                    showlegend=False
+                )
 
         bNum = "{}".format(lickdata['bNum'])
         bMean = "{:.2f}".format(lickdata['bMean'])

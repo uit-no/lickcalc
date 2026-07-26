@@ -449,7 +449,9 @@ dcc.Store(id='lick-data'),
                     id='intraburst-fig-type',
                     options=[
                         {'label': 'Intraburst ILIs', 'value': 'intraburst_ili'},
-                        {'label': 'First n ILIs', 'value': 'first_n_ili'}
+                        {'label': 'Lick lengths', 'value': 'lick_lengths'},
+                        {'label': 'First n ILIs', 'value': 'first_n_ili'},
+                        {'label': 'Intercontact lengths', 'value': 'intercontact_lengths'}
                     ],
                     value=config.get('plots.intraburst_fig_type', 'intraburst_ili'),
                     clearable=False
@@ -498,6 +500,8 @@ dcc.Store(id='lick-data'),
                     id='longlick-fig-type',
                     options=[
                         {'label': 'Lick lengths', 'value': 'lick_lengths'},
+                        {'label': 'Intraburst ILIs', 'value': 'intraburst_ili'},
+                        {'label': 'First n ILIs', 'value': 'first_n_ili'},
                         {'label': 'Intercontact lengths', 'value': 'intercontact_lengths'}
                     ],
                     value=config.get('plots.longlick_fig_type', 'lick_lengths'),
@@ -551,7 +555,10 @@ dcc.Store(id='lick-data'),
                 dcc.Dropdown(
                     id='bursthist-fig-type',
                     options=[
-                        {'label': 'Burst histogram', 'value': 'burst_hist'}
+                        {'label': 'Burst histogram', 'value': 'burst_hist'},
+                        {'label': 'Burst size over time', 'value': 'burst_size_over_time'},
+                        {'label': 'Interburst interval over time', 'value': 'interburst_interval_over_time'},
+                        {'label': 'Weibull probability', 'value': 'weibull_prob'}
                     ],
                     value=config.get('plots.bursthist_fig_type', 'burst_hist'),
                     clearable=False
@@ -563,7 +570,10 @@ dcc.Store(id='lick-data'),
                 dcc.Dropdown(
                     id='burstprob-fig-type',
                     options=[
-                        {'label': 'Weibull probability', 'value': 'weibull_prob'}
+                        {'label': 'Weibull probability', 'value': 'weibull_prob'},
+                        {'label': 'Burst histogram', 'value': 'burst_hist'},
+                        {'label': 'Burst size over time', 'value': 'burst_size_over_time'},
+                        {'label': 'Interburst interval over time', 'value': 'interburst_interval_over_time'}
                     ],
                     value=config.get('plots.burstprob_fig_type', 'weibull_prob'),
                     clearable=False

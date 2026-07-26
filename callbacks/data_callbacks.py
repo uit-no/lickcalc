@@ -92,10 +92,11 @@ def toggle_longlick_controls_visibility(offset_key, data_store):
 
 @app.callback(Output('first-n-ili-slider-container', 'style'),
               Output('longlick-graph-spacer', 'style'),
-              Input('intraburst-fig-type', 'value'))
-def toggle_first_n_ili_slider(intraburst_fig_type):
+              Input('intraburst-fig-type', 'value'),
+              Input('longlick-fig-type', 'value'))
+def toggle_first_n_ili_slider(intraburst_fig_type, longlick_fig_type):
     """Show/hide first-n-ILI slider for the corresponding intraburst plot mode."""
-    if intraburst_fig_type == 'first_n_ili':
+    if intraburst_fig_type == 'first_n_ili' or longlick_fig_type == 'first_n_ili':
         return (
             {'display': 'block', 'margin-top': '8px', 'margin-bottom': '10px'},
             {'display': 'block', 'height': '96px'}
