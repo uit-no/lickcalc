@@ -28,7 +28,7 @@ Earlier versions of this application can be found [here](https://github.com/jaim
 
 The application is hosted at [lickcalc.uit.no](https://lickcalc.uit.no)
 
-To install locally, clone the repository and create an environment using the `environment.yml` file. You can use either `conda` or `mamba`:
+To install locally, clone the repository and create an environment using the `environment.yml` file. You can use either `conda`, `mamba`, or `pixi`:
 
 ```powershell
 # Using conda
@@ -46,6 +46,13 @@ cd lickcalc
 mamba env create -f environment.yml
 mamba activate lickcalc
 python app.py
+```
+
+```powershell
+# Using pixi (requires prior installation of pixi)
+git clone https://github.com/uit-no/lickcalc.git
+cd lickcalc
+pixi run lickcalc
 ```
 The app will then be available by opening a browser and typing `localhost:8050` in the address bar.
 
